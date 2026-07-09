@@ -25,15 +25,21 @@ for fname in sorted(os.listdir(reports_dir)):
 # We need to preserve the core: header, kpis, sections, tables, js, svg, images
 # Strategy: extract the key building blocks from ORIG and reassemble
 
-# Extract everything between <style> and </style> (CSS only)
-style_start = ORIG.find("<style>") + 7  # after "<style>"
-style_end = ORIG.find("</style>", style_start)
-existing_css = ORIG[style_start:style_end]
+# Extract ALL CSS from ALL <style> blocks before </head>
+head_end = ORIG.find("</head>")
+# Find last </style> before </head>
+last_close = ORIG.rfind("</style>", 0, head_end)
+# Find first <style> 
+first_open = ORIG.find("<style>")
+# Extract everything between first <style> and last </style>
+raw_css = ORIG[first_open + 7:last_close]
+# Remove any intermediate </style><style> pairs from multiple style blocks
+existing_css = re.sub(r'</style>\s*<style[^>]*>', '', raw_css)
 
 # Extract JS (everything between last <script> and </html>)
 script_start = ORIG.rfind("<script>")
 script_end = ORIG.rfind("</script>")
-existing_js = ORIG[script_start:script_end + 9]
+existing_js = ORIG[script_start + 8:script_end]
 
 # Extract the body content
 body_start = ORIG.find("<header", ORIG.find("<body"))
