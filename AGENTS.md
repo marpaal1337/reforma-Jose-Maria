@@ -80,22 +80,42 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 │   ├── auditoria.json          extraction audit (pages, character counts, warnings per PDF)
 │   ├── excel.json              Presupuesto.xlsx → parsed columns B & C
 │   └── texto/                  (gitignored) raw text dumps per PDF
-├── informes/                   8 Markdown reports
+├── informes/                   29 Markdown reports
 │   ├── RESUMEN_EJECUTIVO.md           ← start here
 │   ├── AUDITORIA_PDFS.md              extraction quality log
 │   ├── COMPARATIVA_CYSS.md            Cyss v1 → v2.0 deltas
 │   ├── COMPARATIVA_ALBAÑILERIA.md      Toni 468 (SOFIA) vs Toni 472
 │   ├── COMPARATIVA_FONTANERIA.md       David Barat 1-000022 (mixed) vs standalone
 │   ├── COMPARATIVA_ELECTRICIDAD.md    Paracon vs Poveda
-│   ├── HUECOS_Y_DUPLICIDADES.md       gaps, overlapping scopes, missing trades
+│   ├── COMPARATIVA_ESCENARIOS.md      economic scenarios comparison
+│   ├── HUECOS_Y_DUPLICIDADES.md       gaps, overlapping scopes, missing trades, risks
 │   ├── CRUCE_CON_EXCEL.md             contract totals vs planning spreadsheet
-│   └── ANALISIS_PLANOS.md            floor plans (dimensions, layout notes)
+│   ├── ANALISIS_PLANOS.md            floor plans (dimensions, layout notes)
+│   ├── ANALISTA_COMPARATIVA_GLOBAL.md multi-contractor comparison by trade
+│   ├── ANALISTA_CONCILIACION_CYSS.md  Cyss vs subcontractors by chapter
+│   ├── ANALISTA_OPTIMIZACION_COSTES.md value engineering proposals
+│   ├── ARQUITECTO_MEMORIA_DESCRIPTIVA.md architectural description
+│   ├── ARQUITECTO_MEMORIA_CALIDADES.md material specifications
+│   ├── ARQUITECTO_ANALISIS_DISTRIBUCION.md layout analysis
+│   ├── ARQUITECTO_ANALISIS_ILUMINACION.md lighting analysis
+│   ├── APAREJADOR_VERIFICACION_MEDICIONES.md measurement verification
+│   ├── APAREJADOR_ANALISIS_MATERIALES.md materials analysis
+│   ├── APAREJADOR_SISTEMAS_CONSTRUCTIVOS.md construction systems
+│   ├── APAREJADOR_PARTIDAS_ALZADAS.md incomplete items detection
+│   ├── PM_PLAN_DE_EJECUCION.md execution plan / Gantt
+│   ├── PM_RUTA_CRITICA.md critical path analysis
+│   ├── PM_PLAN_PAGOS.md payment schedule
+│   ├── DO_PLAN_CONTROL_CALIDAD.md quality control plan
+│   ├── DO_CHECKLIST_MATERIALES.md materials checklist
+│   ├── DO_ACTAS_VISITA.md site visit reports
+│   ├── DO_PROTOCOLO_PRUEBAS_FINALES.md final testing protocol
+│   └── DISTRIBUCION_POR_ESTANCIAS.md room-by-room distribution
 └── scripts/
     ├── extraer_pdfs.py          pdftotext fallback to pdfplumber → data/texto/
     ├── parsear_presupuestos.py   per-contractor parsers → data/presupuestos.json + .csv
     ├── leer_excel.py              openpyxl → data/excel.json
     ├── auditar.py                 rutaudit → data/auditoria.json + AUDITORIA_PDFS.md
-    ├── analizar.py                reads JSONs → 8 reports in informes/
+    ├── analizar.py                reads JSONs → reports in informes/
     └── generar_html.py            reads presupuestos.json → index.html
 ```
 
