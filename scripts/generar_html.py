@@ -120,6 +120,50 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
 .legend span { display: inline-flex; align-items: center; gap: 4px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.ctx-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.ctx-item { background: var(--paper-2); border: 1px solid var(--line); padding: 14px 16px; border-radius: 2px; text-align: center; }
+.ctx-item .ctx-val { font-family: var(--serif); font-size: 24px; font-weight: 600; display: block; color: var(--accent); }
+.ctx-item .ctx-label { font-size: 12px; color: var(--muted); }
+.scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 12px; }
+.scenario { background: var(--paper-2); border: 1px solid var(--line); padding: 18px 20px; border-radius: 2px; position: relative; }
+.scenario.scenario-rec { border-color: var(--accent); border-width: 2px; }
+.scenario h3 { font-family: var(--serif); font-size: 15px; margin-bottom: 6px; }
+.scenario .scenario-price { font-family: var(--serif); font-size: 26px; font-variant-numeric: tabular-nums; color: var(--accent); margin-bottom: 8px; }
+.scenario p { font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+.scenario .risk { font-size: 11px; padding: 3px 8px; border-radius: 2px; display: inline-block; }
+.risk-low { background: #D4E2C8; color: #2E4A1A; }
+.risk-med { background: #F0E0C8; color: #8C6B14; }
+.risk-high { background: #F0D5C8; color: #8C3A14; }
+[data-theme="dark"] .risk-low { background: #2E4A1A; color: #D4E2C8; }
+[data-theme="dark"] .risk-med { background: #5C4A2E; color: #F0E0C8; }
+[data-theme="dark"] .risk-high { background: #5C2A1A; color: #F0D5C8; }
+.phases { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+.phase-row { display: flex; align-items: center; gap: 16px; }
+.phase-label { min-width: 140px; font-size: 12px; flex-shrink: 0; }
+.phase-label strong { display: block; font-family: var(--serif); font-size: 14px; }
+.phase-label .meta { font-size: 11px; color: var(--muted); }
+.phase-track { flex: 1; height: 28px; background: var(--paper); border-radius: 2px; position: relative; overflow: visible; }
+.phase-bar { height: 28px; background: var(--accent); border-radius: 2px; position: absolute; top: 0; display: flex; align-items: center; justify-content: center; min-width: 40px; }
+.phase-bar span { font-size: 10px; color: #fff; font-weight: 600; white-space: nowrap; padding: 0 6px; }
+.phase-bar.dep { background: var(--accent-2); }
+.phase-bar.par { background: var(--good); }
+.phase-bar.rem { background: var(--muted); }
+.dq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.dq-card { background: var(--paper-2); border: 1px solid var(--line); border-left: 3px solid var(--warn); padding: 14px 16px; border-radius: 2px; }
+.dq-card h4 { font-family: var(--serif); font-size: 14px; margin-bottom: 6px; }
+.dq-card ul { margin-left: 16px; font-size: 13px; }
+.dq-card li { margin: 3px 0; }
+.dq-card .dq-note { font-size: 12px; color: var(--warn); margin-top: 6px; }
+.dq-card.encimera { border-left-color: var(--accent); }
+.dq-card.encimera .dq-note { color: var(--accent); }
+.pay-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.pay-item { background: var(--paper-2); border: 1px solid var(--line); padding: 14px 16px; border-radius: 2px; text-align: center; }
+.pay-item .pay-pct { font-family: var(--serif); font-size: 24px; font-weight: 600; color: var(--accent); }
+.pay-item .pay-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.pay-item .pay-eur { font-size: 13px; font-family: var(--serif); margin-top: 4px; color: var(--ink); }
+td.neg { color: var(--good); }
+td.pos { color: var(--warn); }
+@media (max-width: 700px) { .ctx-grid { grid-template-columns: repeat(2, 1fr); } .scenarios { grid-template-columns: 1fr; } .phase-label { min-width: 100px; font-size: 11px; } .phase-label strong { font-size: 12px; } .pay-grid { grid-template-columns: repeat(2, 1fr); } }
 @media print {
   body { padding: 16px; max-width: none; font-size: 11px; }
   .actions, .controls { display: none; }
@@ -360,6 +404,208 @@ def svg_barras_por_contratista(por_grupo: dict[str, list[tuple[str, float, str]]
         y += 6
     out.append('</svg>')
     return "\n".join(out)
+
+
+def build_project_context() -> str:
+    return """
+<section>
+  <h2>Proyecto</h2>
+  <div class="ctx-grid">
+    <div class="ctx-item"><span class="ctx-val">~90</span> <span class="ctx-label">m² superficie</span></div>
+    <div class="ctx-item"><span class="ctx-val">9</span> <span class="ctx-label">estancias</span></div>
+    <div class="ctx-item"><span class="ctx-val">88,3</span> <span class="ctx-label">m² pavimento</span></div>
+    <div class="ctx-item"><span class="ctx-val">93,4</span> <span class="ctx-label">m² falso techo</span></div>
+    <div class="ctx-item"><span class="ctx-val">2</span> <span class="ctx-label">baños</span></div>
+    <div class="ctx-item"><span class="ctx-val">~90</span> <span class="ctx-label">m² climatización</span></div>
+    <div class="ctx-item"><span class="ctx-val">10</span> <span class="ctx-label">oficios</span></div>
+    <div class="ctx-item"><span class="ctx-val">14</span> <span class="ctx-label">documentos</span></div>
+  </div>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">Según planos <em>estado inicial</em> (PEA.01) y <em>distribución</em> (PEA.02) escala 1:50. Ver <code>informes/ANALISIS_PLANOS.md</code>.</p>
+</section>"""
+
+
+def build_scenarios(excel: dict, total_cyss: float) -> str:
+    col_b = 70846
+    col_c = 79469
+    diff_sc = col_c - total_cyss
+    diff_cb = col_c - col_b
+    return f"""
+<section>
+  <h2>Escenarios económicos</h2>
+  <div class="scenarios">
+    <div class="scenario scenario-rec">
+      <h3>Cyss v2.0 (contratista general)</h3>
+      <div class="scenario-price">{fmt_eur(total_cyss)}</div>
+      <p>Cyss coordina todos los oficios. Riesgo de deriva mínimo. Incluye dirección de obra simplificada, IVA 10%.</p>
+      <div class="risk risk-low">Riesgo bajo · coordinación incluida</div>
+    </div>
+    <div class="scenario">
+      <h3>Gestión directa (col. B Excel)</h3>
+      <div class="scenario-price">{fmt_eur(total_cyss - col_b)}</div>
+      <p>Subcontratas directas sin Cyss. Ahorro estimado con precios de 2025. Requiere coordinación propia. Diferencia vs Cyss: {fmt_eur(col_b - total_cyss)}.</p>
+      <div class="risk risk-med">Riesgo medio · coordinación a cargo del cliente</div>
+    </div>
+    <div class="scenario">
+      <h3>Autogestión (col. C Excel)</h3>
+      <div class="scenario-price">{fmt_eur(col_c)}</div>
+      <p>Escenario alternativo con precios actualizados. Máximo coste. Diferencia vs Cyss: {fmt_eur(col_c - total_cyss)} ({((col_c/total_cyss)-1)*100:+.0f}%).</p>
+      <div class="risk risk-high">Riesgo alto · máximo coste y carga de gestión</div>
+    </div>
+  </div>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">Datos del Excel de planificación (Sofia Palacios). Col. B = 70.846 € (subcontratas directas), Col. C = 79.469 € (escenario alternativo). Ver <code>informes/CRUCE_CON_EXCEL.md</code>.</p>
+</section>"""
+
+
+def build_phases() -> str:
+    phases = [
+        ("00", "Demolición", "Demolición, Albañilería", "1 sem", "", "dep"),
+        ("01", "Albañilería", "Albañilería", "2 sem", "00", "dep"),
+        ("02", "Instalaciones", "Fontanería, Electricidad, Clima", "2 sem", "01", "dep"),
+        ("03", "Pladur", "Pladur", "1-2 sem", "02", "dep"),
+        ("04", "Carpintería int.", "Valenzuela (armarios, cocina, puertas)", "8 sem*", "03", "dep"),
+        ("05", "Acabados", "Pavimentos, alicatados, pintura", "2 sem", "04", "dep"),
+        ("06", "Ventanas", "Ventanas Nacher", "1 sem", "00", "par"),
+        ("07", "Encimeras", "Marmolista", "1 sem", "04", "par"),
+        ("08", "Remates", "Limpieza, retoques", "1 sem", "05-07", "rem"),
+    ]
+    rows = []
+    for num, name, off, dur, dep, cls in phases:
+        rows.append(f"""
+  <div class="phase-row">
+    <div class="phase-label"><strong>{num} · {name}</strong><span class="meta">{off}</span></div>
+    <div class="phase-track"><div class="phase-bar {cls}" style="width:{(int(dur[0]) if dur[0].isdigit() else 2)*4 + (4 if '8' in dur else 0)}%"><span>{dur}</span></div></div>
+  </div>""")
+    return f"""
+<section>
+  <h2>Fases de ejecución</h2>
+  <div class="phases">
+    {''.join(rows)}
+  </div>
+  <p class="meta" style="margin-top: 12px; color: var(--muted); font-size: 12px;">
+    * Carpintería interior: 8 semanas de plazo de fabricación (pedir lo antes posible).
+    <span style="display:inline-block; width:12px; height:12px; background:var(--accent); border-radius:2px; vertical-align:middle; margin-left:12px;"></span> secuencial
+    <span style="display:inline-block; width:12px; height:12px; background:var(--good); border-radius:2px; vertical-align:middle; margin-left:8px;"></span> paralelo
+    <span style="display:inline-block; width:12px; height:12px; background:var(--muted); border-radius:2px; vertical-align:middle; margin-left:8px;"></span> remate
+  </p>
+</section>"""
+
+
+def build_cyss_comparison(v1: dict | None, v2: dict | None) -> str:
+    if not v1 or not v2 or not v1.get("capitulos") or not v2.get("capitulos"):
+        return ""
+    v1_map = {c["capitulo"]: c["euros"] for c in v1["capitulos"]}
+    v2_map = {c["capitulo"]: c["euros"] for c in v2["capitulos"]}
+    caps_order = ["01", "02", "03", "04", "05", "06", "13", "14"]
+    rows = []
+    total_v1 = 0
+    total_v2 = 0
+    for cap in caps_order:
+        v1v = v1_map.get(cap, 0)
+        v2v = v2_map.get(cap, 0)
+        total_v1 += v1v
+        total_v2 += v2v
+        diff = v2v - v1v
+        pct = (diff / v1v * 100) if v1v else 0
+        cls = "neg" if diff < 0 else ("pos" if diff > 0 else "")
+        arrow = "▼" if diff < 0 else ("▲" if diff > 0 else "—")
+        rows.append(f"""
+<tr>
+  <td>{cap} {html.escape(v2.get("capitulos", [{}])[caps_order.index(cap)]["nombre"] if caps_order.index(cap) < len(v2["capitulos"]) else "")}</td>
+  <td class="num">{fmt_eur(v1v)}</td>
+  <td class="num">{fmt_eur(v2v)}</td>
+  <td class="num {cls}">{arrow} {fmt_eur(abs(diff))}</td>
+  <td class="num {cls}">{pct:+.1f}%</td>
+</tr>""")
+    diff_t = total_v2 - total_v1
+    cls_t = "neg" if diff_t < 0 else ("pos" if diff_t > 0 else "")
+    return f"""
+<section>
+  <h2>Cyss v1 vs v2.0 — evolución del presupuesto general</h2>
+  <table>
+    <thead><tr><th>Capítulo</th><th class="num">v1 (€)</th><th class="num">v2.0 (€)</th><th class="num">Δ €</th><th class="num">Δ %</th></tr></thead>
+    <tbody>{''.join(rows)}
+<tr style="font-weight:600;">
+  <td>TOTAL</td>
+  <td class="num">{fmt_eur(total_v1)}</td>
+  <td class="num">{fmt_eur(total_v2)}</td>
+  <td class="num {cls_t}">{'▼' if diff_t < 0 else '▲' if diff_t > 0 else '—'} {fmt_eur(abs(diff_t))}</td>
+  <td class="num {cls_t}">{(diff_t/total_v1)*100:+.1f}%</td>
+</tr></tbody>
+  </table>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">v1: 17-10-2025 · v2.0: 04-06-2026. El trasvase Albañilería → Pladur (-38.9% / +119.1%) es el principal cambio. Total neto: -3.0%. Ver <code>informes/COMPARATIVA_CYSS.md</code>.</p>
+</section>"""
+
+
+def build_data_quality(pres: list[dict]) -> str:
+    toni472 = next((r for r in pres if "472" in r.get("archivo", "")), None)
+    items_sin_precio = []
+    if toni472:
+        for sec in toni472.get("secciones", []):
+            for p in sec.get("partidas", []):
+                if p.get("importe") is None:
+                    items_sin_precio.append(p["descripcion"])
+    return f"""
+<section>
+  <h2>Datos abiertos y riesgos</h2>
+  <div class="dq-grid">
+    <div class="dq-card">
+      <h4>Toni 472 — 5 partidas sin cerrar</h4>
+      <ul>
+        {''.join(f'<li>{html.escape(d)}</li>' for d in items_sin_precio)}
+      </ul>
+      <div class="dq-note">⚠ Pedir a Toni que cierre los importes antes de comparar con Cyss</div>
+    </div>
+    <div class="dq-card encimera">
+      <h4>Encimeras no presupuestadas</h4>
+      <p style="font-size:13px;">DEKTON Marmorio + SILESTONE Charcoal Soapstone no aparecen en Cyss v2.0. Pueden suponer 2.000–4.000 € adicionales.</p>
+      <div class="dq-note">⚠ Pedir oferta a marmolista</div>
+    </div>
+    <div class="dq-card">
+      <h4>Poveda — oferta caducada</h4>
+      <p style="font-size:13px;">Presupuesto de electricidad válido hasta 16-11-2025. Superado por Paracon (más reciente y más barato).</p>
+      <div class="dq-note">→ Descartar Poveda</div>
+    </div>
+  </div>
+</section>"""
+
+
+def build_payments(pres: list[dict]) -> str:
+    paracon = next((r for r in pres if "Paracon" in r.get("contratista", "")), None)
+    if not paracon:
+        return ""
+    total_p = paracon.get("total_con_iva", 6056.05)
+    hitos = paracon.get("forma_de_pago", [])
+    if not hitos:
+        return ""
+    items = []
+    total_pct = 0
+    for h in hitos:
+        pct = h.get("pct", 0)
+        eur = total_p * pct / 100
+        total_pct += pct
+        items.append(f"""
+  <div class="pay-item">
+    <div class="pay-pct">{pct}%</div>
+    <div class="pay-label">{html.escape(h.get("hito", ""))}</div>
+    <div class="pay-eur">{fmt_eur(eur)}</div>
+  </div>""")
+    # remaining
+    restante = 100 - total_pct
+    if restante > 0:
+        items.append(f"""
+  <div class="pay-item">
+    <div class="pay-pct">{restante}%</div>
+    <div class="pay-label">Finalización</div>
+    <div class="pay-eur">{fmt_eur(total_p * restante / 100)}</div>
+  </div>""")
+    return f"""
+<section>
+  <h2>Plan de pagos — Paracon (electricidad)</h2>
+  <div class="pay-grid">
+    {''.join(items)}
+  </div>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">Sobre <strong>{fmt_eur(total_p)}</strong> IVA incl. · <strong>{total_pct + restante}%</strong> distribuido en {len(hitos) + (1 if restante > 0 else 0)} hitos. Solo Paracon tiene condiciones de pago detalladas en los PDFs extraídos.</p>
+</section>"""
 
 
 def main() -> None:
@@ -623,6 +869,14 @@ def main() -> None:
 </div>
 """
 
+    # ---- Nuevas secciones ----
+    contexto_html = build_project_context()
+    scenarios_html = build_scenarios(EXCEL, total_cyss)
+    phases_html = build_phases()
+    cyss_comp_html = build_cyss_comparison(v1, v2)
+    dq_html = build_data_quality(PRES)
+    pay_html = build_payments(PRES)
+
     # ---- HTML completo ----
     html_doc = f"""<!DOCTYPE html>
 <html lang="es">
@@ -648,19 +902,29 @@ def main() -> None:
   </div>
 </header>
 
+{contexto_html}
+
 {kpis}
+
+{scenarios_html}
 
 <section>
   <h2>Por oficio</h2>
   {cards_html}
 </section>
 
+{phases_html}
+
 {alertas_html}
+
+{dq_html}
 
 <section>
   <h2>Tabla global de presupuestos</h2>
   {tabla}
 </section>
+
+{cyss_comp_html}
 
 <section>
   <h2>Comparativa visual</h2>
@@ -688,6 +952,8 @@ def main() -> None:
   <h2>Cronología de presupuestos</h2>
   {''.join(timeline)}
 </section>
+
+{pay_html}
 
 <footer>
   <p>Documento generado automáticamente. Datos extraídos de los PDFs con <code>pdfplumber</code>. Parsers en <code>scripts/</code>. Hallazgos completos en <code>informes/</code>.</p>

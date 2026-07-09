@@ -136,6 +136,42 @@ Opens from `file://` in any modern browser. Features:
 
 Google Fonts (Inter + Source Serif 4) are loaded from CDN — requires internet. Fallback fonts are defined and the page is readable offline.
 
+## Agentes / Skills del proyecto (skills/)
+
+El repositorio incluye **skills locales** para que un agente de IA (o el usuario) adopte un rol específico al analizar el proyecto. Cada skill es un archivo `SKILL.md` dentro de su carpeta en `skills/`.
+
+### Roles disponibles
+
+| Rol | Carpeta | Para qué sirve |
+|---|---|---|
+| **Arquitecto** | `skills/arquitecto/` | Memorias descriptivas y de calidades, análisis de planos, distribución, iluminación, paleta de materiales |
+| **Arquitecto Técnico / Aparejador** | `skills/arquitecto-tecnico/` | Verificación de mediciones, análisis de materiales y sistemas constructivos, detección de partidas incompletas |
+| **Project Manager** | `skills/project-manager/` | Diagramas de Gantt, planificación de fases, ruta crítica, dependencias entre oficios, plan de pagos |
+| **Analista de Presupuestos** | `skills/analista-presupuestos/` | Comparativa de ofertas, conciliación Cyss vs. subcontratistas, detección de huecos y duplicidades, optimización de costes, escenarios económicos |
+| **Director de Ejecución** | `skills/director-ejecucion/` | Plan de control de calidad, actas de visita, checklists de materiales, no conformidades, protocolo de pruebas finales |
+
+### Cómo usar una skill
+
+Desde la interfaz de opencode, invoca el skill por su nombre, por ejemplo:
+
+> Usa el skill de project-manager para generar un diagrama de Gantt
+
+O carga el skill directamente con la herramienta `skill`:
+
+```
+skill: project-manager
+```
+
+Cada skill sabe qué datos leer (`data/presupuestos.json`, `data/excel.json`, `Planos/`, etc.), qué informes previos consultar (`informes/`), y en qué formato generar los outputs.
+
+### Outputs esperados
+
+Todos los outputs se guardan en `informes/` con el prefijo del rol:
+- `informes/ARQUITECTO_MEMORIA_DESCRIPTIVA.md`
+- `informes/PM_PLAN_DE_EJECUCION.md`
+- `informes/ANALISTA_COMPARATIVA_GLOBAL.md`
+- etc.
+
 ## Verifying changes
 
 There is nothing to build, lint, or test. `ls <folder>/` is the only verification needed. Use `ls` and `git status` to confirm renames/moves landed as intended.

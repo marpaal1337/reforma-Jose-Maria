@@ -106,6 +106,50 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
 .legend span { display: inline-flex; align-items: center; gap: 4px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.ctx-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.ctx-item { background: var(--paper-2); border: 1px solid var(--line); padding: 14px 16px; border-radius: 2px; text-align: center; }
+.ctx-item .ctx-val { font-family: var(--serif); font-size: 24px; font-weight: 600; display: block; color: var(--accent); }
+.ctx-item .ctx-label { font-size: 12px; color: var(--muted); }
+.scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 12px; }
+.scenario { background: var(--paper-2); border: 1px solid var(--line); padding: 18px 20px; border-radius: 2px; position: relative; }
+.scenario.scenario-rec { border-color: var(--accent); border-width: 2px; }
+.scenario h3 { font-family: var(--serif); font-size: 15px; margin-bottom: 6px; }
+.scenario .scenario-price { font-family: var(--serif); font-size: 26px; font-variant-numeric: tabular-nums; color: var(--accent); margin-bottom: 8px; }
+.scenario p { font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+.scenario .risk { font-size: 11px; padding: 3px 8px; border-radius: 2px; display: inline-block; }
+.risk-low { background: #D4E2C8; color: #2E4A1A; }
+.risk-med { background: #F0E0C8; color: #8C6B14; }
+.risk-high { background: #F0D5C8; color: #8C3A14; }
+[data-theme="dark"] .risk-low { background: #2E4A1A; color: #D4E2C8; }
+[data-theme="dark"] .risk-med { background: #5C4A2E; color: #F0E0C8; }
+[data-theme="dark"] .risk-high { background: #5C2A1A; color: #F0D5C8; }
+.phases { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+.phase-row { display: flex; align-items: center; gap: 16px; }
+.phase-label { min-width: 140px; font-size: 12px; flex-shrink: 0; }
+.phase-label strong { display: block; font-family: var(--serif); font-size: 14px; }
+.phase-label .meta { font-size: 11px; color: var(--muted); }
+.phase-track { flex: 1; height: 28px; background: var(--paper); border-radius: 2px; position: relative; overflow: visible; }
+.phase-bar { height: 28px; background: var(--accent); border-radius: 2px; position: absolute; top: 0; display: flex; align-items: center; justify-content: center; min-width: 40px; }
+.phase-bar span { font-size: 10px; color: #fff; font-weight: 600; white-space: nowrap; padding: 0 6px; }
+.phase-bar.dep { background: var(--accent-2); }
+.phase-bar.par { background: var(--good); }
+.phase-bar.rem { background: var(--muted); }
+.dq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.dq-card { background: var(--paper-2); border: 1px solid var(--line); border-left: 3px solid var(--warn); padding: 14px 16px; border-radius: 2px; }
+.dq-card h4 { font-family: var(--serif); font-size: 14px; margin-bottom: 6px; }
+.dq-card ul { margin-left: 16px; font-size: 13px; }
+.dq-card li { margin: 3px 0; }
+.dq-card .dq-note { font-size: 12px; color: var(--warn); margin-top: 6px; }
+.dq-card.encimera { border-left-color: var(--accent); }
+.dq-card.encimera .dq-note { color: var(--accent); }
+.pay-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.pay-item { background: var(--paper-2); border: 1px solid var(--line); padding: 14px 16px; border-radius: 2px; text-align: center; }
+.pay-item .pay-pct { font-family: var(--serif); font-size: 24px; font-weight: 600; color: var(--accent); }
+.pay-item .pay-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.pay-item .pay-eur { font-size: 13px; font-family: var(--serif); margin-top: 4px; color: var(--ink); }
+td.neg { color: var(--good); }
+td.pos { color: var(--warn); }
+@media (max-width: 700px) { .ctx-grid { grid-template-columns: repeat(2, 1fr); } .scenarios { grid-template-columns: 1fr; } .phase-label { min-width: 100px; font-size: 11px; } .phase-label strong { font-size: 12px; } .pay-grid { grid-template-columns: repeat(2, 1fr); } }
 @media print {
   body { padding: 16px; max-width: none; font-size: 11px; }
   .actions, .controls { display: none; }
@@ -127,6 +171,22 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
     <button class="btn" onclick="window.print()" title="Imprimir o guardar como PDF">⎙ Imprimir</button>
   </div>
 </header>
+
+
+<section>
+  <h2>Proyecto</h2>
+  <div class="ctx-grid">
+    <div class="ctx-item"><span class="ctx-val">~90</span> <span class="ctx-label">m² superficie</span></div>
+    <div class="ctx-item"><span class="ctx-val">9</span> <span class="ctx-label">estancias</span></div>
+    <div class="ctx-item"><span class="ctx-val">88,3</span> <span class="ctx-label">m² pavimento</span></div>
+    <div class="ctx-item"><span class="ctx-val">93,4</span> <span class="ctx-label">m² falso techo</span></div>
+    <div class="ctx-item"><span class="ctx-val">2</span> <span class="ctx-label">baños</span></div>
+    <div class="ctx-item"><span class="ctx-val">~90</span> <span class="ctx-label">m² climatización</span></div>
+    <div class="ctx-item"><span class="ctx-val">10</span> <span class="ctx-label">oficios</span></div>
+    <div class="ctx-item"><span class="ctx-val">14</span> <span class="ctx-label">documentos</span></div>
+  </div>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">Según planos <em>estado inicial</em> (PEA.01) y <em>distribución</em> (PEA.02) escala 1:50. Ver <code>informes/ANALISIS_PLANOS.md</code>.</p>
+</section>
 
 
 <div class="kpis">
@@ -152,6 +212,32 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
   </div>
 </div>
 
+
+
+<section>
+  <h2>Escenarios económicos</h2>
+  <div class="scenarios">
+    <div class="scenario scenario-rec">
+      <h3>Cyss v2.0 (contratista general)</h3>
+      <div class="scenario-price">56.677,94 €</div>
+      <p>Cyss coordina todos los oficios. Riesgo de deriva mínimo. Incluye dirección de obra simplificada, IVA 10%.</p>
+      <div class="risk risk-low">Riesgo bajo · coordinación incluida</div>
+    </div>
+    <div class="scenario">
+      <h3>Gestión directa (col. B Excel)</h3>
+      <div class="scenario-price">-14.168,06 €</div>
+      <p>Subcontratas directas sin Cyss. Ahorro estimado con precios de 2025. Requiere coordinación propia. Diferencia vs Cyss: 14.168,06 €.</p>
+      <div class="risk risk-med">Riesgo medio · coordinación a cargo del cliente</div>
+    </div>
+    <div class="scenario">
+      <h3>Autogestión (col. C Excel)</h3>
+      <div class="scenario-price">79.469,00 €</div>
+      <p>Escenario alternativo con precios actualizados. Máximo coste. Diferencia vs Cyss: 22.791,06 € (+40%).</p>
+      <div class="risk risk-high">Riesgo alto · máximo coste y carga de gestión</div>
+    </div>
+  </div>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">Datos del Excel de planificación (Sofia Palacios). Col. B = 70.846 € (subcontratas directas), Col. C = 79.469 € (escenario alternativo). Ver <code>informes/CRUCE_CON_EXCEL.md</code>.</p>
+</section>
 
 <section>
   <h2>Por oficio</h2>
@@ -238,11 +324,85 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
 </section>
 
 
+<section>
+  <h2>Fases de ejecución</h2>
+  <div class="phases">
+    
+  <div class="phase-row">
+    <div class="phase-label"><strong>00 · Demolición</strong><span class="meta">Demolición, Albañilería</span></div>
+    <div class="phase-track"><div class="phase-bar dep" style="width:4%"><span>1 sem</span></div></div>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label"><strong>01 · Albañilería</strong><span class="meta">Albañilería</span></div>
+    <div class="phase-track"><div class="phase-bar dep" style="width:8%"><span>2 sem</span></div></div>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label"><strong>02 · Instalaciones</strong><span class="meta">Fontanería, Electricidad, Clima</span></div>
+    <div class="phase-track"><div class="phase-bar dep" style="width:8%"><span>2 sem</span></div></div>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label"><strong>03 · Pladur</strong><span class="meta">Pladur</span></div>
+    <div class="phase-track"><div class="phase-bar dep" style="width:4%"><span>1-2 sem</span></div></div>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label"><strong>04 · Carpintería int.</strong><span class="meta">Valenzuela (armarios, cocina, puertas)</span></div>
+    <div class="phase-track"><div class="phase-bar dep" style="width:36%"><span>8 sem*</span></div></div>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label"><strong>05 · Acabados</strong><span class="meta">Pavimentos, alicatados, pintura</span></div>
+    <div class="phase-track"><div class="phase-bar dep" style="width:8%"><span>2 sem</span></div></div>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label"><strong>06 · Ventanas</strong><span class="meta">Ventanas Nacher</span></div>
+    <div class="phase-track"><div class="phase-bar par" style="width:4%"><span>1 sem</span></div></div>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label"><strong>07 · Encimeras</strong><span class="meta">Marmolista</span></div>
+    <div class="phase-track"><div class="phase-bar par" style="width:4%"><span>1 sem</span></div></div>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label"><strong>08 · Remates</strong><span class="meta">Limpieza, retoques</span></div>
+    <div class="phase-track"><div class="phase-bar rem" style="width:4%"><span>1 sem</span></div></div>
+  </div>
+  </div>
+  <p class="meta" style="margin-top: 12px; color: var(--muted); font-size: 12px;">
+    * Carpintería interior: 8 semanas de plazo de fabricación (pedir lo antes posible).
+    <span style="display:inline-block; width:12px; height:12px; background:var(--accent); border-radius:2px; vertical-align:middle; margin-left:12px;"></span> secuencial
+    <span style="display:inline-block; width:12px; height:12px; background:var(--good); border-radius:2px; vertical-align:middle; margin-left:8px;"></span> paralelo
+    <span style="display:inline-block; width:12px; height:12px; background:var(--muted); border-radius:2px; vertical-align:middle; margin-left:8px;"></span> remate
+  </p>
+</section>
+
+
 <div class="alerts">
   <h3>Acciones recomendadas</h3>
   <ul><li>Pedir a Toni que cierre las 5 partidas con '?' en el presupuesto 472 (albañilería).</li><li>Pedir oferta de encimeras (DEKTON + SILESTONE) — no están en Cyss v2.0.</li><li>Aceptar Paracon para electricidad (más reciente, más barato, financia en 4 hitos).</li><li>Verificar que Cyss v2.0 cap. 03 (Pladur) incluye todo lo que estaba en cap. 02 de v1 (yeso, alicatado, pintura).</li><li>Pedir oferta desglosada de fontanería a David Barat (limpio, sin ayudas de albañilería) para comparar con Cyss cap. 05.</li></ul>
 </div>
 
+
+
+<section>
+  <h2>Datos abiertos y riesgos</h2>
+  <div class="dq-grid">
+    <div class="dq-card">
+      <h4>Toni 472 — 5 partidas sin cerrar</h4>
+      <ul>
+        <li>DESMONTAJE DE SPLIT</li><li>DESMONTAJE DE SPLIT CON RECUPERACION</li><li>FALCADO DE PREMARCOS</li><li>COLOCACION DE VIERTEAGUAS</li><li>PINTURA PLASTICA</li>
+      </ul>
+      <div class="dq-note">⚠ Pedir a Toni que cierre los importes antes de comparar con Cyss</div>
+    </div>
+    <div class="dq-card encimera">
+      <h4>Encimeras no presupuestadas</h4>
+      <p style="font-size:13px;">DEKTON Marmorio + SILESTONE Charcoal Soapstone no aparecen en Cyss v2.0. Pueden suponer 2.000–4.000 € adicionales.</p>
+      <div class="dq-note">⚠ Pedir oferta a marmolista</div>
+    </div>
+    <div class="dq-card">
+      <h4>Poveda — oferta caducada</h4>
+      <p style="font-size:13px;">Presupuesto de electricidad válido hasta 16-11-2025. Superado por Paracon (más reciente y más barato).</p>
+      <div class="dq-note">→ Descartar Poveda</div>
+    </div>
+  </div>
+</section>
 
 <section>
   <h2>Tabla global de presupuestos</h2>
@@ -506,6 +666,79 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
 
 </section>
 
+
+<section>
+  <h2>Cyss v1 vs v2.0 — evolución del presupuesto general</h2>
+  <table>
+    <thead><tr><th>Capítulo</th><th class="num">v1 (€)</th><th class="num">v2.0 (€)</th><th class="num">Δ €</th><th class="num">Δ %</th></tr></thead>
+    <tbody>
+<tr>
+  <td>01 DEMOLICIÓN</td>
+  <td class="num">3.587,67 €</td>
+  <td class="num">4.571,48 €</td>
+  <td class="num pos">▲ 983,81 €</td>
+  <td class="num pos">+27.4%</td>
+</tr>
+<tr>
+  <td>02 ALBAÑILERÍA</td>
+  <td class="num">22.700,96 €</td>
+  <td class="num">13.880,05 €</td>
+  <td class="num neg">▼ 8.820,91 €</td>
+  <td class="num neg">-38.9%</td>
+</tr>
+<tr>
+  <td>03 PLADUR</td>
+  <td class="num">4.767,86 €</td>
+  <td class="num">10.448,45 €</td>
+  <td class="num pos">▲ 5.680,59 €</td>
+  <td class="num pos">+119.1%</td>
+</tr>
+<tr>
+  <td>04 INSTALACIÓN ELÉCTRICA</td>
+  <td class="num">7.129,20 €</td>
+  <td class="num">7.129,20 €</td>
+  <td class="num ">— 0,00 €</td>
+  <td class="num ">+0.0%</td>
+</tr>
+<tr>
+  <td>05 INSTALACIÓN FONTANERÍA</td>
+  <td class="num">4.355,00 €</td>
+  <td class="num">4.400,00 €</td>
+  <td class="num pos">▲ 45,00 €</td>
+  <td class="num pos">+1.0%</td>
+</tr>
+<tr>
+  <td>06 INSTALACIÓN CLIMATIZACIÓN</td>
+  <td class="num">6.234,00 €</td>
+  <td class="num">6.594,00 €</td>
+  <td class="num pos">▲ 360,00 €</td>
+  <td class="num pos">+5.8%</td>
+</tr>
+<tr>
+  <td>13 ILUMINACIÓN</td>
+  <td class="num">1.750,43 €</td>
+  <td class="num">1.552,22 €</td>
+  <td class="num neg">▼ 198,21 €</td>
+  <td class="num neg">-11.3%</td>
+</tr>
+<tr>
+  <td>14 VARIOS</td>
+  <td class="num">2.600,00 €</td>
+  <td class="num">2.950,00 €</td>
+  <td class="num pos">▲ 350,00 €</td>
+  <td class="num pos">+13.5%</td>
+</tr>
+<tr style="font-weight:600;">
+  <td>TOTAL</td>
+  <td class="num">53.125,12 €</td>
+  <td class="num">51.525,40 €</td>
+  <td class="num neg">▼ 1.599,72 €</td>
+  <td class="num neg">-3.0%</td>
+</tr></tbody>
+  </table>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">v1: 17-10-2025 · v2.0: 04-06-2026. El trasvase Albañilería → Pladur (-38.9% / +119.1%) es el principal cambio. Total neto: -3.0%. Ver <code>informes/COMPARATIVA_CYSS.md</code>.</p>
+</section>
+
 <section>
   <h2>Comparativa visual</h2>
   <div class="chart-row">
@@ -686,6 +919,35 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
   <div class="when">2026-06-04</div>
   <div class="what"><strong>Contratista general</strong> — Cyss_v2.0_resumen · 56.677,94 €</div>
 </div></div>
+</section>
+
+
+<section>
+  <h2>Plan de pagos — Paracon (electricidad)</h2>
+  <div class="pay-grid">
+    
+  <div class="pay-item">
+    <div class="pay-pct">15%</div>
+    <div class="pay-label">FIRMA DE CONTRATO</div>
+    <div class="pay-eur">908,41 €</div>
+  </div>
+  <div class="pay-item">
+    <div class="pay-pct">35%</div>
+    <div class="pay-label">TERMINAR CANALIZACION</div>
+    <div class="pay-eur">2.119,62 €</div>
+  </div>
+  <div class="pay-item">
+    <div class="pay-pct">35%</div>
+    <div class="pay-label">TERMINAR CABLEADO</div>
+    <div class="pay-eur">2.119,62 €</div>
+  </div>
+  <div class="pay-item">
+    <div class="pay-pct">15%</div>
+    <div class="pay-label">Finalización</div>
+    <div class="pay-eur">908,41 €</div>
+  </div>
+  </div>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">Sobre <strong>6.056,05 €</strong> IVA incl. · <strong>100%</strong> distribuido en 4 hitos. Solo Paracon tiene condiciones de pago detalladas en los PDFs extraídos.</p>
 </section>
 
 <footer>
