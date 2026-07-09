@@ -479,7 +479,7 @@ def main() -> None:
     for r in PRES:
         if r.get("archivo", "").endswith("_myp.txt"): continue
         if "Planos" in r.get("oficio", ""): continue
-        arch = r["archivo"].split("__", 1)[-1].replace(".txt", ".pdf")
+        arch = r["archivo"].replace("__", "/").replace(".txt", ".pdf")
         contr = r.get("contratista", "—")
         oficio = r.get("oficio", "?")
         np = r.get("num_presupuesto") or r.get("num_borrador") or "—"
@@ -489,14 +489,7 @@ def main() -> None:
         est = estado_para(r)
         est_label = {"vigente": "vigente", "borrador": "borrador", "legacy": "legacy",
                      "cyss": "Cyss", "sofia": "otro proyecto"}.get(est, est)
-        # PDF relativo
-        if "Contratista general" in oficio:
-            pdf_rel = f"Contratista general/{arch}"
-        else:
-            pdf_rel = f"{oficio}/{arch}"
-        # Si es desconocido_, el archivo es el legacy directo
-        if arch.startswith("desconocido_"):
-            pdf_rel = f"{oficio}/{arch}"
+        pdf_rel = arch
         filas.append(f"""
 <tr data-oficio="{html.escape(oficio)}" data-estado="{html.escape(est)}">
   <td>{html.escape(oficio)}</td>
