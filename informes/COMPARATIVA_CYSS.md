@@ -31,4 +31,30 @@ Cyss es el **contratista general**. Su presupuesto va por capítulos y resume el
 - **Eléctrico, fontanería y clima**: prácticamente iguales. Cyss mantiene los importes subcontratados.
 - **El total baja 1.760 €** (~3%): el movimiento principal es el reparto albañilería→pladur.
 
-**Acción recomendada**: aceptar la v2.0 como presupuesto de referencia (es la más reciente, está revisada). Cotejar las mediciones del cap. 01 (demolición) y cap. 03 (pladur) con los planos antes de firmar.
+## ⚠ Lo que NO incluye Cyss v2.0
+
+Es fundamental entender que Cyss v2.0 **NO incluye** los siguientes capítulos. Deben contratarse aparte en cualquier escenario:
+
+| Capítulo | Contratista | Importe (IVA incl.) |
+|---|---:|---|
+| Carpintería exterior | Ventanas Nacher | 10.151,48 € |
+| Carpintería interior | Valenzuela | 27.146,92 € |
+| Encimeras | Pendiente | **¿?** (est. 2.000–4.000 €) |
+
+**Coste real del proyecto si se contrata Cyss**: 56.677,94 € + 10.151,48 € + 27.146,92 € + encimeras = **~93.976,34 € + encimeras**
+
+## Comparativa por oficio (Cyss vs subcontrata directa)
+
+Para los oficios que Cyss SÍ incluye, así se compara con las ofertas independientes:
+
+| Oficio | Cyss v2.0 (sin IVA) | Subcontrata (sin IVA) | Diferencia |
+|---|---:|---:|---:|
+| Albañilería | 13.880,05 € | 17.725,00 € (Toni 472) | **Cyss -3.845 €** |
+| Electricidad | 7.129,20 € | 5.005,00 € (Paracon) | **Subcontrata -2.124 €** |
+| Fontanería | 4.400,00 € | 3.360,00 € (DB 1-000079) | **Subcontrata -1.040 €** |
+| Climatización | 6.594,00 € | 6.177,00 € (DB 1-000084) | **Subcontrata -417 €** |
+
+**Conclusión**: Cyss compensa en obra gruesa (albañilería) pero es más caro en instalaciones.
+Esto sugiere que el **escenario híbrido** (Cyss para obra gruesa + subcontratas para instalaciones) es la opción más eficiente.
+
+**Acción recomendada**: ver `COMPARATIVA_ESCENARIOS.md` para el análisis detallado de los 3 escenarios.

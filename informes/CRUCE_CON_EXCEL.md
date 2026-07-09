@@ -37,4 +37,22 @@ La columna C (22.135 / 9.583 / 3.965 / 5.005 / 7.962 / 8.386 / 22.433) es un **e
 
 **Decisión implícita en el Excel**: el cliente está valorando **no usar Cyss como contratista general** y gestionar las subcontratas directamente. La diferencia económica, según el Excel, es 79.469 - 70.846 = **8.623 €** a favor de la gestión directa (~12% de ahorro).
 
-**Riesgo**: gestionar 7 subcontratas directamente implica más carga de coordinación, más riesgo de solapamientos, y necesitas a alguien con función de 'dirección facultativa' para resolver conflictos. Cyss probablemente ofrece esa coordinación por los 8.623 € de diferencia.
+## ⚠ Limitaciones de esta comparación
+
+El Excel **no incluye**:
+- Demolición (cap. 01 de Cyss) — no hay fila separada
+- Iluminación (cap. 13 de Cyss)
+- Varios / Plataforma elevadora (cap. 14 de Cyss)
+- Encimeras
+
+Además, el total de Cyss v2.0 (56.678 €) **no es comparable directamente** con la suma del Excel (70.846 €) porque Cyss no incluye carpinterías. Para una comparativa justa:
+
+| Escenario | importe | Incluye carpinterías? | Incluye encimeras? |
+|---|---:|---|---|
+| Cyss v2.0 (solo) | 56.678 € | ❌ | ❌ |
+| Excel col. B | 70.846 € (bases) | ✅ (8.386+22.433) | ❌ |
+| Cyss completo + carpint. | ~93.976 € | ✅ | ❌ |
+
+La comparativa correcta es contra el **Excel col. B + IVA + partidas faltantes**, no contra Cyss v2.0 directamente.
+
+**Riesgo de autogestión**: gestionar 7 subcontratas directamente implica más carga de coordinación, más riesgo de solapamientos, y necesitas a alguien con función de 'dirección facultativa' para resolver conflictos. Cyss probablemente ofrece esa coordinación.

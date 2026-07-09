@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Visor de Planos · Reforma José María Mortés Lerma</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+:root {
+  --paper: #FAF7F2;
+  --paper-2: #F5F1EA;
+  --ink: #1A1A1A;
+  --ink-2: #3D3D3D;
+  --muted: #6B6B6B;
+  --line: #E0DAD0;
+  --accent: #B5651D;
+  --accent-2: #8C4D14;
+  --warn: #B5410F;
+  --good: #4A6B2E;
+  --serif: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+[data-theme="dark"] {
+  --paper: #1A1815;
+  --paper-2: #252220;
+  --ink: #F2EFE8;
+  --ink-2: #D9D4CA;
+  --muted: #9B968A;
+  --line: #3D3933;
+  --accent: #D88B4D;
+  --accent-2: #E5A870;
+  --warn: #E07A4A;
+  --good: #8FB059;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+
+header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--ink);
+  flex-shrink: 0;
+  background: var(--paper);
+  z-index: 1000;
+  flex-wrap: wrap;
+}
+header h1 { font-family: var(--serif); font-size: 18px; font-weight: 600; white-space: nowrap; }
+header .sub { font-size: 11px; color: var(--muted); }
+header nav { display: flex; gap: 8px; margin-left: auto; align-items: center; flex-wrap: wrap; }
+.btn {
+  background: var(--paper-2); color: var(--ink); border: 1px solid var(--line);
+  padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer; border-radius: 2px;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--line); }
+.btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-group { display: flex; gap: 0; }
+.btn-group .btn { border-radius: 0; }
+.btn-group .btn:first-child { border-radius: 2px 0 0 2px; }
+.btn-group .btn:last-child { border-radius: 0 2px 2px 0; }
+.btn-group .btn + .btn { border-left: none; }
+
+#container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+#map { flex: 1; background: var(--paper); }
+
+#sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  background: var(--paper);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#sidebar.collapsed { width: 0; padding: 0; overflow: hidden; border: none; }
+
+#sidebar h3 { font-family: var(--serif); font-size: 14px; margin-bottom: 6px; }
+#sidebar .meta { font-size: 12px; color: var(--muted); }
+#sidebar .info-card {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 12px 14px;
+}
+#sidebar .info-card h4 { font-family: var(--serif); font-size: 13px; margin-bottom: 4px; }
+#sidebar .info-card .val { font-family: var(--serif); font-size: 18px; color: var(--accent); font-variant-numeric: tabular-nums; }
+#sidebar .info-card .detail { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+
+.layer-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.layer-item:hover { background: var(--paper-2); }
+.layer-item input[type="checkbox"] { accent-color: var(--accent); }
+.layer-badge { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+
+.measure-info { font-size: 12px; color: var(--muted); padding: 4px 0; }
+.measure-info strong { color: var(--ink); font-family: var(--serif); }
+
+#mode-label {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 2px 8px;
+  background: var(--paper-2);
+  border-radius: 2px;
+}
+
+.opacity-control { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.opacity-control input[type="range"] { flex: 1; accent-color: var(--accent); }
+
+.room-list { display: flex; flex-direction: column; gap: 4px; }
+.room-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+.room-item:hover { background: var(--paper-2); border-color: var(--line); }
+.room-item .rname { font-weight: 500; }
+.room-item .rcost { margin-left: auto; font-family: var(--serif); color: var(--accent); }
+.room-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+.leaflet-container { background: var(--paper); }
+.leaflet-control-zoom a { background: var(--paper-2) !important; color: var(--ink) !important; border-color: var(--line) !important; }
+.leaflet-control-attribution { display: none; }
+
+.leaflet-popup-content-wrapper { background: var(--paper-2); color: var(--ink); border-radius: 2px; box-shadow: none; border: 1px solid var(--line); }
+.leaflet-popup-tip { background: var(--paper-2); }
+.leaflet-popup-content { font-family: var(--sans); font-size: 13px; margin: 10px 14px; }
+.leaflet-popup-content strong { font-family: var(--serif); }
+.leaflet-popup-close-button { color: var(--muted) !important; }
+
+.tooltip-label { background: var(--ink); color: var(--paper); padding: 2px 6px; border-radius: 2px; font-size: 11px; white-space: nowrap; }
+
+#mode-controls { display: flex; align-items: center; gap: 10px; }
+
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: var(--paper);
+  padding: 8px 20px; border-radius: 2px;
+  font-size: 13px;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; }
+
+.scale-config { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.scale-config input { width: 50px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); padding: 2px 4px; font-size: 11px; border-radius: 2px; }
+
+.measure-label { background: var(--warn); color: #fff; padding: 2px 8px; border-radius: 2px; font-size: 11px; white-space: nowrap; font-weight: 600; }
+
+@media (max-width: 900px) {
+  #sidebar { width: 260px; }
+  header { gap: 8px; }
+  header h1 { font-size: 15px; }
+}
+
+#add-room-form { display: none; flex-direction: column; gap: 8px; margin-top: 8px; }
+#add-room-form input, #add-room-form select, #add-room-form textarea {
+  background: var(--paper); color: var(--ink); border: 1px solid var(--line);
+  padding: 5px 8px; font: inherit; font-size: 12px; border-radius: 2px;
+}
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🗺 Visor de Planos</h1>
+    <div class="sub">Reforma José María Mortés Lerma</div>
+  </div>
+  <div id="mode-label">Modo: Explorar</div>
+  <div id="mode-controls">
+    <div class="btn-group" id="view-modes">
+      <button class="btn active" data-view="inicial">Inicial</button>
+      <button class="btn" data-view="distribucion">Distribución</button>
+      <button class="btn" data-view="ladoalado">Lado a lado</button>
+      <button class="btn" data-view="superposicion">Superposición</button>
+    </div>
+    <div class="btn-group" id="tools">
+      <button class="btn" data-tool="explorar" id="tool-explorar">🔍 Explorar</button>
+      <button class="btn" data-tool="medir" id="tool-medir">📏 Medir</button>
+      <button class="btn" data-tool="habitaciones" id="tool-habitaciones">🏠 Habitaciones</button>
+      <button class="btn" data-tool="capas" id="tool-capas">📑 Capas</button>
+    </div>
+  </div>
+  <nav>
+    <a href="index.html" class="btn">Dashboard</a>
+    <button id="sidebar-toggle" class="btn">☰ Panel</button>
+    <button id="theme-btn" class="btn">◐ Tema</button>
+  </nav>
+</header>
+
+<div id="container">
+  <div id="map"></div>
+
+  <div id="sidebar">
+    <div id="sidebar-content">
+      <div id="panel-explorar">
+        <h3>Explorar</h3>
+        <p class="meta">Usa el ratón para desplazarte. Rueda para zoom. Haz clic en una habitación para ver detalles.</p>
+      </div>
+
+      <div id="panel-medir" style="display:none">
+        <h3>📏 Medición</h3>
+        <p class="meta">Haz clic en el plano para colocar puntos. Doble clic para terminar.</p>
+        <div class="scale-config">
+          <label>Escala 1:</label>
+          <input type="number" id="scale-input" value="50" min="1" max="500">
+          <label>px/m:</label>
+          <span id="px-per-meter">236</span> <!-- auto-computed at init: (DPI*1000)/(25.4*SCALE) -->
+        </div>
+        <div id="measure-results" class="measure-info"></div>
+        <button id="clear-measure" class="btn">Limpiar mediciones</button>
+      </div>
+
+      <div id="panel-habitaciones" style="display:none">
+        <h3>🏠 Habitaciones</h3>
+        <p class="meta">Haz clic en una habitación en el plano para ver su información. Usa "Añadir" para crear una nueva.</p>
+        <div id="room-list" class="room-list"></div>
+        <button id="toggle-add-room" class="btn" style="margin-top:8px;width:100%">+ Añadir habitación</button>
+        <div id="add-room-form">
+          <input type="text" id="room-name" placeholder="Nombre (ej: Salón)">
+          <input type="number" id="room-area" placeholder="Área m² (opcional)" step="0.1">
+          <input type="text" id="room-cost" placeholder="Coste € (opcional)">
+          <select id="room-type">
+            <option value="dorm">Dormitorio</option>
+            <option value="banio">Baño</option>
+            <option value="cocina">Cocina</option>
+            <option value="salon">Salón</option>
+            <option value="pasillo">Pasillo</option>
+          </select>
+          <p class="meta" style="font-size:11px">Dibuja primero el polígono en el plano usando la herramienta medir, luego rellena los datos.</p>
+          <button id="save-room" class="btn">Guardar</button>
+        </div>
+      </div>
+
+      <div id="panel-capas" style="display:none">
+        <h3>📑 Capas de oficios</h3>
+        <p class="meta">Muestra/oculta las intervenciones de cada oficio sobre el plano.</p>
+        <div id="layer-list"></div>
+        <div class="opacity-control" id="opacity-group" style="display:none;margin-top:8px">
+          <label>Opacidad:</label>
+          <input type="range" id="opacity-slider" min="0" max="1" step="0.05" value="0.6">
+        </div>
+      </div>
+    </div>
+
+    <div id="room-detail" style="display:none" class="info-card">
+      <h4 id="detail-name"></h4>
+      <div><span class="val" id="detail-cost"></span></div>
+      <div class="detail"><span id="detail-area"></span> · <span id="detail-type"></span></div>
+      <div class="detail" id="detail-desc"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ── Config ──
+  var IMG_W = 4963, IMG_H = 3509;
+  var SCALE = 50; // 1:50
+  var DPI = 300;
+  var PX_PER_M = (DPI * 1000) / (25.4 * SCALE); // ≈ 236.2
+  var PLAN_DIR = 'Planos/';
+
+  // ── Color palette per trade ──
+  var TRADE_COLORS = {
+    fontaneria: '#3B82F6',
+    electricidad: '#EAB308',
+    albanileria: '#EF4444',
+    clima: '#22C55E',
+    pladur: '#8B8B8B',
+    demolicion: '#A855F7',
+    carpinteria: '#F97316',
+  };
+
+  var ROOM_COLORS = {
+    dorm: { bg: '#8C4D14', fill: 'rgba(140,77,20,0.15)' },
+    banio: { bg: '#B5651D', fill: 'rgba(181,101,29,0.15)' },
+    cocina: { bg: '#4A6B2E', fill: 'rgba(74,107,46,0.15)' },
+    salon: { bg: '#B5410F', fill: 'rgba(181,65,15,0.15)' },
+    pasillo: { bg: '#6B6B6B', fill: 'rgba(107,107,107,0.12)' },
+  };
+
+  // ── Budget data for rooms (from index.html) ──
+  var ROOM_DATA = [
+    { id: 'dorm-principal', name: 'Dormitorio principal', area: 24.8, cost: '14.461,04 €', type: 'dorm', desc: '24,8 m² · presupuesto proporcional Cyss' },
+    { id: 'dorm-2', name: 'Dormitorio 2', area: 13.7, cost: '7.988,56 €', type: 'dorm', desc: '13,7 m² · presupuesto proporcional Cyss' },
+    { id: 'dorm-1', name: 'Dormitorio 1', area: 8.1, cost: '4.723,16 €', type: 'dorm', desc: '8,1 m² · presupuesto proporcional Cyss' },
+    { id: 'despacho', name: 'Despacho', area: 12.8, cost: '7.463,76 €', type: 'dorm', desc: '12,8 m² (dorm. 3)' },
+    { id: 'salon', name: 'Salón-comedor', area: 16.4, cost: '9.562,94 €', type: 'salon', desc: '16,4 m²' },
+    { id: 'cocina', name: 'Cocina', area: 9.7, cost: '5.656,13 €', type: 'cocina', desc: '9,7 m²' },
+    { id: 'bano-1', name: 'Baño 1', area: 4.5, cost: '2.623,98 €', type: 'banio', desc: '4,5 m²' },
+    { id: 'aseo', name: 'Aseo', area: 2.6, cost: '1.516,08 €', type: 'banio', desc: '2,6 m²' },
+    { id: 'pasillo', name: 'Pasillo', area: 0, cost: '2.682,29 €', type: 'pasillo', desc: 'Distribuidor + pasillo' },
+  ];
+
+  // ── Approximate room polygons (pixel coords on 4963x3509 image) ──
+  // Polygons are calculated from the apartment dimensions (~10m x 9m, ~90m²)
+  // centered on the image. 1m ≈ PX_PER_M = 236px.
+  // Layout (roughly):
+  //   [Baño1: 4.5m²]  [Pasillo/cocina]   [Desp: 12.8m²]
+  //   [Cocina: 9.7m²]                     [DormPrinc: 24.8m²]
+  //   [Aseo: 2.6m²]   [Distribuidor]      [Salón: 16.4m²]
+  //   [Dorm2: 13.7m²]                     [Dorm1: 8.1m²]
+  var MP = PX_PER_M;
+  var CX = IMG_W / 2, CY = IMG_H / 2;
+  var ROOM_POLYGONS = {
+    'dorm-principal': roundPoly([
+      [CX-1.2*MP, CY-3.8*MP], [CX+2.8*MP, CY-3.8*MP],
+      [CX+2.8*MP, CY+0.2*MP], [CX-1.2*MP, CY+0.2*MP]
+    ]),
+    'dorm-2': roundPoly([
+      [CX-1.2*MP, CY+2.0*MP], [CX+2.8*MP, CY+2.0*MP],
+      [CX+2.8*MP, CY+4.5*MP], [CX-1.2*MP, CY+4.5*MP]
+    ]),
+    'dorm-1': roundPoly([
+      [CX+3.0*MP, CY+2.0*MP], [CX+4.5*MP, CY+2.0*MP],
+      [CX+4.5*MP, CY+4.5*MP], [CX+3.0*MP, CY+4.5*MP]
+    ]),
+    'despacho': roundPoly([
+      [CX+3.0*MP, CY-3.8*MP], [CX+4.5*MP, CY-3.8*MP],
+      [CX+4.5*MP, CY-4.8*MP], [CX+3.0*MP, CY-4.8*MP]
+    ]),
+    'salon': roundPoly([
+      [CX+3.0*MP, CY-3.0*MP], [CX+4.5*MP, CY-3.0*MP],
+      [CX+4.5*MP, CY+0.2*MP], [CX+3.0*MP, CY+0.2*MP]
+    ]),
+    'cocina': roundPoly([
+      [CX-1.2*MP, CY-3.8*MP], [CX-2.5*MP, CY-3.8*MP],
+      [CX-2.5*MP, CY-1.8*MP], [CX-1.2*MP, CY-1.8*MP]
+    ]),
+    'bano-1': roundPoly([
+      [CX-2.7*MP, CY-1.6*MP], [CX-1.6*MP, CY-1.6*MP],
+      [CX-1.6*MP, CY-0.2*MP], [CX-2.7*MP, CY-0.2*MP]
+    ]),
+    'aseo': roundPoly([
+      [CX-2.7*MP, CY-0.0*MP], [CX-1.6*MP, CY-0.0*MP],
+      [CX-1.6*MP, CY+1.4*MP], [CX-2.7*MP, CY+1.4*MP]
+    ]),
+    'pasillo': roundPoly([
+      [CX-1.4*MP, CY+0.2*MP], [CX+2.8*MP, CY+0.2*MP],
+      [CX+2.8*MP, CY+2.0*MP], [CX-1.4*MP, CY+2.0*MP]
+    ]),
+  };
+
+  function roundPoly(pts) {
+    return pts.map(function(p) { return [Math.round(p[0]), Math.round(p[1])]; });
+  }
+
+  // ── State ──
+  var map, overlayInicial, overlayDist, measureGroup, roomGroup, layerGroup;
+  var currentView = 'inicial';
+  var currentTool = 'explorar';
+  var measurePoints = [];
+  var roomPolygons = {};
+  var tradeLayers = {};
+  var pinnedRoom = null;
+  var sidebarVisible = true;
+
+  // ── Init Map ──
+  function init() {
+    var bounds = [[0, 0], [IMG_H, IMG_W]];
+
+    map = L.map('map', {
+      crs: L.CRS.Simple,
+      minZoom: -2,
+      maxZoom: 4,
+      zoomControl: true,
+      attributionControl: false,
+      center: [IMG_H/2, IMG_W/2],
+      zoom: 0,
+    });
+
+    overlayInicial = L.imageOverlay(PLAN_DIR + 'estado inicial.png', bounds, { opacity: 1 }).addTo(map);
+    overlayDist = L.imageOverlay(PLAN_DIR + 'distribución.png', bounds, { opacity: 0 });
+
+    measureGroup = L.layerGroup().addTo(map);
+    roomGroup = L.layerGroup().addTo(map);
+    layerGroup = L.layerGroup().addTo(map);
+
+    map.fitBounds(bounds);
+
+    initRoomPolygons();
+    initTradeLayers();
+    initEvents();
+    initTheme();
+    switchView('inicial');
+    switchTool('explorar');
+    updateRoomList();
+  }
+
+  // ── Room Polygons ──
+  function initRoomPolygons() {
+    roomPolygons = {};
+    ROOM_DATA.forEach(function(r) {
+      var pts = ROOM_POLYGONS[r.id];
+      if (!pts) return;
+      var colors = ROOM_COLORS[r.type] || { bg: '#6B6B6B', fill: 'rgba(107,107,107,0.15)' };
+      var poly = L.polygon(pts, {
+        color: colors.bg,
+        weight: 2,
+        opacity: 0.8,
+        fillColor: colors.bg,
+        fillOpacity: 0.12,
+        className: 'room-poly',
+      });
+      poly.roomId = r.id;
+      poly.on('click', function() { showRoomDetail(r.id); });
+      poly.on('mouseover', function() { this.setStyle({ fillOpacity: 0.25, weight: 3 }); });
+      poly.on('mouseout', function() { this.setStyle({ fillOpacity: 0.12, weight: 2 }); });
+      poly.bindTooltip(r.name, { permanent: false, direction: 'center', className: 'tooltip-label' });
+      roomGroup.addLayer(poly);
+      roomPolygons[r.id] = poly;
+    });
+  }
+
+  // ── Trade Layers (empty overlays ready to be drawn on) ──
+  function initTradeLayers() {
+    var trades = [
+      { id: 'fontaneria', label: 'Fontanería', color: TRADE_COLORS.fontaneria },
+      { id: 'electricidad', label: 'Electricidad', color: TRADE_COLORS.electricidad },
+      { id: 'albanileria', label: 'Albañilería', color: TRADE_COLORS.albanileria },
+      { id: 'clima', label: 'Clima', color: TRADE_COLORS.clima },
+      { id: 'pladur', label: 'Pladur', color: TRADE_COLORS.pladur },
+      { id: 'demolicion', label: 'Demolición', color: TRADE_COLORS.demolicion },
+      { id: 'carpinteria', label: 'Carpintería', color: TRADE_COLORS.carpinteria },
+    ];
+    trades.forEach(function(t) {
+      var g = L.layerGroup();
+      tradeLayers[t.id] = { group: g, label: t.label, color: t.color, visible: false };
+      // Example: add some sample markers showing the concept
+      var center = [IMG_H/2, IMG_W/2];
+      var marker = L.circleMarker(center, {
+        radius: 30, color: t.color, fillColor: t.color,
+        fillOpacity: 0.15, weight: 2, opacity: 0.5
+      });
+      marker.bindTooltip(t.label + ' (dibuja aquí las zonas)', { className: 'tooltip-label' });
+      g.addLayer(marker);
+      g.addTo(map);
+    });
+    updateLayerList();
+  }
+
+  // ── View Switching ──
+  function switchView(view) {
+    // Clean up side-by-side slider when leaving that mode
+    if (view !== 'ladoalado' && map && map._sbsSlider) {
+      map.removeControl(map._sbsSlider);
+      map._sbsSlider = null;
+      sideBySideActive = false;
+    }
+
+    currentView = view;
+    document.querySelectorAll('#view-modes .btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.view === view);
+    });
+    var lbl = { inicial: 'Estado inicial', distribucion: 'Distribución', ladoalado: 'Lado a lado', superposicion: 'Superposición' };
+    document.getElementById('mode-label').textContent = 'Modo: ' + (lbl[view] || view);
+
+    overlayInicial.setOpacity(0);
+    overlayDist.setOpacity(0);
+
+    if (view === 'inicial') {
+      overlayInicial.setOpacity(1).bringToBack();
+    } else if (view === 'distribucion') {
+      overlayDist.setOpacity(1).bringToBack();
+    } else if (view === 'superposicion') {
+      overlayInicial.setOpacity(0.3).bringToBack();
+      overlayDist.setOpacity(0.7);
+      document.getElementById('opacity-group').style.display = 'flex';
+      document.getElementById('opacity-slider').value = 0.7;
+    } else if (view === 'ladoalado') {
+      overlayInicial.setOpacity(1).bringToBack();
+      overlayDist.setOpacity(1);
+      var clip = IMG_W / 2;
+      overlayDist.getElement().style.clip = 'rect(0px,' + clip + 'px,' + IMG_H + 'px,0px)';
+      overlayInicial.getElement().style.clip = 'rect(0px,' + IMG_W + 'px,' + IMG_H + 'px,' + clip + 'px)';
+      addSideBySideSlider();
+      return;
+    }
+
+    overlayDist.getElement().style.clip = '';
+    overlayInicial.getElement().style.clip = '';
+    document.getElementById('opacity-group').style.display = view === 'superposicion' ? 'flex' : 'none';
+  }
+
+  var sideBySideActive = false;
+
+  function addSideBySideSlider() {
+    if (sideBySideActive) return;
+    sideBySideActive = true;
+    var slider = L.control({position: 'topright'});
+    slider.onAdd = function() {
+      var div = L.DomUtil.create('div', 'leaflet-bar');
+      div.innerHTML = '<input type="range" min="0" max="' + IMG_W + '" value="' + (IMG_W/2) + '" style="width:120px;writing-mode:vertical-lr;height:120px;accent-color:var(--accent)">';
+      div.style.background = 'var(--paper-2)';
+      div.style.padding = '6px';
+      div.style.border = '1px solid var(--line)';
+      div.style.borderRadius = '2px';
+      L.DomEvent.disableClickPropagation(div);
+      var input = div.querySelector('input');
+      input.addEventListener('input', function() {
+        var v = parseInt(this.value);
+        overlayDist.getElement().style.clip = 'rect(0px,' + v + 'px,' + IMG_H + 'px,0px)';
+        overlayInicial.getElement().style.clip = 'rect(0px,' + IMG_W + 'px,' + IMG_H + 'px,' + v + 'px)';
+      });
+      return div;
+    };
+    slider.addTo(map);
+    // Store reference to clean up later
+    map._sbsSlider = slider;
+  }
+
+  // ── Tool Switching ──
+  function switchTool(tool) {
+    currentTool = tool;
+    document.querySelectorAll('#tools .btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.tool === tool);
+    });
+    ['explorar','medir','habitaciones','capas'].forEach(function(t) {
+      var el = document.getElementById('panel-' + t);
+      if (el) el.style.display = t === tool ? 'block' : 'none';
+    });
+    document.getElementById('room-detail').style.display = 'none';
+
+    if (tool !== 'medir') {
+      map.off('click', handleMeasureClick);
+      map.off('dblclick', handleMeasureDblClick);
+    }
+
+    if (tool === 'medir') {
+      map.on('click', handleMeasureClick);
+      map.on('dblclick', handleMeasureDblClick);
+      toast('Haz clic para medir. Doble clic para terminar.');
+    }
+    if (tool === 'habitaciones') {
+      toast('Haz clic en una habitación para ver detalles, o usa el panel para añadir.');
+    }
+  }
+
+  // ── Measurement Tool ──
+  function handleMeasureClick(e) {
+    measurePoints.push(e.latlng);
+    L.circleMarker(e.latlng, {
+      radius: 6,
+      color: measurePoints.length === 1 ? '#22C55E' : '#EF4444',
+      fillColor: measurePoints.length === 1 ? '#22C55E' : '#EF4444',
+      fillOpacity: 1,
+      weight: 2,
+    }).addTo(measureGroup);
+
+    if (measurePoints.length >= 2) {
+      var p1 = measurePoints[measurePoints.length - 2];
+      var p2 = measurePoints[measurePoints.length - 1];
+      L.polyline([p1, p2], {
+        color: '#EF4444', weight: 2, dashArray: '6 3'
+      }).addTo(measureGroup);
+
+      var distPx = Math.sqrt(Math.pow(p2.lat - p1.lat, 2) + Math.pow(p2.lng - p1.lng, 2));
+      var distM = distPx / PX_PER_M;
+      var mid = [(p1.lat + p2.lat)/2, (p1.lng + p2.lng)/2];
+      L.marker(mid, {
+        icon: L.divIcon({
+          className: 'measure-label',
+          html: distM >= 1 ? distM.toFixed(2) + ' m' : (distM*100).toFixed(0) + ' cm',
+          iconSize: [0, 0],
+          iconAnchor: [0, 0],
+        })
+      }).addTo(measureGroup);
+
+      updateMeasureResults();
+    }
+  }
+
+  function handleMeasureDblClick(e) {
+    if (measurePoints.length === 0) return;
+    // Finish measurement
+    map.off('click', handleMeasureClick);
+    var total = 0;
+    for (var i = 1; i < measurePoints.length; i++) {
+      var p1 = measurePoints[i-1], p2 = measurePoints[i];
+      total += Math.sqrt(Math.pow(p2.lat - p1.lat, 2) + Math.pow(p2.lng - p1.lng, 2));
+    }
+    total = total / PX_PER_M;
+    toast('Medición completada: ' + (total >= 1 ? total.toFixed(2) + ' m' : (total*100).toFixed(0) + ' cm') + ' total');
+  }
+
+  function clearMeasurements() {
+    measureGroup.clearLayers();
+    measurePoints = [];
+    document.getElementById('measure-results').innerHTML = '';
+    if (currentTool === 'medir') {
+      map.off('click', handleMeasureClick);
+      map.on('click', handleMeasureClick);
+    }
+  }
+
+  function updateMeasureResults() {
+    var html = '';
+    var total = 0;
+    for (var i = 1; i < measurePoints.length; i++) {
+      var p1 = measurePoints[i-1], p2 = measurePoints[i];
+      var d = Math.sqrt(Math.pow(p2.lat - p1.lat, 2) + Math.pow(p2.lng - p1.lng, 2)) / PX_PER_M;
+      total += d;
+      html += '<div>Segmento ' + i + ': <strong>' + (d >= 1 ? d.toFixed(2) + ' m' : (d*100).toFixed(0) + ' cm') + '</strong></div>';
+    }
+    if (measurePoints.length > 1) {
+      html += '<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--line)">Total: <strong>' + (total >= 1 ? total.toFixed(2) + ' m' : (total*100).toFixed(0) + ' cm') + '</strong></div>';
+    }
+    document.getElementById('measure-results').innerHTML = html;
+  }
+
+  // ── Room Detail ──
+  function showRoomDetail(id) {
+    var data = null;
+    for (var i = 0; i < ROOM_DATA.length; i++) {
+      if (ROOM_DATA[i].id === id) { data = ROOM_DATA[i]; break; }
+    }
+    if (!data) return;
+
+    pinnedRoom = id;
+    document.getElementById('room-detail').style.display = 'block';
+    document.getElementById('detail-name').textContent = data.name;
+    document.getElementById('detail-cost').textContent = data.cost || '—';
+    document.getElementById('detail-area').textContent = data.area ? data.area + ' m²' : '';
+    var typeLabels = { dorm: 'Dormitorio', banio: 'Baño', cocina: 'Cocina', salon: 'Salón', pasillo: 'Pasillo' };
+    document.getElementById('detail-type').textContent = typeLabels[data.type] || data.type;
+    document.getElementById('detail-desc').textContent = data.desc || '';
+
+    // Highlight on map
+    Object.keys(roomPolygons).forEach(function(k) {
+      roomPolygons[k].setStyle({ fillOpacity: 0.12, weight: 2, opacity: 0.8 });
+    });
+    if (roomPolygons[id]) {
+      roomPolygons[id].setStyle({ fillOpacity: 0.35, weight: 3, opacity: 1 });
+      map.fitBounds(roomPolygons[id].getBounds(), { padding: [40, 40], maxZoom: 2 });
+    }
+
+    updateRoomList();
+  }
+
+  function updateRoomList() {
+    var el = document.getElementById('room-list');
+    el.innerHTML = '';
+    ROOM_DATA.forEach(function(r) {
+      var colors = ROOM_COLORS[r.type] || { bg: '#6B6B6B' };
+      var item = document.createElement('div');
+      item.className = 'room-item' + (pinnedRoom === r.id ? ' active' : '');
+      if (pinnedRoom === r.id) item.style.borderColor = colors.bg;
+      item.innerHTML = '<span class="room-dot" style="background:' + colors.bg + '"></span>'
+        + '<span class="rname">' + r.name + '</span>'
+        + (r.area ? '<span style="color:var(--muted);font-size:11px">' + r.area + ' m²</span>' : '')
+        + '<span class="rcost">' + (r.cost || '') + '</span>';
+      item.addEventListener('click', function() { showRoomDetail(r.id); });
+      el.appendChild(item);
+    });
+  }
+
+  // ── Layer Controls ──
+  function updateLayerList() {
+    var el = document.getElementById('layer-list');
+    el.innerHTML = '';
+    Object.keys(tradeLayers).forEach(function(id) {
+      var t = tradeLayers[id];
+      var item = document.createElement('div');
+      item.className = 'layer-item';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = t.visible;
+      cb.addEventListener('change', function() {
+        t.visible = this.checked;
+        if (this.checked) {
+          t.group.addTo(map);
+        } else {
+          map.removeLayer(t.group);
+        }
+      });
+      var badge = document.createElement('span');
+      badge.className = 'layer-badge';
+      badge.style.background = t.color;
+      var label = document.createElement('span');
+      label.textContent = t.label;
+      item.appendChild(cb);
+      item.appendChild(badge);
+      item.appendChild(label);
+      el.appendChild(item);
+    });
+  }
+
+  // ── Sidebar Toggle ──
+  function toggleSidebar() {
+    sidebarVisible = !sidebarVisible;
+    var s = document.getElementById('sidebar');
+    s.classList.toggle('collapsed', !sidebarVisible);
+  }
+
+  // ── Toast ──
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._timer);
+    el._timer = setTimeout(function() { el.classList.remove('show'); }, 3000);
+  }
+
+  // ── Theme ──
+  function initTheme() {
+    var saved = localStorage.getItem('theme');
+    if (saved) document.documentElement.dataset.theme = saved;
+    document.getElementById('theme-btn').addEventListener('click', function() {
+      var cur = document.documentElement.dataset.theme;
+      var next = cur === 'dark' ? '' : 'dark';
+      if (next) document.documentElement.dataset.theme = next;
+      else document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('theme', next);
+    });
+  }
+
+  // ── Scale config ──
+  function updatePxPerM() {
+    SCALE = parseInt(document.getElementById('scale-input').value) || 50;
+    PX_PER_M = (DPI * 1000) / (25.4 * SCALE);
+    document.getElementById('px-per-meter').textContent = Math.round(PX_PER_M);
+  }
+
+  // ── Events ──
+  function initEvents() {
+    document.getElementById('view-modes').addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-view]');
+      if (btn) switchView(btn.dataset.view);
+    });
+
+    document.getElementById('tools').addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-tool]');
+      if (btn) switchTool(btn.dataset.tool);
+    });
+
+    document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+    document.getElementById('clear-measure').addEventListener('click', clearMeasurements);
+
+    document.getElementById('scale-input').addEventListener('input', updatePxPerM);
+
+    document.getElementById('opacity-slider').addEventListener('input', function() {
+      if (currentView === 'superposicion') {
+        overlayDist.setOpacity(parseFloat(this.value));
+      }
+    });
+
+    document.getElementById('toggle-add-room').addEventListener('click', function() {
+      var f = document.getElementById('add-room-form');
+      f.style.display = f.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    document.getElementById('save-room').addEventListener('click', saveUserRoom);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        if (pinnedRoom) {
+          pinnedRoom = null;
+          document.getElementById('room-detail').style.display = 'none';
+          Object.keys(roomPolygons).forEach(function(k) {
+            roomPolygons[k].setStyle({ fillOpacity: 0.12, weight: 2, opacity: 0.8 });
+          });
+          updateRoomList();
+        }
+      }
+      if (e.key === 'm' && !e.ctrlKey && !e.metaKey) {
+        if (currentTool === 'medir') switchTool('explorar');
+        else switchTool('medir');
+      }
+    });
+
+  }
+
+  function saveUserRoom() {
+    var name = document.getElementById('room-name').value.trim();
+    var area = parseFloat(document.getElementById('room-area').value) || 0;
+    var cost = document.getElementById('room-cost').value.trim() || '—';
+    var type = document.getElementById('room-type').value;
+    if (!name) { toast('Escribe un nombre para la habitación'); return; }
+
+    var id = 'user-' + Date.now();
+    var newRoom = { id: id, name: name, area: area, cost: cost, type: type, desc: 'Añadida por el usuario' };
+    ROOM_DATA.push(newRoom);
+
+    // Add colored circle as placeholder polygon
+    var colors = ROOM_COLORS[type] || { bg: '#6B6B6B', fill: 'rgba(107,107,107,0.15)' };
+    var pt = map.getCenter();
+    var poly = L.circleMarker(pt, {
+      radius: 40, color: colors.bg, fillColor: colors.bg,
+      fillOpacity: 0.15, weight: 2, opacity: 0.8,
+    });
+    poly.roomId = id;
+    poly.on('click', function() { showRoomDetail(id); });
+    poly.on('mouseover', function() { this.setStyle({ fillOpacity: 0.25 }); });
+    poly.on('mouseout', function() { this.setStyle({ fillOpacity: 0.15 }); });
+    poly.bindTooltip(name, { permanent: false, direction: 'center', className: 'tooltip-label' });
+    roomGroup.addLayer(poly);
+    roomPolygons[id] = poly;
+
+    updateRoomList();
+    document.getElementById('add-room-form').style.display = 'none';
+    document.getElementById('room-name').value = '';
+    document.getElementById('room-area').value = '';
+    document.getElementById('room-cost').value = '';
+    toast('Habitación "' + name + '" añadida');
+  }
+
+  // ── Init on load ──
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

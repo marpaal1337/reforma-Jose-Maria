@@ -163,7 +163,18 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
 .pay-item .pay-eur { font-size: 13px; font-family: var(--serif); margin-top: 4px; color: var(--ink); }
 td.neg { color: var(--good); }
 td.pos { color: var(--warn); }
-@media (max-width: 700px) { .ctx-grid { grid-template-columns: repeat(2, 1fr); } .scenarios { grid-template-columns: 1fr; } .phase-label { min-width: 100px; font-size: 11px; } .phase-label strong { font-size: 12px; } .pay-grid { grid-template-columns: repeat(2, 1fr); } }
+.floorplan { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; max-width: 700px; margin: 0 auto; }
+.floorplan .room { background: var(--paper-2); border: 1px solid var(--line); padding: 10px 12px; border-radius: 2px; min-height: 80px; display: flex; flex-direction: column; }
+.floorplan .room .rname { font-family: var(--serif); font-size: 12px; font-weight: 600; }
+.floorplan .room .rarea { font-size: 11px; color: var(--muted); }
+.floorplan .room .rcost { font-family: var(--serif); font-size: 13px; margin-top: auto; }
+.floorplan .room.baño { border-left: 3px solid var(--accent); }
+.floorplan .room.cocina { border-left: 3px solid var(--good); }
+.floorplan .room.pasillo { border-left: 3px solid var(--muted); }
+.floorplan .room.salon { border-left: 3px solid var(--warn); }
+.floorplan .room.dorm { border-left: 3px solid var(--accent-2); }
+.floorplan .floorplan-hall { grid-column: 1 / -1; text-align: center; padding: 6px; font-size: 11px; color: var(--muted); background: var(--paper-2); border: 1px dashed var(--line); border-radius: 2px; }
+@media (max-width: 700px) { .ctx-grid { grid-template-columns: repeat(2, 1fr); } .scenarios { grid-template-columns: 1fr; } .phase-label { min-width: 100px; font-size: 11px; } .phase-label strong { font-size: 12px; } .pay-grid { grid-template-columns: repeat(2, 1fr); } .floorplan { grid-template-columns: 1fr 1fr; } }
 @media print {
   body { padding: 16px; max-width: none; font-size: 11px; }
   .actions, .controls { display: none; }
@@ -424,35 +435,76 @@ def build_project_context() -> str:
 </section>"""
 
 
-def build_scenarios(excel: dict, total_cyss: float) -> str:
-    col_b = 70846
-    col_c = 79469
-    diff_sc = col_c - total_cyss
-    diff_cb = col_c - col_b
+def build_scenarios(excel: dict, total_cyss: float, pres: list[dict]) -> str:
+    # Cyss total
+    nacher = next((r for r in pres if "Nacher" in r.get("contratista","")), None)
+    val_arm = next((r for r in pres if "ARMARIOS" in r.get("seccion","")), None)
+    val_coc = next((r for r in pres if "COCINA" in r.get("seccion","")), None)
+    val_pue = next((r for r in pres if "PUERTAS" in r.get("seccion","")), None)
+    paracon = next((r for r in pres if "Paracon" in r.get("contratista","")), None)
+    db_079 = next((r for r in pres if "000079" in r.get("archivo","")), None)
+    db_084 = next((r for r in pres if "000084" in r.get("archivo","")), None)
+
+    nacher_t = nacher["total_con_iva"] if nacher else 0
+    val_t = (val_arm["total_con_iva"] if val_arm else 0) + (val_coc["total_con_iva"] if val_coc else 0) + (val_pue["total_con_iva"] if val_pue else 0)
+    paracon_t = paracon["total_con_iva"] if paracon else 0
+    db079_t = db_079["total_con_iva"] if db_079 else 0
+    db084_t = db_084["total_con_iva"] if db_084 else 0
+
+    # Scenario 1: Cyss completo
+    e1 = total_cyss + nacher_t + val_t
+
+    # Scenario 2: Híbrido — Cyss para obra gruesa
+    v2 = next((r for r in pres if r["archivo"] == "Contratista general__Cyss_v2.0_resumen.txt"), None)
+    cyss_obra = 0
+    if v2:
+        for c in v2["capitulos"]:
+            if c["nombre"] in ("DEMOLICIÓN", "ALBAÑILERÍA", "PLADUR", "ILUMINACIÓN", "VARIOS"):
+                cyss_obra += c["euros"]
+    cyss_obra_iva = round(cyss_obra * 1.10, 2)
+    e2 = cyss_obra_iva + paracon_t + db079_t + db084_t + nacher_t + val_t
+
+    # Scenario 3: Autogestión (parcial - faltan ofertas)
+    toni472 = next((r for r in pres if "472" in r.get("archivo","") and "toni" in r["archivo"].lower()), None)
+    toni_suma = 0
+    if toni472:
+        for sec in toni472.get("secciones", []):
+            for p in sec.get("partidas", []):
+                if p.get("importe"):
+                    toni_suma += p["importe"]
+    toni_con_iva = round(toni_suma * 1.10, 2)
+    e3_parcial = toni_con_iva + paracon_t + db079_t + db084_t + nacher_t + val_t
+
     return f"""
 <section>
   <h2>Escenarios económicos</h2>
+  <p class="meta" style="margin-bottom: 12px; color: var(--muted); font-size: 13px;">
+    <strong>⚠ Importante:</strong> Cyss v2.0 ({fmt_eur(total_cyss)}) <strong>NO incluye</strong> carpinterías ni encimeras.
+    Se muestran los 3 escenarios con el coste real incluyendo todo lo presupuestado.
+  </p>
   <div class="scenarios">
+    <div class="scenario">
+      <h3>1. Cyss completo + carpinterías directas</h3>
+      <div class="scenario-price">{fmt_eur(e1)} + encimeras</div>
+      <p>Cyss coordina toda la obra gruesa e instalaciones. Carpinterías (Nacher + Valenzuela) se contratan directas. Riesgo mínimo de coordinación.</p>
+      <div class="risk risk-low">Riesgo bajo · Cyss coordina</div>
+    </div>
     <div class="scenario scenario-rec">
-      <h3>Cyss v2.0 (contratista general)</h3>
-      <div class="scenario-price">{fmt_eur(total_cyss)}</div>
-      <p>Cyss coordina todos los oficios. Riesgo de deriva mínimo. Incluye dirección de obra simplificada, IVA 10%.</p>
-      <div class="risk risk-low">Riesgo bajo · coordinación incluida</div>
+      <h3>2. ✅ HÍBRIDO (recomendado)</h3>
+      <div class="scenario-price">{fmt_eur(e2)} + encimeras</div>
+      <p>Cyss solo para obra gruesa (demo, albañi, pladur, ilum, varios). Instalaciones directas: Paracon electricidad + David Barat fontanería/clima. Ahorro ~{fmt_eur(e1 - e2)}.</p>
+      <div class="risk risk-med">Riesgo medio · Cyss + 3 contratos directos</div>
     </div>
     <div class="scenario">
-      <h3>Gestión directa (col. B Excel)</h3>
-      <div class="scenario-price">{fmt_eur(total_cyss - col_b)}</div>
-      <p>Subcontratas directas sin Cyss. Ahorro estimado con precios de 2025. Requiere coordinación propia. Diferencia vs Cyss: {fmt_eur(col_b - total_cyss)}.</p>
-      <div class="risk risk-med">Riesgo medio · coordinación a cargo del cliente</div>
-    </div>
-    <div class="scenario">
-      <h3>Autogestión (col. C Excel)</h3>
-      <div class="scenario-price">{fmt_eur(col_c)}</div>
-      <p>Escenario alternativo con precios actualizados. Máximo coste. Diferencia vs Cyss: {fmt_eur(col_c - total_cyss)} ({((col_c/total_cyss)-1)*100:+.0f}%).</p>
-      <div class="risk risk-high">Riesgo alto · máximo coste y carga de gestión</div>
+      <h3>3. Autogestión total (incompleto)</h3>
+      <div class="scenario-price">{fmt_eur(e3_parcial)} + pladur + otros</div>
+      <p>Todas las subcontratas directas. Faltan ofertas de pladur, iluminación y plataforma elevadora. Requiere director de obra externo.</p>
+      <div class="risk risk-high">Riesgo alto · faltan ofertas</div>
     </div>
   </div>
-  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">Datos del Excel de planificación (Sofia Palacios). Col. B = 70.846 € (subcontratas directas), Col. C = 79.469 € (escenario alternativo). Ver <code>informes/CRUCE_CON_EXCEL.md</code>.</p>
+  <p class="meta" style="margin-top: 8px; color: var(--muted); font-size: 12px;">
+    Todos los importes con IVA. Cyss aplica IVA 10% (reforma vivienda). Subcontratas aplican IVA 21%. Encimeras sin presupuestar (est. 2.000–4.000 €). Ver <code>informes/COMPARATIVA_ESCENARIOS.md</code>.
+  </p>
 </section>"""
 
 
@@ -569,6 +621,57 @@ def build_data_quality(pres: list[dict]) -> str:
 </section>"""
 
 
+def build_floorplan(pres: list[dict]) -> str:
+    total_cyss = 0
+    v2 = next((r for r in pres if r["archivo"] == "Contratista general__Cyss_v2.0_resumen.txt"), None)
+    if v2:
+        total_cyss = v2["total_con_iva"]
+
+    rooms = [
+        ("Dorm. principal", "24,8 m²", "dorm", 24.8),
+        ("Dorm. 3 / Despacho", "12,8 m²", "dorm", 12.8),
+        ("Pasillo", "—", "pasillo", 4.6),
+        ("Baño 1", "4,5 m²", "baño", 4.5),
+        ("Dormitorio 2", "13,7 m²", "dorm", 13.7),
+        ("Cocina", "9,7 m²", "cocina", 9.7),
+        ("Aseo", "2,6 m²", "baño", 2.6),
+        ("Dormitorio 1", "8,1 m²", "dorm", 8.1),
+        ("Salón-comedor", "16,4 m²", "salon", 16.4),
+    ]
+    total_area = sum(r[3] for r in rooms)
+    cards = []
+    for name, area_str, cls, area in rooms:
+        cost = total_cyss * area / total_area if total_area > 0 else 0
+        cards.append(
+            f'<div class="room {cls}">'
+            f'<span class="rname">{html.escape(name)}</span>'
+            f'<span class="rarea">{area_str}</span>'
+            f'<span class="rcost">{fmt_eur(cost)}</span>'
+            f"</div>"
+        )
+    cards.insert(5, '<div class="floorplan-hall">← Distribuidor →</div>')
+    return f"""
+<section>
+  <h2>Plano de distribución (estimado)</h2>
+  <p class="meta" style="margin-bottom: 12px; color: var(--muted); font-size: 12px;">
+    Distribución aproximada según plano <em>estado inicial</em> (PEA.01). 
+    Superficie total: <strong>{total_area:.1f} m²</strong>. 
+    Coste por estancia proporcional sobre <strong>{fmt_eur(total_cyss)}</strong> (solo Cyss, sin carpinterías ni encimeras).
+    Ver <code>informes/DISTRIBUCION_POR_ESTANCIAS.md</code>.
+  </p>
+  <div class="floorplan">
+    {''.join(cards)}
+  </div>
+  <div class="legend" style="margin-top: 8px;">
+    <span><i style="background:var(--accent-2)"></i> Dormitorios</span>
+    <span><i style="background:var(--accent)"></i> Baños</span>
+    <span><i style="background:var(--good)"></i> Cocina</span>
+    <span><i style="background:var(--warn)"></i> Salón</span>
+    <span><i style="background:var(--muted)"></i> Pasillo</span>
+  </div>
+</section>"""
+
+
 def build_payments(pres: list[dict]) -> str:
     paracon = next((r for r in pres if "Paracon" in r.get("contratista", "")), None)
     if not paracon:
@@ -644,23 +747,31 @@ def main() -> None:
             "r": r,
         })
 
-    # ---- KPIs ----
+    # ---- KPIs corregidos ----
+    nacher_k = next((r for r in PRES if "Nacher" in r.get("contratista","")), None)
+    val_arm_k = next((r for r in PRES if "ARMARIOS" in r.get("seccion","")), None)
+    val_coc_k = next((r for r in PRES if "COCINA" in r.get("seccion","")), None)
+    val_pue_k = next((r for r in PRES if "PUERTAS" in r.get("seccion","")), None)
+    nacher_t_k = nacher_k["total_con_iva"] if nacher_k else 0
+    val_t_k = (val_arm_k["total_con_iva"] if val_arm_k else 0) + (val_coc_k["total_con_iva"] if val_coc_k else 0) + (val_pue_k["total_con_iva"] if val_pue_k else 0)
+    cyss_completo = total_cyss + nacher_t_k + val_t_k
+
     kpis = f"""
 <div class="kpis">
   <div class="kpi">
-    <div class="label">Cyss v2.0 (general)</div>
+    <div class="label">Cyss v2.0 (solo su alcance)</div>
     <div class="value">{fmt_eur(total_cyss)}</div>
-    <div class="delta">04-06-2026 · IVA incl.</div>
+    <div class="delta">04-06-2026 · IVA 10% incl. · NO incluye carpinterías</div>
   </div>
   <div class="kpi">
-    <div class="label">Suma subcontratas</div>
-    <div class="value">{fmt_eur(total_subs)}</div>
-    <div class="delta">{len(subs)} ofertas independientes</div>
+    <div class="label">Cyss completo + carpinterías</div>
+    <div class="value">{fmt_eur(cyss_completo)}</div>
+    <div class="delta">+ encimeras (2k-4k € pendiente)</div>
   </div>
   <div class="kpi">
-    <div class="label">Δ gestión directa</div>
-    <div class="value">{fmt_eur(total_cyss - total_subs)}</div>
-    <div class="delta">Cyss − subcontratas</div>
+    <div class="label">Escenario híbrido (recomendado)</div>
+    <div class="value" style="font-size: 22px;">~91.112 € + encimeras</div>
+    <div class="delta">Cyss obra gruesa + instalaciones directas</div>
   </div>
   <div class="kpi">
     <div class="label">vs Cyss v1 (oct 2025)</div>
@@ -672,17 +783,9 @@ def main() -> None:
 
     # ---- Tarjetas por oficio ----
     cards = []
-    # Mapeo a capítulos Cyss (para tarjetas de oficios integrados)
-    caps = {c["nombre"].strip().split()[0]: (c["nombre"].strip(), c["euros"]) for c in (v2.get("capitulos", []) if v2 else [])}
-    nombre_caps = {
-        "DEMOLICIÓN": "Demolición",
-        "ALBAÑILERÍA": "Albañilería",
-        "PLADUR": "Pladur",
-        "INSTALACIÓN": None,  # múltiples
-        "ILUMINACIÓN": "Iluminación",
-        "VARIOS": "Varios",
-    }
-    # Construir tarjetas
+    en_cyss = {"Albañilería": "cap.02", "Demolición": "cap.01", "Pladur": "cap.03",
+               "Electricidad": "cap.04", "Fontanería": "cap.05", "Clima": "cap.06",
+               "Iluminación": "cap.13", "Varios": "cap.14"}
     for oficio in ["Albañilería", "Carpintería exterior", "Carpintería interior",
                    "Clima", "Demolición", "Detalle baños", "Electricidad",
                    "Encimeras", "Fontanería", "Pladur"]:
@@ -696,19 +799,26 @@ def main() -> None:
             rango = "—"
         # Recomendación rápida
         reco = ""
+        cyss_tag = f" ✅ {en_cyss[oficio]}" if oficio in en_cyss else ""
+        if not cyss_tag and oficio not in ("Carpintería exterior", "Carpintería interior", "Encimeras", "Detalle baños"):
+            cyss_tag = " ❌ No en Cyss"
         if oficio == "Electricidad":
-            reco = "Paracon (más reciente, financia en 4 hitos)"
+            reco = f"Paracon directo (más barato que Cyss){cyss_tag}"
         elif oficio == "Albañilería" and any("Toni" in (o.get("contratista") or "") for o in ofertas):
             tono = next((o for o in ofertas if "Toni" in (o.get("contratista") or "")), None)
-            if tono: reco = f"Validar {tono['contratista']} vs Cyss (Toni +28%)"
+            if tono: reco = f"Validar {tono['contratista']} vs Cyss (Toni +28%){cyss_tag}"
         elif oficio == "Encimeras":
-            reco = "⚠ No en Cyss v2.0 · pedir oferta a marmolista"
-        elif oficio == "Carpintería interior" and any("Valenzuela" in (o.get("contratista") or "") for o in ofertas):
-            reco = "Aceptar (3 oficios, 8 sem. de plazo)"
+            reco = f"⚠ No presupuestado · pedir oferta a marmolista{cyss_tag}"
+        elif oficio == "Carpintería exterior":
+            reco = f"Directo Nacher (Cyss NO cubre){cyss_tag}"
+        elif oficio == "Carpintería interior":
+            reco = f"Directo Valenzuela (Cyss NO cubre){cyss_tag}"
         elif oficio == "Fontanería":
-            reco = "Cubierto por David Barat (vía Cyss)"
+            reco = f"David Barat directo (más barato que Cyss){cyss_tag}"
         elif oficio == "Clima":
-            reco = "Cubierto por David Barat (vía Cyss)"
+            reco = f"David Barat directo (~igual que Cyss){cyss_tag}"
+        else:
+            reco = cyss_tag.lstrip()
         card_class = "card" if ofertas else "card empty"
         cards.append(f"""
 <div class="{card_class}">
@@ -857,10 +967,10 @@ def main() -> None:
     # ---- Alertas ----
     alertas = [
         "Pedir a Toni que cierre las 5 partidas con '?' en el presupuesto 472 (albañilería).",
-        "Pedir oferta de encimeras (DEKTON + SILESTONE) — no están en Cyss v2.0.",
-        "Aceptar Paracon para electricidad (más reciente, más barato, financia en 4 hitos).",
-        "Verificar que Cyss v2.0 cap. 03 (Pladur) incluye todo lo que estaba en cap. 02 de v1 (yeso, alicatado, pintura).",
-        "Pedir oferta desglosada de fontanería a David Barat (limpio, sin ayudas de albañilería) para comparar con Cyss cap. 05.",
+        "Pedir oferta de encimeras (DEKTON + SILESTONE) — no están en ningún presupuesto.",
+        "Aceptar Paracon para electricidad directo (más barato que Cyss, financia en 4 hitos).",
+        "Negociar con Cyss alcance reducido si se opta por el híbrido (solo cap. 01, 02, 03, 13, 14).",
+        "Confirmar con Paracon que incluye videoportero y red de datos (lo que sí especifica Poveda).",
     ]
     alertas_html = f"""
 <div class="alerts">
@@ -871,7 +981,8 @@ def main() -> None:
 
     # ---- Nuevas secciones ----
     contexto_html = build_project_context()
-    scenarios_html = build_scenarios(EXCEL, total_cyss)
+    scenarios_html = build_scenarios(EXCEL, total_cyss, PRES)
+    floorplan_html = build_floorplan(PRES)
     phases_html = build_phases()
     cyss_comp_html = build_cyss_comparison(v1, v2)
     dq_html = build_data_quality(PRES)
@@ -907,6 +1018,8 @@ def main() -> None:
 {kpis}
 
 {scenarios_html}
+
+{floorplan_html}
 
 <section>
   <h2>Por oficio</h2>

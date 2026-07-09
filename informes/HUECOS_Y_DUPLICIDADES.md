@@ -13,6 +13,19 @@ Estos oficios **no tienen oferta independiente** — están cubiertos dentro del
 | Detalle baños | desconocido_Detalle baños.pdf | sub-capítulo dentro de cap. 02 y 03 (alicatados, sanitarios) |
 | Encimeras | desconocido_Encimeras.pdf | no incluido en Cyss — el cap. 02 menciona colocación de pavimentos pero no encimeras |
 
+
+## Oficios NO incluidos en Cyss v2.0
+
+Estos oficios **no están en el presupuesto de Cyss** y deben contratarse aparte en cualquier escenario:
+
+| Oficio | Contratista | Importe estimado (IVA incl.) | Notas |
+|---|---:|---|---|
+| Carpintería exterior | Ventanas Nacher | 10.151,48 € | Proyecto SOFIA — 8 ventanas |
+| Carpintería interior | Valenzuela | 27.146,92 € | Armarios + Cocina + Puertas (3 presupuestos) |
+| Encimeras | Pendiente | **¿?** | DEKTON Marmorio + SILESTONE Charcoal Soapstone |
+
+**Total adicional mínimo si se contrata Cyss**: 37.298,40 € + encimeras.
+
 **Importante**: las encimeras (DEKTON Marmorio + SILESTONE Charcoal Soapstone, según `desconocido_Encimeras.pdf`) **no aparecen explícitamente en Cyss v2.0**. Hay que pedir presupuesto a un marmolista y/o confirmar si Cyss las incluye.
 
 ## Duplicidades detectadas
