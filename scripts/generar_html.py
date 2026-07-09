@@ -80,15 +80,15 @@ section > h2 { font-family: var(--serif); font-size: 22px; margin-bottom: 16px; 
 .card.empty { opacity: 0.55; }
 .card.empty .range { color: var(--muted); }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--paper); }
 th { background: var(--paper-2); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); cursor: pointer; user-select: none; }
 th:hover { background: var(--line); }
 th .arrow { opacity: 0.4; margin-left: 4px; font-size: 10px; }
 th.sorted .arrow { opacity: 1; color: var(--accent); }
 td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--serif); }
-tr:nth-child(even) td { background: rgba(245, 241, 234, 0.5); }
-[data-theme="dark"] tr:nth-child(even) td { background: rgba(45, 41, 36, 0.5); }
-tr:hover td { background: var(--paper-2); }
+tbody tr:nth-child(even) td { background: var(--paper-2); }
+[data-theme="dark"] tbody tr:nth-child(even) td { background: #252220; }
+tr:hover td { background: var(--line); }
 .tag { display: inline-block; padding: 2px 7px; border-radius: 2px; font-size: 11px; font-weight: 500; }
 .tag.cyss { background: #E8DCC8; color: #5C3D14; }
 .tag.vigente { background: #D4E2C8; color: #2E4A1A; }
