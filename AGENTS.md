@@ -64,6 +64,80 @@ Within each trade folder, files are named `<Contratista>_<Doc>.pdf`. The legacy 
 - New Cyss versions follow `Cyss_v<version>_<myp|resumen>.pdf`.
 - Do not delete the `Zone.Identifier` files.
 
+## Analysis pipeline (scripts/, data/, informes/, index.html)
+
+The repository now includes an **analysis pipeline** that extracts, parses, and visualises all PDFs. The pipeline is fully **reproducible** — run the scripts in order to regenerate all artefacts from scratch.
+
+### Repo additions
+
+```
+.
+├── .gitignore                  ignores data/texto/ and __pycache__
+├── index.html                  interactive dashboard (33 KB, self-contained except Google Fonts CDN)
+├── data/
+│   ├── presupuestos.json       master parsed data (27 records with line items)
+│   ├── presupuestos.csv        flat table for spreadsheet import
+│   ├── auditoria.json          extraction audit (pages, character counts, warnings per PDF)
+│   ├── excel.json              Presupuesto.xlsx → parsed columns B & C
+│   └── texto/                  (gitignored) raw text dumps per PDF
+├── informes/                   8 Markdown reports
+│   ├── RESUMEN_EJECUTIVO.md           ← start here
+│   ├── AUDITORIA_PDFS.md              extraction quality log
+│   ├── COMPARATIVA_CYSS.md            Cyss v1 → v2.0 deltas
+│   ├── COMPARATIVA_ALBAÑILERIA.md      Toni 468 (SOFIA) vs Toni 472
+│   ├── COMPARATIVA_FONTANERIA.md       David Barat 1-000022 (mixed) vs standalone
+│   ├── COMPARATIVA_ELECTRICIDAD.md    Paracon vs Poveda
+│   ├── HUECOS_Y_DUPLICIDADES.md       gaps, overlapping scopes, missing trades
+│   ├── CRUCE_CON_EXCEL.md             contract totals vs planning spreadsheet
+│   └── ANALISIS_PLANOS.md            floor plans (dimensions, layout notes)
+└── scripts/
+    ├── extraer_pdfs.py          pdftotext fallback to pdfplumber → data/texto/
+    ├── parsear_presupuestos.py   per-contractor parsers → data/presupuestos.json + .csv
+    ├── leer_excel.py              openpyxl → data/excel.json
+    ├── auditar.py                 rutaudit → data/auditoria.json + AUDITORIA_PDFS.md
+    ├── analizar.py                reads JSONs → 8 reports in informes/
+    └── generar_html.py            reads presupuestos.json → index.html
+```
+
+### How to regenerate
+
+```bash
+python3 scripts/extraer_pdfs.py && \
+python3 scripts/parsear_presupuestos.py && \
+python3 scripts/auditar.py && \
+python3 scripts/leer_excel.py && \
+python3 scripts/analizar.py && \
+python3 scripts/generar_html.py
+```
+
+### Key findings (as of 2026-07-09)
+
+| Item | Value |
+|------|-------|
+| Cyss v2.0 total (IVA incl.) | **56.677,94 €** |
+| Toni 472 (albañilería) | 21.447 € (5 items marked `?` — unbudgeted) |
+| Toni 468 | **SOFIA project** — different client, not applicable |
+| David Barat DEF (mixed) | 11.927,23 € fontanería + clima combined |
+| Electricidad | **Paracon** 6.056 € (cheaper + 4 instalments) vs Poveda 10.570 € (expired) |
+| Encimeras | **Not priced** in Cyss — need a separate stoneworker quote |
+| Excel col B | 70.846 € (sum of subcontractor quotes) |
+| Excel col C | 79.469 € (alternative scenario — client self-managing) |
+
+### Dashboard (`index.html`)
+
+Opens from `file://` in any modern browser. Features:
+- Dark/light mode toggle (persisted in `localStorage`)
+- Sortable & filterable main table (all 27+ budget records)
+- Donut chart of Cyss v2.0 by trade
+- Bar charts comparing multiple quotes per trade
+- Timeline visualisation
+- KPI cards per trade with budget summaries
+- Alert/action block with top recommendations
+
+Google Fonts (Inter + Source Serif 4) are loaded from CDN — requires internet. Fallback fonts are defined and the page is readable offline.
+
 ## Verifying changes
 
 There is nothing to build, lint, or test. `ls <folder>/` is the only verification needed. Use `ls` and `git status` to confirm renames/moves landed as intended.
+
+If a new PDF is added: re-run the pipeline above. Check `informes/AUDITORIA_PDFS.md` to confirm the new file was parsed correctly.
