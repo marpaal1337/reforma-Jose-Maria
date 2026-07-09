@@ -130,79 +130,111 @@ footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line);
 """
 
 JS = r"""
-(function() {
-  // ---- Table sort + filter ----
+(function () {
+  var tables = {};
+
   function setupTable(tid) {
-    const t = document.getElementById(tid);
+    var t = document.getElementById(tid);
     if (!t) return;
-    const tbody = t.tBodies[0];
-    const headers = t.tHead.rows[0].cells;
-    const sortKey = { col: -1, asc: true };
-    headers.forEach((th, i) => {
-      th.addEventListener('click', () => {
-        if (sortKey.col === i) sortKey.asc = !sortKey.asc;
-        else { sortKey.col = i; sortKey.asc = true; }
-        const rows = Array.from(tbody.rows);
-        rows.sort((a, b) => {
-          const av = a.cells[i].dataset.v || a.cells[i].textContent.trim();
-          const bv = b.cells[i].dataset.v || b.cells[i].textContent.trim();
-          const an = parseFloat(av), bn = parseFloat(bv);
-          if (!isNaN(an) && !isNaN(bn)) return sortKey.asc ? an - bn : bn - an;
-          return sortKey.asc ? String(av).localeCompare(String(bv), 'es') : String(bv).localeCompare(String(av), 'es');
+    var tbody = t.tBodies[0];
+    var headers = t.tHead.rows[0].cells;
+    var state = { col: -1, asc: true };
+    tables[tid] = state;
+    Array.from(headers).forEach(function (th, i) {
+      var arrow = th.querySelector('.arrow');
+      if (!arrow) { arrow = document.createElement('span'); arrow.className = 'arrow'; th.appendChild(arrow); }
+      th.addEventListener('click', function () {
+        if (state.col === i) { state.asc = !state.asc; } else { state.col = i; state.asc = true; }
+        var rows = Array.from(tbody.rows);
+        rows.sort(function (a, b) {
+          var av = (a.cells[i].dataset && a.cells[i].dataset.v != null) ? a.cells[i].dataset.v : a.cells[i].textContent.trim();
+          var bv = (b.cells[i].dataset && b.cells[i].dataset.v != null) ? b.cells[i].dataset.v : b.cells[i].textContent.trim();
+          var an = parseFloat(av), bn = parseFloat(bv);
+          if (!isNaN(an) && !isNaN(bn)) return state.asc ? an - bn : bn - an;
+          return state.asc ? String(av).localeCompare(String(bv), 'es') : String(bv).localeCompare(String(av), 'es');
         });
-        rows.forEach(r => tbody.appendChild(r));
-        headers.forEach((h, j) => {
+        rows.forEach(function (r) { tbody.appendChild(r); });
+        Array.from(headers).forEach(function (h, j) {
           h.classList.toggle('sorted', j === i);
-          h.querySelector('.arrow').textContent = j === i ? (sortKey.asc ? '▲' : '▼') : '';
+          var a = h.querySelector('.arrow');
+          if (a) a.textContent = (j === i) ? (state.asc ? '\u25B2' : '\u25BC') : '';
         });
       });
     });
   }
-  ['tbl-main','tbl-cap'].forEach(setupTable);
 
   // ---- Filter ----
   function applyFilter() {
-    const txt = (document.getElementById('f-q').value || '').toLowerCase();
-    const of = document.getElementById('f-of').value;
-    const est = document.getElementById('f-est').value;
-    const tbody = document.getElementById('tbl-main').tBodies[0];
-    Array.from(tbody.rows).forEach(tr => {
-      const text = tr.textContent.toLowerCase();
-      const ofOk = !of || tr.dataset.oficio === of;
-      const estOk = !est || tr.dataset.estado === est;
-      const txtOk = !txt || text.includes(txt);
+    var txt = (document.getElementById('f-q').value || '').toLowerCase();
+    var of = document.getElementById('f-of').value;
+    var est = document.getElementById('f-est').value;
+    var tbody = document.getElementById('tbl-main').tBodies[0];
+    Array.from(tbody.rows).forEach(function (tr) {
+      var text = tr.textContent.toLowerCase();
+      var ofOk = !of || tr.dataset.oficio === of;
+      var estOk = !est || tr.dataset.estado === est;
+      var txtOk = !txt || text.indexOf(txt) !== -1;
       tr.style.display = (ofOk && estOk && txtOk) ? '' : 'none';
     });
     updateCount();
   }
+
   function updateCount() {
-    const tbody = document.getElementById('tbl-main').tBodies[0];
-    const n = Array.from(tbody.rows).filter(r => r.style.display !== 'none').length;
-    const tot = tbody.rows.length;
-    document.getElementById('f-count').textContent = n + ' / ' + tot;
+    var el = document.getElementById('f-count');
+    if (!el) return;
+    var tbody = document.getElementById('tbl-main').tBodies[0];
+    var n = Array.from(tbody.rows).filter(function (r) { return r.style.display !== 'none'; }).length;
+    var tot = tbody.rows.length;
+    el.textContent = n + ' / ' + tot;
   }
-  ['f-q','f-of','f-est'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', applyFilter);
-  });
-  document.getElementById('f-reset').addEventListener('click', () => {
-    document.getElementById('f-q').value = '';
-    document.getElementById('f-of').value = '';
-    document.getElementById('f-est').value = '';
-    applyFilter();
-  });
-  updateCount();
+
+  function initFilters() {
+    var ids = ['f-q', 'f-of', 'f-est'];
+    ids.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', applyFilter);
+    });
+    var resetBtn = document.getElementById('f-reset');
+    if (resetBtn) resetBtn.addEventListener('click', function () {
+      var q = document.getElementById('f-q');
+      var o = document.getElementById('f-of');
+      var e = document.getElementById('f-est');
+      if (q) q.value = '';
+      if (o) o.value = '';
+      if (e) e.value = '';
+      applyFilter();
+    });
+    updateCount();
+  }
 
   // ---- Theme ----
-  const saved = localStorage.getItem('theme');
-  if (saved) document.documentElement.dataset.theme = saved;
-  document.getElementById('theme').addEventListener('click', () => {
-    const cur = document.documentElement.dataset.theme;
-    const next = cur === 'dark' ? '' : 'dark';
-    if (next) document.documentElement.dataset.theme = next;
-    else document.documentElement.removeAttribute('data-theme');
-    localStorage.setItem('theme', next);
-  });
+  function initTheme() {
+    var saved = localStorage.getItem('theme');
+    if (saved) document.documentElement.dataset.theme = saved;
+    var btn = document.getElementById('theme');
+    if (btn) btn.addEventListener('click', function () {
+      var cur = document.documentElement.dataset.theme;
+      var next = cur === 'dark' ? '' : 'dark';
+      if (next) document.documentElement.dataset.theme = next;
+      else document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('theme', next);
+    });
+  }
+
+  // ---- Init ----
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setupTable('tbl-main');
+      setupTable('tbl-cap');
+      initFilters();
+      initTheme();
+    });
+  } else {
+    setupTable('tbl-main');
+    setupTable('tbl-cap');
+    initFilters();
+    initTheme();
+  }
 })();
 """
 
