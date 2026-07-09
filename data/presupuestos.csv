@@ -1,0 +1,28 @@
+oficio,contratista,archivo,formato,fecha,total_con_iva,total_sin_iva,total_ejecucion_material,total_calculado_sin_iva,importe_iva,iva_pct,base_imponible,num_presupuesto,num_borrador,cliente_cabecera
+Albañilería,Toni,Albañilería__Toni_PRESUPUESTO NUMERO 468 PROYECTO SOFIA.txt,toni_lista,2025-11-09,,,,23855.0,,,,,,SOFIA
+Albañilería,Toni,Albañilería__Toni_PRESUPUESTO NUMERO 472 REFORMA CALLE JOSE MARIA LERMA N 2 PTA 28.txt,toni_lista,2026-03-17,,,,17725.0,,,,,,SOFIA
+Albañilería,desconocido_Albañilería,Albañilería__desconocido_Albañilería.txt,desconocido,,,,,,,,,,,
+Carpintería exterior,Ventanas Nacher_SOFIA,Carpintería exterior__Ventanas Nacher_SOFIA.txt,nacher_ventanas,2025-10-14,10151.48,,,,1761.83,21.0,8389.65,1040/1,,
+Carpintería exterior,desconocido_Carpintería exterior,Carpintería exterior__desconocido_Carpintería exterior.txt,desconocido,,,,,,,,,,,
+Carpintería interior,Valenzuela_PPTO JOSE MARIA MARTES LERMA ARMARIOS,Carpintería interior__Valenzuela_PPTO JOSE MARIA MARTES LERMA ARMARIOS.txt,valenzuela,2025-11-05,15356.49,12691.31,,,,,,,,
+Carpintería interior,Valenzuela_PPTO JOSE MARIA MARTES LERMA COCINA,Carpintería interior__Valenzuela_PPTO JOSE MARIA MARTES LERMA COCINA.txt,valenzuela,2025-11-05,6621.36,5472.2,,,,,,,,
+Carpintería interior,Valenzuela_PPTO JOSE MARIA MARTES LERMA PUERTAS,Carpintería interior__Valenzuela_PPTO JOSE MARIA MARTES LERMA PUERTAS.txt,valenzuela,2025-11-05,5169.07,4271.96,,,,,,,,
+Carpintería interior,desconocido_Carpintería interior,Carpintería interior__desconocido_Carpintería interior.txt,desconocido,,,,,,,,,,,
+Clima,David Barat,Clima__David Barat_Presupuesto 1-000084.txt,david_barat,2025-11-17,7474.29,,,,,,,000084,,
+Clima,desconocido_Clima,Clima__desconocido_Clima.txt,desconocido,,,,,,,,,,,
+Contratista general,Cyss_v1_myp,Contratista general__Cyss_v1_myp.txt,cyss_myp,2025-10-17,,,53125.12,,,,,,,
+Contratista general,Cyss_v1_resumen,Contratista general__Cyss_v1_resumen.txt,cyss_resumen,2025-10-17,58437.63,,53125.12,,5312.51,10.0,,,,
+Contratista general,Cyss_v2.0_myp,Contratista general__Cyss_v2.0_myp.txt,cyss_myp,2026-06-04,,,51525.4,,,,,,,
+Contratista general,Cyss_v2.0_resumen,Contratista general__Cyss_v2.0_resumen.txt,cyss_resumen,2026-06-04,56677.94,,51525.4,,5152.54,10.0,,,,
+Demolición,desconocido_Demolición,Demolición__desconocido_Demolición.txt,desconocido,,,,,,,,,,,
+Detalle baños,desconocido_Detalle baños,Detalle baños__desconocido_Detalle baños.txt,desconocido,,,,,,,,,,,
+Electricidad,Paracon,Electricidad__Paracon_2026-7 TONI AMORES.txt,paracon_estancias,2026-03-23,6056.05,,,,1051.05,,5005.0,2026-7,,TONI AMORES
+Electricidad,Poveda,Electricidad__Poveda_Presupuesto borrador 2025-11-06.txt,poveda,2025-11-06,6402.11,,,,1111.11,21,5291.0,,9,
+Electricidad,desconocido_Electricidad,Electricidad__desconocido_Electricidad.txt,desconocido,,,,,,,,,,,
+Encimeras,desconocido_Encimeras,Encimeras__desconocido_Encimeras.txt,desconocido,,,,,,,,,,,
+Fontanería,David Barat,Fontanería__David Barat_Presupuesto 1-000022 DEF.txt,david_barat,2026-03-10,11927.23,,,,,,,000022,,
+Fontanería,David Barat,Fontanería__David Barat_Presupuesto 1-000079.txt,david_barat,2025-11-04,4065.6,,,,,,,000079,,
+Fontanería,desconocido_Fontanería,Fontanería__desconocido_Fontanería.txt,desconocido,,,,,,,,,,,
+Pladur,desconocido_Pladur,Pladur__desconocido_Pladur.txt,desconocido,,,,,,,,,,,
+Planos,distribución,Planos__distribución.txt,desconocido,,,,,,,,,,,
+Planos,estado inicial,Planos__estado inicial.txt,desconocido,,,,,,,,,,,

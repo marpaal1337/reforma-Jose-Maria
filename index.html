@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Reforma José María Mortés Lerma — dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+  <style>
+:root {
+  --paper: #FAF7F2;
+  --paper-2: #F5F1EA;
+  --ink: #1A1A1A;
+  --ink-2: #3D3D3D;
+  --muted: #6B6B6B;
+  --line: #E0DAD0;
+  --accent: #B5651D;
+  --accent-2: #8C4D14;
+  --warn: #B5410F;
+  --good: #4A6B2E;
+  --serif: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+[data-theme="dark"] {
+  --paper: #1A1815;
+  --paper-2: #252220;
+  --ink: #F2EFE8;
+  --ink-2: #D9D4CA;
+  --muted: #9B968A;
+  --line: #3D3933;
+  --accent: #D88B4D;
+  --accent-2: #E5A870;
+  --warn: #E07A4A;
+  --good: #8FB059;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+body { max-width: 1280px; margin: 0 auto; padding: 32px 40px 96px; }
+header.top {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 16px; margin-bottom: 32px;
+}
+header.top h1 { font-family: var(--serif); font-size: 36px; font-weight: 600; letter-spacing: -0.02em; }
+header.top .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+header.top .actions { display: flex; gap: 8px; }
+button.btn {
+  background: var(--paper-2); color: var(--ink); border: 1px solid var(--line);
+  padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; border-radius: 2px;
+}
+button.btn:hover { background: var(--line); }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
+.kpi { background: var(--paper-2); border: 1px solid var(--line); padding: 18px 20px; border-radius: 2px; }
+.kpi .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+.kpi .value { font-family: var(--serif); font-size: 28px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.kpi .delta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+section { margin-bottom: 48px; }
+section > h2 { font-family: var(--serif); font-size: 22px; margin-bottom: 16px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.card { background: var(--paper-2); border: 1px solid var(--line); padding: 16px 18px; border-radius: 2px; }
+.card h3 { font-family: var(--serif); font-size: 16px; margin-bottom: 8px; }
+.card .meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.card .range { font-family: var(--serif); font-size: 14px; font-variant-numeric: tabular-nums; }
+.card .reco { margin-top: 10px; font-size: 12px; padding: 4px 8px; background: var(--paper); border-left: 2px solid var(--accent); border-radius: 1px; }
+.card.empty { opacity: 0.55; }
+.card.empty .range { color: var(--muted); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { background: var(--paper-2); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); cursor: pointer; user-select: none; }
+th:hover { background: var(--line); }
+th .arrow { opacity: 0.4; margin-left: 4px; font-size: 10px; }
+th.sorted .arrow { opacity: 1; color: var(--accent); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--serif); }
+tr:nth-child(even) td { background: rgba(245, 241, 234, 0.5); }
+[data-theme="dark"] tr:nth-child(even) td { background: rgba(45, 41, 36, 0.5); }
+tr:hover td { background: var(--paper-2); }
+.tag { display: inline-block; padding: 2px 7px; border-radius: 2px; font-size: 11px; font-weight: 500; }
+.tag.cyss { background: #E8DCC8; color: #5C3D14; }
+.tag.vigente { background: #D4E2C8; color: #2E4A1A; }
+.tag.borrador { background: #E8D5C8; color: #7A3A14; }
+.tag.legacy { background: #D8D8D8; color: #555; }
+.tag.warn { background: #F0D5C8; color: #8C3A14; }
+[data-theme="dark"] .tag.cyss { background: #5C4A2E; color: #E8D5B0; }
+[data-theme="dark"] .tag.vigente { background: #2E4A1A; color: #D4E2C8; }
+[data-theme="dark"] .tag.borrador { background: #7A4A2E; color: #E8D5B0; }
+[data-theme="dark"] .tag.legacy { background: #3D3933; color: #B8B0A0; }
+[data-theme="dark"] .tag.warn { background: #7A3A14; color: #F0D5B0; }
+.controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.controls input, .controls select { background: var(--paper); color: var(--ink); border: 1px solid var(--line); padding: 5px 10px; font: inherit; font-size: 13px; border-radius: 2px; }
+.controls input { min-width: 200px; }
+.controls label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+@media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } .kpis { grid-template-columns: 1fr 1fr; } }
+svg { display: block; max-width: 100%; }
+.timeline { position: relative; padding-left: 20px; border-left: 2px solid var(--line); }
+.timeline .event { position: relative; padding: 6px 0 6px 16px; }
+.timeline .event::before { content: ''; position: absolute; left: -7px; top: 14px; width: 12px; height: 12px; background: var(--accent); border: 2px solid var(--paper); border-radius: 50%; }
+.timeline .event .when { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.timeline .event .what { font-size: 14px; }
+.alerts { background: var(--paper-2); border-left: 3px solid var(--warn); padding: 16px 20px; border-radius: 2px; }
+.alerts h3 { color: var(--warn); font-family: var(--serif); font-size: 16px; margin-bottom: 8px; }
+.alerts ul { margin-left: 20px; }
+.alerts li { margin: 4px 0; }
+footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+@media print {
+  body { padding: 16px; max-width: none; font-size: 11px; }
+  .actions, .controls { display: none; }
+  section { break-inside: avoid; page-break-inside: avoid; }
+  table { font-size: 10px; }
+  th { background: #EEE; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>Reforma José María Mortés Lerma</h1>
+    <div class="sub">C/ José María Mortes Lerma 2, 7º PTA 28 · 46018 Valencia · informe generado el 2026-07-09</div>
+  </div>
+  <div class="actions">
+    <button id="theme" class="btn" title="Cambiar tema">◐ Tema</button>
+    <button class="btn" onclick="window.print()" title="Imprimir o guardar como PDF">⎙ Imprimir</button>
+  </div>
+</header>
+
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="label">Cyss v2.0 (general)</div>
+    <div class="value">56.677,94 €</div>
+    <div class="delta">04-06-2026 · IVA incl.</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Suma subcontratas</div>
+    <div class="value">94.670,93 €</div>
+    <div class="delta">10 ofertas independientes</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Δ gestión directa</div>
+    <div class="value">-37.992,99 €</div>
+    <div class="delta">Cyss − subcontratas</div>
+  </div>
+  <div class="kpi">
+    <div class="label">vs Cyss v1 (oct 2025)</div>
+    <div class="value">-1.759,69 €</div>
+    <div class="delta">-3.0% en 8 meses</div>
+  </div>
+</div>
+
+
+<section>
+  <h2>Por oficio</h2>
+  <div class="cards">
+<div class="card">
+  <h3>Albañilería</h3>
+  <div class="meta">2 oferta(s) con importe</div>
+  <div class="range">21.447,25 € – 28.864,55 €</div>
+  <div class="reco">Validar Toni vs Cyss (Toni +28%)</div>
+</div>
+
+
+<div class="card">
+  <h3>Carpintería exterior</h3>
+  <div class="meta">1 oferta(s) con importe</div>
+  <div class="range">10.151,48 €</div>
+  
+</div>
+
+
+<div class="card">
+  <h3>Carpintería interior</h3>
+  <div class="meta">3 oferta(s) con importe</div>
+  <div class="range">5.169,07 € – 15.356,49 €</div>
+  <div class="reco">Aceptar (3 oficios, 8 sem. de plazo)</div>
+</div>
+
+
+<div class="card">
+  <h3>Clima</h3>
+  <div class="meta">1 oferta(s) con importe</div>
+  <div class="range">7.474,29 €</div>
+  <div class="reco">Cubierto por David Barat (vía Cyss)</div>
+</div>
+
+
+<div class="card empty">
+  <h3>Demolición</h3>
+  <div class="meta">0 oferta(s) con importe</div>
+  <div class="range">—</div>
+  
+</div>
+
+
+<div class="card empty">
+  <h3>Detalle baños</h3>
+  <div class="meta">0 oferta(s) con importe</div>
+  <div class="range">—</div>
+  
+</div>
+
+
+<div class="card">
+  <h3>Electricidad</h3>
+  <div class="meta">2 oferta(s) con importe</div>
+  <div class="range">6.056,05 € – 6.402,11 €</div>
+  <div class="reco">Paracon (más reciente, financia en 4 hitos)</div>
+</div>
+
+
+<div class="card empty">
+  <h3>Encimeras</h3>
+  <div class="meta">0 oferta(s) con importe</div>
+  <div class="range">—</div>
+  <div class="reco">⚠ No en Cyss v2.0 · pedir oferta a marmolista</div>
+</div>
+
+
+<div class="card">
+  <h3>Fontanería</h3>
+  <div class="meta">2 oferta(s) con importe</div>
+  <div class="range">4.065,60 € – 11.927,23 €</div>
+  <div class="reco">Cubierto por David Barat (vía Cyss)</div>
+</div>
+
+
+<div class="card empty">
+  <h3>Pladur</h3>
+  <div class="meta">0 oferta(s) con importe</div>
+  <div class="range">—</div>
+  
+</div>
+</div>
+</section>
+
+
+<div class="alerts">
+  <h3>Acciones recomendadas</h3>
+  <ul><li>Pedir a Toni que cierre las 5 partidas con '?' en el presupuesto 472 (albañilería).</li><li>Pedir oferta de encimeras (DEKTON + SILESTONE) — no están en Cyss v2.0.</li><li>Aceptar Paracon para electricidad (más reciente, más barato, financia en 4 hitos).</li><li>Verificar que Cyss v2.0 cap. 03 (Pladur) incluye todo lo que estaba en cap. 02 de v1 (yeso, alicatado, pintura).</li><li>Pedir oferta desglosada de fontanería a David Barat (limpio, sin ayudas de albañilería) para comparar con Cyss cap. 05.</li></ul>
+</div>
+
+
+<section>
+  <h2>Tabla global de presupuestos</h2>
+  
+<div class="controls">
+  <input id="f-q" placeholder="Buscar...">
+  <select id="f-of"><option value="">— todos los oficios —</option>
+    <option value="Albañilería">Albañilería</option><option value="Carpintería exterior">Carpintería exterior</option><option value="Carpintería interior">Carpintería interior</option><option value="Clima">Clima</option><option value="Contratista general">Contratista general</option><option value="Demolición">Demolición</option><option value="Detalle baños">Detalle baños</option><option value="Electricidad">Electricidad</option><option value="Encimeras">Encimeras</option><option value="Fontanería">Fontanería</option><option value="Pladur">Pladur</option>
+  </select>
+  <select id="f-est"><option value="">— todos los estados —</option>
+    <option value="vigente">Vigentes</option>
+    <option value="borrador">Borradores</option>
+    <option value="legacy">Legacy</option>
+    <option value="cyss">Cyss (general)</option>
+    <option value="sofia">Otro proyecto</option>
+  </select>
+  <button id="f-reset" class="btn">Reset</button>
+  <span style="margin-left:auto; color: var(--muted); font-size: 12px;">mostrando <span id="f-count">0</span></span>
+</div>
+<table id="tbl-main">
+  <thead>
+    <tr><th>Oficio<span class="arrow"></span></th><th>Contratista<span class="arrow"></span></th>
+        <th>Nº<span class="arrow"></span></th><th>Fecha<span class="arrow"></span></th>
+        <th class="num">Base (sin IVA)<span class="arrow"></span></th>
+        <th class="num">Total (IVA incl.)<span class="arrow"></span></th>
+        <th>Estado<span class="arrow"></span></th>
+        <th>Doc</th></tr>
+  </thead>
+  <tbody>
+<tr data-oficio="Albañilería" data-estado="sofia">
+  <td>Albañilería</td>
+  <td>Toni</td>
+  <td>—</td>
+  <td>2025-11-09</td>
+  <td class="num" data-v="23855.0">23.855,00 €</td>
+  <td class="num" data-v="28864.55"><strong>28.864,55 €</strong></td>
+  <td><span class="tag sofia">otro proyecto</span></td>
+  <td><a href="Albañilería/Toni_PRESUPUESTO NUMERO 468 PROYECTO SOFIA.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Albañilería" data-estado="sofia">
+  <td>Albañilería</td>
+  <td>Toni</td>
+  <td>—</td>
+  <td>2026-03-17</td>
+  <td class="num" data-v="17725.0">17.725,00 €</td>
+  <td class="num" data-v="21447.25"><strong>21.447,25 €</strong></td>
+  <td><span class="tag sofia">otro proyecto</span></td>
+  <td><a href="Albañilería/Toni_PRESUPUESTO NUMERO 472 REFORMA CALLE JOSE MARIA LERMA N 2 PTA 28.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Albañilería" data-estado="legacy">
+  <td>Albañilería</td>
+  <td>desconocido_Albañilería</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Albañilería/desconocido_Albañilería.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Carpintería exterior" data-estado="vigente">
+  <td>Carpintería exterior</td>
+  <td>Ventanas Nacher_SOFIA</td>
+  <td>1040/1</td>
+  <td>2025-10-14</td>
+  <td class="num" data-v="8389.65">8.389,65 €</td>
+  <td class="num" data-v="10151.48"><strong>10.151,48 €</strong></td>
+  <td><span class="tag vigente">vigente</span></td>
+  <td><a href="Carpintería exterior/Ventanas Nacher_SOFIA.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Carpintería exterior" data-estado="legacy">
+  <td>Carpintería exterior</td>
+  <td>desconocido_Carpintería exterior</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Carpintería exterior/desconocido_Carpintería exterior.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Carpintería interior" data-estado="vigente">
+  <td>Carpintería interior</td>
+  <td>Valenzuela_PPTO JOSE MARIA MARTES LERMA ARMARIOS</td>
+  <td>—</td>
+  <td>2025-11-05</td>
+  <td class="num" data-v="12691.31">12.691,31 €</td>
+  <td class="num" data-v="15356.49"><strong>15.356,49 €</strong></td>
+  <td><span class="tag vigente">vigente</span></td>
+  <td><a href="Carpintería interior/Valenzuela_PPTO JOSE MARIA MARTES LERMA ARMARIOS.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Carpintería interior" data-estado="vigente">
+  <td>Carpintería interior</td>
+  <td>Valenzuela_PPTO JOSE MARIA MARTES LERMA COCINA</td>
+  <td>—</td>
+  <td>2025-11-05</td>
+  <td class="num" data-v="5472.2">5.472,20 €</td>
+  <td class="num" data-v="6621.36"><strong>6.621,36 €</strong></td>
+  <td><span class="tag vigente">vigente</span></td>
+  <td><a href="Carpintería interior/Valenzuela_PPTO JOSE MARIA MARTES LERMA COCINA.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Carpintería interior" data-estado="vigente">
+  <td>Carpintería interior</td>
+  <td>Valenzuela_PPTO JOSE MARIA MARTES LERMA PUERTAS</td>
+  <td>—</td>
+  <td>2025-11-05</td>
+  <td class="num" data-v="4271.96">4.271,96 €</td>
+  <td class="num" data-v="5169.07"><strong>5.169,07 €</strong></td>
+  <td><span class="tag vigente">vigente</span></td>
+  <td><a href="Carpintería interior/Valenzuela_PPTO JOSE MARIA MARTES LERMA PUERTAS.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Carpintería interior" data-estado="legacy">
+  <td>Carpintería interior</td>
+  <td>desconocido_Carpintería interior</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Carpintería interior/desconocido_Carpintería interior.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Clima" data-estado="vigente">
+  <td>Clima</td>
+  <td>David Barat</td>
+  <td>000084</td>
+  <td>2025-11-17</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v="7474.29"><strong>7.474,29 €</strong></td>
+  <td><span class="tag vigente">vigente</span></td>
+  <td><a href="Clima/David Barat_Presupuesto 1-000084.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Clima" data-estado="legacy">
+  <td>Clima</td>
+  <td>desconocido_Clima</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Clima/desconocido_Clima.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Contratista general" data-estado="cyss">
+  <td>Contratista general</td>
+  <td>Cyss_v1_resumen</td>
+  <td>—</td>
+  <td>2025-10-17</td>
+  <td class="num" data-v="53125.12">53.125,12 €</td>
+  <td class="num" data-v="58437.63"><strong>58.437,63 €</strong></td>
+  <td><span class="tag cyss">Cyss</span></td>
+  <td><a href="Contratista general/Cyss_v1_resumen.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Contratista general" data-estado="cyss">
+  <td>Contratista general</td>
+  <td>Cyss_v2.0_resumen</td>
+  <td>—</td>
+  <td>2026-06-04</td>
+  <td class="num" data-v="51525.4">51.525,40 €</td>
+  <td class="num" data-v="56677.94"><strong>56.677,94 €</strong></td>
+  <td><span class="tag cyss">Cyss</span></td>
+  <td><a href="Contratista general/Cyss_v2.0_resumen.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Demolición" data-estado="legacy">
+  <td>Demolición</td>
+  <td>desconocido_Demolición</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Demolición/desconocido_Demolición.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Detalle baños" data-estado="legacy">
+  <td>Detalle baños</td>
+  <td>desconocido_Detalle baños</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Detalle baños/desconocido_Detalle baños.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Electricidad" data-estado="vigente">
+  <td>Electricidad</td>
+  <td>Paracon</td>
+  <td>2026-7</td>
+  <td>2026-03-23</td>
+  <td class="num" data-v="5005.0">5.005,00 €</td>
+  <td class="num" data-v="6056.05"><strong>6.056,05 €</strong></td>
+  <td><span class="tag vigente">vigente</span></td>
+  <td><a href="Electricidad/Paracon_2026-7 TONI AMORES.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Electricidad" data-estado="borrador">
+  <td>Electricidad</td>
+  <td>Poveda</td>
+  <td>9</td>
+  <td>2025-11-06</td>
+  <td class="num" data-v="5291.0">5.291,00 €</td>
+  <td class="num" data-v="6402.11"><strong>6.402,11 €</strong></td>
+  <td><span class="tag borrador">borrador</span></td>
+  <td><a href="Electricidad/Poveda_Presupuesto borrador 2025-11-06.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Electricidad" data-estado="legacy">
+  <td>Electricidad</td>
+  <td>desconocido_Electricidad</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Electricidad/desconocido_Electricidad.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Encimeras" data-estado="legacy">
+  <td>Encimeras</td>
+  <td>desconocido_Encimeras</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Encimeras/desconocido_Encimeras.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Fontanería" data-estado="vigente">
+  <td>Fontanería</td>
+  <td>David Barat</td>
+  <td>000022</td>
+  <td>2026-03-10</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v="11927.23"><strong>11.927,23 €</strong></td>
+  <td><span class="tag vigente">vigente</span></td>
+  <td><a href="Fontanería/David Barat_Presupuesto 1-000022 DEF.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Fontanería" data-estado="vigente">
+  <td>Fontanería</td>
+  <td>David Barat</td>
+  <td>000079</td>
+  <td>2025-11-04</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v="4065.6"><strong>4.065,60 €</strong></td>
+  <td><span class="tag vigente">vigente</span></td>
+  <td><a href="Fontanería/David Barat_Presupuesto 1-000079.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Fontanería" data-estado="legacy">
+  <td>Fontanería</td>
+  <td>desconocido_Fontanería</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Fontanería/desconocido_Fontanería.pdf" target="_blank">PDF</a></td>
+</tr>
+<tr data-oficio="Pladur" data-estado="legacy">
+  <td>Pladur</td>
+  <td>desconocido_Pladur</td>
+  <td>—</td>
+  <td>—</td>
+  <td class="num" data-v="">—</td>
+  <td class="num" data-v=""><strong>—</strong></td>
+  <td><span class="tag legacy">legacy</span></td>
+  <td><a href="Pladur/desconocido_Pladur.pdf" target="_blank">PDF</a></td>
+</tr></tbody>
+</table>
+
+</section>
+
+<section>
+  <h2>Comparativa visual</h2>
+  <div class="chart-row">
+    <div>
+      <h3 style="font-family: var(--serif); font-size: 16px; margin-bottom: 8px;">% por capítulo · Cyss v2.0</h3>
+      <svg viewBox="0 0 320 380" xmlns="http://www.w3.org/2000/svg">
+<path d="M 160.00 10.00 A 150.0 150.0 0 0 1 239.36 32.71 L 203.65 89.99 A 82.5 82.5 0 0 0 160.00 77.50 Z" fill="#B5651D" />
+<path d="M 239.36 32.71 A 150.0 150.0 0 0 1 276.71 254.23 L 224.19 211.83 A 82.5 82.5 0 0 0 203.65 89.99 Z" fill="#8C4D14" />
+<path d="M 276.71 254.23 A 150.0 150.0 0 0 1 104.00 299.16 L 129.20 236.54 A 82.5 82.5 0 0 0 224.19 211.83 Z" fill="#3D5A80" />
+<path d="M 104.00 299.16 A 150.0 150.0 0 0 1 17.56 207.02 L 81.66 185.86 A 82.5 82.5 0 0 0 129.20 236.54 Z" fill="#5B8C5A" />
+<path d="M 17.56 207.02 A 150.0 150.0 0 0 1 13.54 127.60 L 79.45 142.18 A 82.5 82.5 0 0 0 81.66 185.86 Z" fill="#A35D5D" />
+<path d="M 13.54 127.60 A 150.0 150.0 0 0 1 81.72 32.04 L 116.95 89.62 A 82.5 82.5 0 0 0 79.45 142.18 Z" fill="#C9943D" />
+<path d="M 81.72 32.04 A 150.0 150.0 0 0 1 107.20 19.60 L 130.96 82.78 A 82.5 82.5 0 0 0 116.95 89.62 Z" fill="#6B6B6B" />
+<path d="M 107.20 19.60 A 150.0 150.0 0 0 1 160.00 10.00 L 160.00 77.50 A 82.5 82.5 0 0 0 130.96 82.78 Z" fill="#8E7B95" />
+<text x="160.0" y="156.0" text-anchor="middle" font-family="Source Serif 4, Georgia, serif" font-size="22" font-weight="600" fill="var(--ink)">51.525,40 €</text>
+<text x="160.0" y="174.0" text-anchor="middle" font-size="10" fill="var(--muted)">total proyecto</text>
+</svg><div class="legend"><span><i style="background:#B5651D"></i>01 DEMOLICIÓN · 8.9%</span><span><i style="background:#8C4D14"></i>02 ALBAÑILERÍA · 26.9%</span><span><i style="background:#3D5A80"></i>03 PLADUR · 20.3%</span><span><i style="background:#5B8C5A"></i>04 INSTALACIÓN ELÉCTRICA · 13.8%</span><span><i style="background:#A35D5D"></i>05 INSTALACIÓN FONTANERÍA · 8.5%</span><span><i style="background:#C9943D"></i>06 INSTALACIÓN CLIMATIZACIÓN · 12.8%</span><span><i style="background:#6B6B6B"></i>13 ILUMINACIÓN · 3.0%</span><span><i style="background:#8E7B95"></i>14 VARIOS · 5.7%</span></div>
+    </div>
+    <div>
+      <h3 style="font-family: var(--serif); font-size: 16px; margin-bottom: 8px;">Subcontratas por oficio (cuando hay comparativa)</h3>
+      <svg viewBox="0 0 520 352" xmlns="http://www.w3.org/2000/svg" style="font-family: Inter, sans-serif; font-size: 11px;">
+<text x="0" y="21" font-family="Source Serif 4, serif" font-size="13" font-weight="600" fill="var(--ink)">Albañilería</text>
+<text x="0" y="43" fill="var(--muted)">Toni</text>
+<rect x="180" y="30" width="240.0" height="18" fill="#C77B5C" rx="1"/>
+<text x="426.0" y="43" font-family="Source Serif 4, serif" fill="var(--ink)">28.864,55 €</text>
+<text x="0" y="71" fill="var(--muted)">Toni</text>
+<rect x="180" y="58" width="178.3" height="18" fill="#C77B5C" rx="1"/>
+<text x="364.3" y="71" font-family="Source Serif 4, serif" fill="var(--ink)">21.447,25 €</text>
+<text x="0" y="103" font-family="Source Serif 4, serif" font-size="13" font-weight="600" fill="var(--ink)">Carpintería interior</text>
+<text x="0" y="125" fill="var(--muted)">Valenzuela_PPTO JOSE MARIA MARTES LERMA </text>
+<rect x="180" y="112" width="127.7" height="18" fill="#B5651D" rx="1"/>
+<text x="313.7" y="125" font-family="Source Serif 4, serif" fill="var(--ink)">15.356,49 €</text>
+<text x="0" y="153" fill="var(--muted)">Valenzuela_PPTO JOSE MARIA MARTES LERMA </text>
+<rect x="180" y="140" width="55.1" height="18" fill="#B5651D" rx="1"/>
+<text x="241.1" y="153" font-family="Source Serif 4, serif" fill="var(--ink)">6.621,36 €</text>
+<text x="0" y="181" fill="var(--muted)">Valenzuela_PPTO JOSE MARIA MARTES LERMA </text>
+<rect x="180" y="168" width="43.0" height="18" fill="#B5651D" rx="1"/>
+<text x="229.0" y="181" font-family="Source Serif 4, serif" fill="var(--ink)">5.169,07 €</text>
+<text x="0" y="213" font-family="Source Serif 4, serif" font-size="13" font-weight="600" fill="var(--ink)">Electricidad</text>
+<text x="0" y="235" fill="var(--muted)">Paracon</text>
+<rect x="180" y="222" width="50.4" height="18" fill="#B5651D" rx="1"/>
+<text x="236.4" y="235" font-family="Source Serif 4, serif" fill="var(--ink)">6.056,05 €</text>
+<text x="0" y="263" fill="var(--muted)">Poveda</text>
+<rect x="180" y="250" width="53.2" height="18" fill="#D4A373" rx="1"/>
+<text x="239.2" y="263" font-family="Source Serif 4, serif" fill="var(--ink)">6.402,11 €</text>
+<text x="0" y="295" font-family="Source Serif 4, serif" font-size="13" font-weight="600" fill="var(--ink)">Fontanería</text>
+<text x="0" y="317" fill="var(--muted)">David Barat</text>
+<rect x="180" y="304" width="99.2" height="18" fill="#B5651D" rx="1"/>
+<text x="285.2" y="317" font-family="Source Serif 4, serif" fill="var(--ink)">11.927,23 €</text>
+<text x="0" y="345" fill="var(--muted)">David Barat</text>
+<rect x="180" y="332" width="33.8" height="18" fill="#B5651D" rx="1"/>
+<text x="219.8" y="345" font-family="Source Serif 4, serif" fill="var(--ink)">4.065,60 €</text>
+</svg>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Desglose de Cyss v2.0 (contratista general)</h2>
+  
+<table id="tbl-cap">
+  <thead><tr><th>Capítulo</th><th class="num">€ sin IVA</th><th class="num">%</th></tr></thead>
+  <tbody>
+<tr>
+  <td>01 DEMOLICIÓN</td>
+  <td class="num" data-v="4571.48">4.571,48 €</td>
+  <td class="num" data-v="8.87">8.87%</td>
+</tr>
+<tr>
+  <td>02 ALBAÑILERÍA</td>
+  <td class="num" data-v="13880.05">13.880,05 €</td>
+  <td class="num" data-v="26.94">26.94%</td>
+</tr>
+<tr>
+  <td>03 PLADUR</td>
+  <td class="num" data-v="10448.45">10.448,45 €</td>
+  <td class="num" data-v="20.28">20.28%</td>
+</tr>
+<tr>
+  <td>04 INSTALACIÓN ELÉCTRICA</td>
+  <td class="num" data-v="7129.2">7.129,20 €</td>
+  <td class="num" data-v="13.84">13.84%</td>
+</tr>
+<tr>
+  <td>05 INSTALACIÓN FONTANERÍA</td>
+  <td class="num" data-v="4400.0">4.400,00 €</td>
+  <td class="num" data-v="8.54">8.54%</td>
+</tr>
+<tr>
+  <td>06 INSTALACIÓN CLIMATIZACIÓN</td>
+  <td class="num" data-v="6594.0">6.594,00 €</td>
+  <td class="num" data-v="12.8">12.80%</td>
+</tr>
+<tr>
+  <td>13 ILUMINACIÓN</td>
+  <td class="num" data-v="1552.22">1.552,22 €</td>
+  <td class="num" data-v="3.01">3.01%</td>
+</tr>
+<tr>
+  <td>14 VARIOS</td>
+  <td class="num" data-v="2950.0">2.950,00 €</td>
+  <td class="num" data-v="5.73">5.73%</td>
+</tr>
+<tr style="font-weight:600; background: var(--paper-2);">
+  <td>TOTAL ejecución material</td>
+  <td class="num">51.525,40 €</td>
+  <td class="num">100%</td>
+</tr>
+<tr>
+  <td>IVA 10%</td>
+  <td class="num">5.152,54 €</td>
+  <td></td>
+</tr>
+<tr style="font-weight:600;">
+  <td>TOTAL con IVA</td>
+  <td class="num">56.677,94 €</td>
+  <td></td>
+</tr></tbody>
+</table>
+
+  <p class="meta" style="margin-top: 12px; color: var(--muted); font-size: 12px;">
+    Movimientos clave desde v1: Albañilería baja de 22.700 € a 13.880 € (-39%) porque se mueve a Pladur, que sube de 4.767 € a 10.448 € (+119%). Demolición +27%. Total neto: −1.760 € (−3%).
+  </p>
+</section>
+
+<section>
+  <h2>Cronología de presupuestos</h2>
+  <div class="timeline">
+<div class="event">
+  <div class="when">2025-10-14</div>
+  <div class="what"><strong>Carpintería exterior</strong> — Ventanas Nacher_SOFIA · 10.151,48 €</div>
+</div>
+<div class="event">
+  <div class="when">2025-10-17</div>
+  <div class="what"><strong>Contratista general</strong> — Cyss_v1_resumen · 58.437,63 €</div>
+</div>
+<div class="event">
+  <div class="when">2025-11-04</div>
+  <div class="what"><strong>Fontanería</strong> — David Barat · 4.065,60 €</div>
+</div>
+<div class="event">
+  <div class="when">2025-11-05</div>
+  <div class="what"><strong>Carpintería interior</strong> — Valenzuela_PPTO JOSE MARIA MARTES LERMA  · 15.356,49 €</div>
+</div>
+<div class="event">
+  <div class="when">2025-11-05</div>
+  <div class="what"><strong>Carpintería interior</strong> — Valenzuela_PPTO JOSE MARIA MARTES LERMA  · 6.621,36 €</div>
+</div>
+<div class="event">
+  <div class="when">2025-11-05</div>
+  <div class="what"><strong>Carpintería interior</strong> — Valenzuela_PPTO JOSE MARIA MARTES LERMA  · 5.169,07 €</div>
+</div>
+<div class="event">
+  <div class="when">2025-11-06</div>
+  <div class="what"><strong>Electricidad</strong> — Poveda · 6.402,11 €</div>
+</div>
+<div class="event">
+  <div class="when">2025-11-09</div>
+  <div class="what"><strong>Albañilería</strong> — Toni · 28.864,55 €</div>
+</div>
+<div class="event">
+  <div class="when">2025-11-17</div>
+  <div class="what"><strong>Clima</strong> — David Barat · 7.474,29 €</div>
+</div>
+<div class="event">
+  <div class="when">2026-03-10</div>
+  <div class="what"><strong>Fontanería</strong> — David Barat · 11.927,23 €</div>
+</div>
+<div class="event">
+  <div class="when">2026-03-17</div>
+  <div class="what"><strong>Albañilería</strong> — Toni · 21.447,25 €</div>
+</div>
+<div class="event">
+  <div class="when">2026-03-23</div>
+  <div class="what"><strong>Electricidad</strong> — Paracon · 6.056,05 €</div>
+</div>
+<div class="event">
+  <div class="when">2026-06-04</div>
+  <div class="what"><strong>Contratista general</strong> — Cyss_v2.0_resumen · 56.677,94 €</div>
+</div></div>
+</section>
+
+<footer>
+  <p>Documento generado automáticamente. Datos extraídos de los PDFs con <code>pdfplumber</code>. Parsers en <code>scripts/</code>. Hallazgos completos en <code>informes/</code>.</p>
+  <p>Total calculado incluye IVA cuando está disponible. Cuando un PDF no muestra el total escrito, se calcula sumando las partidas (marcado en el campo "Estado" del JSON).</p>
+</footer>
+
+<script>
+(function() {
+  // ---- Table sort + filter ----
+  function setupTable(tid) {
+    const t = document.getElementById(tid);
+    if (!t) return;
+    const tbody = t.tBodies[0];
+    const headers = t.tHead.rows[0].cells;
+    const sortKey = { col: -1, asc: true };
+    headers.forEach((th, i) => {
+      th.addEventListener('click', () => {
+        if (sortKey.col === i) sortKey.asc = !sortKey.asc;
+        else { sortKey.col = i; sortKey.asc = true; }
+        const rows = Array.from(tbody.rows);
+        rows.sort((a, b) => {
+          const av = a.cells[i].dataset.v || a.cells[i].textContent.trim();
+          const bv = b.cells[i].dataset.v || b.cells[i].textContent.trim();
+          const an = parseFloat(av), bn = parseFloat(bv);
+          if (!isNaN(an) && !isNaN(bn)) return sortKey.asc ? an - bn : bn - an;
+          return sortKey.asc ? String(av).localeCompare(String(bv), 'es') : String(bv).localeCompare(String(av), 'es');
+        });
+        rows.forEach(r => tbody.appendChild(r));
+        headers.forEach((h, j) => {
+          h.classList.toggle('sorted', j === i);
+          h.querySelector('.arrow').textContent = j === i ? (sortKey.asc ? '▲' : '▼') : '';
+        });
+      });
+    });
+  }
+  ['tbl-main','tbl-cap'].forEach(setupTable);
+
+  // ---- Filter ----
+  function applyFilter() {
+    const txt = (document.getElementById('f-q').value || '').toLowerCase();
+    const of = document.getElementById('f-of').value;
+    const est = document.getElementById('f-est').value;
+    const tbody = document.getElementById('tbl-main').tBodies[0];
+    Array.from(tbody.rows).forEach(tr => {
+      const text = tr.textContent.toLowerCase();
+      const ofOk = !of || tr.dataset.oficio === of;
+      const estOk = !est || tr.dataset.estado === est;
+      const txtOk = !txt || text.includes(txt);
+      tr.style.display = (ofOk && estOk && txtOk) ? '' : 'none';
+    });
+    updateCount();
+  }
+  function updateCount() {
+    const tbody = document.getElementById('tbl-main').tBodies[0];
+    const n = Array.from(tbody.rows).filter(r => r.style.display !== 'none').length;
+    const tot = tbody.rows.length;
+    document.getElementById('f-count').textContent = n + ' / ' + tot;
+  }
+  ['f-q','f-of','f-est'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', applyFilter);
+  });
+  document.getElementById('f-reset').addEventListener('click', () => {
+    document.getElementById('f-q').value = '';
+    document.getElementById('f-of').value = '';
+    document.getElementById('f-est').value = '';
+    applyFilter();
+  });
+  updateCount();
+
+  // ---- Theme ----
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+  document.getElementById('theme').addEventListener('click', () => {
+    const cur = document.documentElement.dataset.theme;
+    const next = cur === 'dark' ? '' : 'dark';
+    if (next) document.documentElement.dataset.theme = next;
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', next);
+  });
+})();
+</script>
+</body>
+</html>

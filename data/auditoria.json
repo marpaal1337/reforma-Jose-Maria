@@ -1,0 +1,1708 @@
+[
+  {
+    "archivo": "Albañilería__Toni_PRESUPUESTO NUMERO 468 PROYECTO SOFIA.txt",
+    "formato": "toni_lista",
+    "moneda": "EUR",
+    "iva_incluido": false,
+    "nota": "Total no escrito en el PDF; se calcula como suma de las partidas con importe.",
+    "cliente_cabecera": "SOFIA",
+    "fecha": "2025-11-09",
+    "secciones": [
+      {
+        "nombre": "DEMOLICION",
+        "partidas": [
+          {
+            "num": "1.1",
+            "descripcion": "DEMOLICION COCINA",
+            "importe": 650.0
+          },
+          {
+            "num": "1.2",
+            "descripcion": "DEMOLICION BAÑO",
+            "importe": 500.0
+          },
+          {
+            "num": "1.3",
+            "descripcion": "DEMOLICION LADRILLO",
+            "importe": 650.0
+          },
+          {
+            "num": "1.4",
+            "descripcion": "DEMOLICION FALSO TECHO",
+            "importe": 180.0
+          },
+          {
+            "num": "1.5",
+            "descripcion": "HUECO VENTANA",
+            "importe": 200.0
+          },
+          {
+            "num": "1.6",
+            "descripcion": "LEVANTADO PAVIMENTO",
+            "importe": 180.0
+          },
+          {
+            "num": "1.7",
+            "descripcion": "LEVANTADO RODAPIE",
+            "importe": 600.0
+          },
+          {
+            "num": "1.8",
+            "descripcion": "LEVANTADO VENTANAS 6",
+            "importe": 150.0
+          },
+          {
+            "num": "1.9",
+            "descripcion": "LEVANTADO VENTANAL",
+            "importe": 210.0
+          },
+          {
+            "num": "1.10",
+            "descripcion": "DESMONTAJE PUERTAS",
+            "importe": 250.0
+          },
+          {
+            "num": "1.11",
+            "descripcion": "DESMONTAJE ARMARIO",
+            "importe": 50.0
+          },
+          {
+            "num": "1.12",
+            "descripcion": "DESMONTAJE CALENTADOR",
+            "importe": 80.0
+          },
+          {
+            "num": "1.13",
+            "descripcion": "DESMONTAJE SPLIT",
+            "importe": null
+          },
+          {
+            "num": "1.14",
+            "descripcion": "DESMONTAJE SPLIT CON RECUPERACION",
+            "importe": null
+          },
+          {
+            "num": "2.1",
+            "descripcion": "FACHADA LH11 Y LH4",
+            "importe": 150.0
+          },
+          {
+            "num": "2.2",
+            "descripcion": "LH7",
+            "importe": 900.0
+          },
+          {
+            "num": "2.3",
+            "descripcion": "LH4",
+            "importe": 3700.0
+          },
+          {
+            "num": "2.4",
+            "descripcion": "YESO",
+            "importe": 550.0
+          },
+          {
+            "num": "2.5",
+            "descripcion": "FALCADO VENTANAS CON MODIFICACION HUECO",
+            "importe": 1000.0
+          },
+          {
+            "num": "2.6",
+            "descripcion": "FALCADO VENTANS SIN MODIFICACION",
+            "importe": 250.0
+          },
+          {
+            "num": "2.7",
+            "descripcion": "FALCADO VENTANAL",
+            "importe": 350.0
+          },
+          {
+            "num": "2.8",
+            "descripcion": "FALCADO VENTANAL CON MODIFICACION",
+            "importe": 180.0
+          },
+          {
+            "num": "2.9",
+            "descripcion": "FALCADO PREMARCO MADERA 5",
+            "importe": 420.0
+          },
+          {
+            "num": "2.10",
+            "descripcion": "VIERTEAGUAS PIEDRA 2",
+            "importe": 200.0
+          },
+          {
+            "num": "2.11",
+            "descripcion": "COLOCACION CASONETO",
+            "importe": 550.0
+          },
+          {
+            "num": "2,12",
+            "descripcion": "NIVELACION MORTERO",
+            "importe": 3150.0
+          },
+          {
+            "num": "2.13",
+            "descripcion": "COLOCACION PAVIMENTO",
+            "importe": 350.0
+          },
+          {
+            "num": "2.14",
+            "descripcion": "COLOCACION PAVIMENTO",
+            "importe": 800.0
+          },
+          {
+            "num": "2.15",
+            "descripcion": "MAESTREADO MORTERO",
+            "importe": 1400.0
+          },
+          {
+            "num": "2.16",
+            "descripcion": "ALICATADO",
+            "importe": 85.0
+          },
+          {
+            "num": "2.17",
+            "descripcion": "INGLETES AZULEJO",
+            "importe": 200.0
+          },
+          {
+            "num": "2.18",
+            "descripcion": "HORNACINA",
+            "importe": 150.0
+          },
+          {
+            "num": "2.19",
+            "descripcion": "COLOCACION PLATO DUCHA",
+            "importe": 200.0
+          },
+          {
+            "num": "2.20",
+            "descripcion": "COLOCACION BAÑERA",
+            "importe": 220.0
+          },
+          {
+            "num": "2.21",
+            "descripcion": "COLOCACION CISTERNA EMPOTRADA",
+            "importe": 75.0
+          },
+          {
+            "num": "2.22",
+            "descripcion": "REJILLA BAÑO",
+            "importe": 85.0
+          },
+          {
+            "num": "2.23",
+            "descripcion": "TUBO FLEXIBLE COCINA",
+            "importe": null
+          },
+          {
+            "num": "2.24",
+            "descripcion": "PICADO PILAR",
+            "importe": 350.0
+          },
+          {
+            "num": "2.25",
+            "descripcion": "PINTURA",
+            "importe": 2400.0
+          },
+          {
+            "num": "14.1",
+            "descripcion": "LIMPIEZA OBRA",
+            "importe": 600.0
+          },
+          {
+            "num": "14.3",
+            "descripcion": "8 CONTENEDORES",
+            "importe": 1840.0
+          }
+        ]
+      }
+    ],
+    "total_calculado_sin_iva": 23855.0,
+    "total_calculado_con_iva": 28864.55,
+    "n_partidas": 41,
+    "n_partidas_con_importe": 38,
+    "oficio": "Albañilería",
+    "contratista": "Toni"
+  },
+  {
+    "archivo": "Albañilería__Toni_PRESUPUESTO NUMERO 472 REFORMA CALLE JOSE MARIA LERMA N 2 PTA 28.txt",
+    "formato": "toni_lista",
+    "moneda": "EUR",
+    "iva_incluido": false,
+    "nota": "Total no escrito en el PDF; se calcula como suma de las partidas con importe.",
+    "cliente_cabecera": "SOFIA",
+    "fecha": "2026-03-17",
+    "secciones": [
+      {
+        "nombre": "DEMOLICIONES",
+        "partidas": [
+          {
+            "num": "1.1",
+            "descripcion": "DEMOLICION COCINA",
+            "importe": 650.0
+          },
+          {
+            "num": "1.2",
+            "descripcion": "DEMOLICION BAÑO COMPLETO",
+            "importe": 1000.0
+          },
+          {
+            "num": "1.3",
+            "descripcion": "DEMOLICION LADRILLO HUECO",
+            "importe": 2350.0
+          },
+          {
+            "num": "1.4",
+            "descripcion": "DEMOLICION DE FALSO TECHO",
+            "importe": 180.0
+          },
+          {
+            "num": "1,5",
+            "descripcion": "AMPLIACION HUECO EN FACHADA",
+            "importe": 200.0
+          },
+          {
+            "num": "1.6",
+            "descripcion": "PICADO DE PAVIMENTO",
+            "importe": 220.0
+          },
+          {
+            "num": "1.7",
+            "descripcion": "PICADO DE RODAPIE",
+            "importe": 180.0
+          },
+          {
+            "num": "1.8",
+            "descripcion": "PICADO DE VENTANA",
+            "importe": 150.0
+          },
+          {
+            "num": "1'9",
+            "descripcion": "PICADO DE VENTANAL",
+            "importe": 210.0
+          },
+          {
+            "num": "1.10",
+            "descripcion": "DESMONTAJE DE PUERTAS INTERIOR",
+            "importe": 250.0
+          },
+          {
+            "num": "1.11",
+            "descripcion": "DESMONTAJE DE ARMARIO EMPOTRADO",
+            "importe": 50.0
+          },
+          {
+            "num": "1.12",
+            "descripcion": "DESMONTAJE DE CALENTADOR",
+            "importe": 80.0
+          },
+          {
+            "num": "1.13",
+            "descripcion": "DESMONTAJE DE SPLIT",
+            "importe": null
+          },
+          {
+            "num": "1,14",
+            "descripcion": "DESMONTAJE DE SPLIT CON RECUPERACION",
+            "importe": null
+          },
+          {
+            "num": "2.1",
+            "descripcion": "COLOCACION LADRILLO",
+            "importe": 280.0
+          },
+          {
+            "num": "2.2",
+            "descripcion": "FALCADO DE VENTANA CON MODIFICACION",
+            "importe": 650.0
+          },
+          {
+            "num": "2.3",
+            "descripcion": "FALCADO DE VENTANA",
+            "importe": 1000.0
+          },
+          {
+            "num": "2.4",
+            "descripcion": "FALCADO DE VENTANA",
+            "importe": 250.0
+          },
+          {
+            "num": "2.5",
+            "descripcion": "FALCADO DE VENTANAL CON MODIFICACION",
+            "importe": 350.0
+          },
+          {
+            "num": "2.6",
+            "descripcion": "FALCADO DE PREMARCOS",
+            "importe": null
+          },
+          {
+            "num": "2.7",
+            "descripcion": "COLOCACION DE VIERTEAGUAS",
+            "importe": null
+          },
+          {
+            "num": "2.8",
+            "descripcion": "COLOCACION DE CASONETO",
+            "importe": 3780.0
+          },
+          {
+            "num": "2.9",
+            "descripcion": "COLOCACION DE PAVIMENTO",
+            "importe": 350.0
+          },
+          {
+            "num": "2.10",
+            "descripcion": "COLOCACION DE PAVIMENTO",
+            "importe": 1680.0
+          },
+          {
+            "num": "2.11",
+            "descripcion": "COLOCACION DE ALICATADO",
+            "importe": 120.0
+          },
+          {
+            "num": "2.12",
+            "descripcion": "REALIZACION DE INGLETES EN AZULEJOS",
+            "importe": 200.0
+          },
+          {
+            "num": "2.13",
+            "descripcion": "HORNACINA BAÑO",
+            "importe": 150.0
+          },
+          {
+            "num": "2.14",
+            "descripcion": "COLOCACION DE PLATO DUCHA",
+            "importe": 200.0
+          },
+          {
+            "num": "2.15",
+            "descripcion": "COLOCACION DE BAÑERA",
+            "importe": 220.0
+          },
+          {
+            "num": "2.16",
+            "descripcion": "FALCADO DE CISTERNA",
+            "importe": 75.0
+          },
+          {
+            "num": "2.17",
+            "descripcion": "REJILLA ESTRACCION BAÑO",
+            "importe": 150.0
+          },
+          {
+            "num": "2.18",
+            "descripcion": "TUBO FLEXIBLE PARA CAMPANA",
+            "importe": 350.0
+          },
+          {
+            "num": "2.19",
+            "descripcion": "PICADO DE PILAR",
+            "importe": 2400.0
+          },
+          {
+            "num": "2.20",
+            "descripcion": "PINTURA PLASTICA",
+            "importe": null
+          }
+        ]
+      }
+    ],
+    "total_calculado_sin_iva": 17725.0,
+    "total_calculado_con_iva": 21447.25,
+    "n_partidas": 34,
+    "n_partidas_con_importe": 29,
+    "oficio": "Albañilería",
+    "contratista": "Toni"
+  },
+  {
+    "archivo": "Albañilería__desconocido_Albañilería.txt",
+    "formato": "desconocido",
+    "oficio": "Albañilería",
+    "contratista": "desconocido_Albañilería"
+  },
+  {
+    "archivo": "Carpintería exterior__Ventanas Nacher_SOFIA.txt",
+    "formato": "nacher_ventanas",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "num_presupuesto": "1040/1",
+    "fecha": "2025-10-14",
+    "ventanas": [],
+    "subtotal": 8389.65,
+    "base_imponible": 8389.65,
+    "iva_pct": 21.0,
+    "importe_iva": 1761.83,
+    "total_con_iva": 10151.48,
+    "oficio": "Carpintería exterior",
+    "contratista": "Ventanas Nacher_SOFIA"
+  },
+  {
+    "archivo": "Carpintería exterior__desconocido_Carpintería exterior.txt",
+    "formato": "desconocido",
+    "oficio": "Carpintería exterior",
+    "contratista": "desconocido_Carpintería exterior"
+  },
+  {
+    "archivo": "Carpintería interior__Valenzuela_PPTO JOSE MARIA MARTES LERMA ARMARIOS.txt",
+    "formato": "valenzuela",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "fecha": "2025-11-05",
+    "seccion": "ARMARIOS",
+    "total_sin_iva": 12691.31,
+    "total_con_iva": 15356.49,
+    "partidas": [
+      {
+        "descripcion": "6 cajones, barra para perchas y altillos",
+        "importe": 2115.57
+      },
+      {
+        "descripcion": "2 baldas, 2 zapateros, barra y altillos",
+        "importe": 1654.51
+      },
+      {
+        "descripcion": "estantería, luz led",
+        "importe": 1020.21
+      },
+      {
+        "descripcion": "2 estantes, 2 cajones, 4 balas barra y altillos",
+        "importe": 1929.91
+      },
+      {
+        "descripcion": "3 cajones, 4 baldas, 2 zapateros, barra y altillos",
+        "importe": 2097.27
+      },
+      {
+        "descripcion": "ESTANTERÍA DORMITORIO 3: 2,26ML MELAMINA",
+        "importe": 450.5
+      },
+      {
+        "descripcion": "MUEBLE BAÑO 1 , 1 cajón oculto ,1 cajón y luz led",
+        "importe": 629.13
+      },
+      {
+        "descripcion": "MUEBLE BAÑO 2 , 1 cajón oculto ,1 cajón y luz led",
+        "importe": 811.15
+      },
+      {
+        "descripcion": "MUEBLE ZAPATERO 1,79ML MELAMINA",
+        "importe": 741.06
+      },
+      {
+        "descripcion": "MUEBLE TV 3ML MELAMINA",
+        "importe": 1242.0
+      },
+      {
+        "descripcion": "Total armarios…………..12.691,31€ más IVA = 15",
+        "importe": 356.49
+      }
+    ],
+    "suma_partidas": 13047.8,
+    "oficio": "Carpintería interior",
+    "contratista": "Valenzuela_PPTO JOSE MARIA MARTES LERMA ARMARIOS"
+  },
+  {
+    "archivo": "Carpintería interior__Valenzuela_PPTO JOSE MARIA MARTES LERMA COCINA.txt",
+    "formato": "valenzuela",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "fecha": "2025-11-05",
+    "seccion": "COCINA",
+    "total_sin_iva": 5472.2,
+    "total_con_iva": 6621.36,
+    "partidas": [
+      {
+        "descripcion": "Precio cocina sin herrajes.………………………",
+        "importe": 4737.3
+      },
+      {
+        "descripcion": "1 carro basura",
+        "importe": 166.6
+      },
+      {
+        "descripcion": "luz led",
+        "importe": 73.8
+      },
+      {
+        "descripcion": "Precio cocina con herrajes…………………….5.472,20€ más IVA = 6",
+        "importe": 621.36
+      }
+    ],
+    "suma_partidas": 5599.06,
+    "plazo_minimo_semanas": 8,
+    "oficio": "Carpintería interior",
+    "contratista": "Valenzuela_PPTO JOSE MARIA MARTES LERMA COCINA"
+  },
+  {
+    "archivo": "Carpintería interior__Valenzuela_PPTO JOSE MARIA MARTES LERMA PUERTAS.txt",
+    "formato": "valenzuela",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "fecha": "2025-11-05",
+    "seccion": "PUERTAS DE PASO",
+    "total_sin_iva": 4271.96,
+    "total_con_iva": 5169.07,
+    "partidas": [
+      {
+        "descripcion": "5 unidades de puertas abatibles lacadas con codena …………………………251,46€ x5=1",
+        "importe": 257.3
+      },
+      {
+        "descripcion": "P03 puerta vidriera abatible con madera maciza y cristal translucido y uñero",
+        "importe": 1120.0
+      },
+      {
+        "descripcion": "y cristal translucido",
+        "importe": 990.0
+      },
+      {
+        "descripcion": "P04 Puerta corredera para casoneto con condena",
+        "importe": 351.03
+      },
+      {
+        "descripcion": "Total puertas……………..4.271,96 más IVA = 5",
+        "importe": 169.07
+      }
+    ],
+    "suma_partidas": 2887.4,
+    "plazo_minimo_semanas": 8,
+    "oficio": "Carpintería interior",
+    "contratista": "Valenzuela_PPTO JOSE MARIA MARTES LERMA PUERTAS"
+  },
+  {
+    "archivo": "Carpintería interior__desconocido_Carpintería interior.txt",
+    "formato": "desconocido",
+    "oficio": "Carpintería interior",
+    "contratista": "desconocido_Carpintería interior"
+  },
+  {
+    "archivo": "Clima__David Barat_Presupuesto 1-000084.txt",
+    "formato": "david_barat",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "num_presupuesto": "000084",
+    "fecha": "2025-11-17",
+    "partidas": [],
+    "total_con_iva": 7474.29,
+    "oficio": "Clima",
+    "contratista": "David Barat"
+  },
+  {
+    "archivo": "Clima__desconocido_Clima.txt",
+    "formato": "desconocido",
+    "oficio": "Clima",
+    "contratista": "desconocido_Clima"
+  },
+  {
+    "archivo": "Contratista general__Cyss_v1_myp.txt",
+    "formato": "cyss_myp",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "fecha": "2025-10-17",
+    "total_ejecucion_material": 53125.12,
+    "capitulos": {
+      "01 DEMOLICIÓN": [
+        {
+          "codigo": "DSM010c",
+          "unidad": "Ud",
+          "descripcion_corta": "Demolición de cocina completa."
+        },
+        {
+          "codigo": "DSM010b",
+          "unidad": "Ud",
+          "descripcion_corta": "Demolición de baño completo."
+        },
+        {
+          "codigo": "DPT020c",
+          "unidad": "m²",
+          "descripcion_corta": "Demolición de partición interior de fábrica revestida."
+        },
+        {
+          "codigo": "DPT020",
+          "unidad": "m²",
+          "descripcion_corta": "Demolición de falso techo continuo."
+        },
+        {
+          "codigo": "DPT020d",
+          "unidad": "m²",
+          "descripcion_corta": "Ampliación hueco ventana."
+        },
+        {
+          "codigo": "DRS011c",
+          "unidad": "m²",
+          "descripcion_corta": "Levantado de pavimento cerámico."
+        },
+        {
+          "codigo": "DRS011",
+          "unidad": "m",
+          "descripcion_corta": "Levantado de rodapié de terrazo."
+        },
+        {
+          "codigo": "DFC010c",
+          "unidad": "Ud",
+          "descripcion_corta": "Levantado de ventana."
+        },
+        {
+          "codigo": "DFC010",
+          "unidad": "Ud",
+          "descripcion_corta": "Levantado de ventanal."
+        },
+        {
+          "codigo": "DPP020",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje de puerta interior de paso de carpintería de madera."
+        },
+        {
+          "codigo": "DPP020c",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje de armario empotrado."
+        },
+        {
+          "codigo": "DPP020d",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje calentador de gas natural."
+        },
+        {
+          "codigo": "DPP020e",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje de slpit sin recuperación."
+        },
+        {
+          "codigo": "DPP020b",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje de slpit con recuperación."
+        }
+      ],
+      "01 DEMOLICIÓN [TOTAL]": [
+        {
+          "total_capitulo": 3587.67
+        }
+      ],
+      "02 ALBAÑILERÍA": [
+        {
+          "codigo": "PTZ010e",
+          "unidad": "m²",
+          "descripcion_corta": "Fachada de dos hojas, de fábrica de ladrillo cerámico."
+        },
+        {
+          "codigo": "PTZ010",
+          "unidad": "m²",
+          "descripcion_corta": "Hoja de partición de hoja de ladrillo hueco de 7 cm."
+        },
+        {
+          "codigo": "PTZ010f",
+          "unidad": "m²",
+          "descripcion_corta": "Trasdosado de 4 cm de espesor de fábrica."
+        },
+        {
+          "codigo": "RPG011b",
+          "unidad": "m²",
+          "descripcion_corta": "Alisado paredes con yeso maestreado."
+        },
+        {
+          "codigo": "FCL060c",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de ventana con modifición de hueco."
+        },
+        {
+          "codigo": "FCL060k",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de ventana sin modifición de hueco."
+        },
+        {
+          "codigo": "FCL060p",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de ventanal sin modifición de huecos."
+        },
+        {
+          "codigo": "FCL060b",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de ventanal con modifición de huecos."
+        },
+        {
+          "codigo": "FCL060d",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de premarco de madera de pino."
+        },
+        {
+          "codigo": "FRV010",
+          "unidad": "m",
+          "descripcion_corta": "Vierteaguas de piedra."
+        },
+        {
+          "codigo": "FCL060o",
+          "unidad": "Ud",
+          "descripcion_corta": "Colocación de casoneto en tabique de ladrillo."
+        },
+        {
+          "codigo": "RSB020",
+          "unidad": "m²",
+          "descripcion_corta": "Base de mortero ligero de cemento."
+        },
+        {
+          "codigo": "RAG012",
+          "unidad": "m²",
+          "descripcion_corta": "Colocación de pavimento porcelánico imitación madera formato 25x"
+        },
+        {
+          "codigo": "RAG012c",
+          "unidad": "m²",
+          "descripcion_corta": "Colocación de pavimento porcelánico formato imitación marmol tra"
+        },
+        {
+          "codigo": "RSB020b",
+          "unidad": "m²",
+          "descripcion_corta": "Enfoscado de cemento para base de alicatado."
+        },
+        {
+          "codigo": "RAG012b",
+          "unidad": "m²",
+          "descripcion_corta": "Alicatado con azulejo porcelánico 60x120cm."
+        },
+        {
+          "codigo": "RAG012q",
+          "unidad": "m",
+          "descripcion_corta": "Ejecución de inglete en azulejos."
+        },
+        {
+          "codigo": "RAG012f",
+          "unidad": "Ud",
+          "descripcion_corta": "Hornacina baño 60x21cm con balda de porcelánico."
+        },
+        {
+          "codigo": "SMS020",
+          "unidad": "Ud",
+          "descripcion_corta": "Colocación de plato de ducha de resina."
+        },
+        {
+          "codigo": "SMS020b",
+          "unidad": "Ud",
+          "descripcion_corta": "Colocación de bañera de resina."
+        },
+        {
+          "codigo": "FCL060",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de cisterna empotrada."
+        },
+        {
+          "codigo": "PTW070d",
+          "unidad": "Ud",
+          "descripcion_corta": "Rejilla extracción de baño."
+        },
+        {
+          "codigo": "PTW070",
+          "unidad": "Ud",
+          "descripcion_corta": "Tubo flexible de 150mm para campana extractora cocina."
+        },
+        {
+          "codigo": "DPP100b",
+          "unidad": "Ud",
+          "descripcion_corta": "Picado de pilar para dejarlo visto."
+        },
+        {
+          "codigo": "RIP035",
+          "unidad": "m²",
+          "descripcion_corta": "Pintura plástica con textura lisa."
+        }
+      ],
+      "02 ALBAÑILERÍA [TOTAL]": [
+        {
+          "total_capitulo": 22700.96
+        }
+      ],
+      "03 PLADUR": [
+        {
+          "codigo": "PTW070b",
+          "unidad": "m²",
+          "descripcion_corta": "Falso techo continuo de pladur."
+        },
+        {
+          "codigo": "PTW070i",
+          "unidad": "m",
+          "descripcion_corta": "Oscuro de placa de pladur."
+        },
+        {
+          "codigo": "PTW070e",
+          "unidad": "m",
+          "descripcion_corta": "Tabica de placa de pladur."
+        },
+        {
+          "codigo": "PTW070h",
+          "unidad": "Ud",
+          "descripcion_corta": "Refuerzos en montantes de estructura de cartón-yeso para campana"
+        },
+        {
+          "codigo": "PTW070j",
+          "unidad": "Ud",
+          "descripcion_corta": "Registro máquina interior ACC 40x60cm."
+        }
+      ],
+      "03 PLADUR [TOTAL]": [
+        {
+          "total_capitulo": 4767.86
+        }
+      ],
+      "04 INSTALACIÓN ELÉCTRICA": [
+        {
+          "codigo": "IEC020",
+          "unidad": "Ud",
+          "descripcion_corta": "Cuadro eléctrico elevado."
+        },
+        {
+          "codigo": "IEC020j",
+          "unidad": "Ud",
+          "descripcion_corta": "Cuadro telecomunicaciones."
+        },
+        {
+          "codigo": "IEC020c",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de enchufe 16A."
+        },
+        {
+          "codigo": "IEC020g",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de enchufe 25A."
+        },
+        {
+          "codigo": "IEC020f",
+          "unidad": "Ud",
+          "descripcion_corta": "Interruptores, conmutadores y cruces."
+        },
+        {
+          "codigo": "IEC020h",
+          "unidad": "Ud",
+          "descripcion_corta": "Suministro y colocación telefonillo universal."
+        },
+        {
+          "codigo": "IEC020e",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de luz con pulsador y timbre."
+        },
+        {
+          "codigo": "IEC020d",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de luz Techo/Pared 10A."
+        },
+        {
+          "codigo": "IEC020i",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto TV."
+        },
+        {
+          "codigo": "IEC020b",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de Datos 16A."
+        },
+        {
+          "codigo": "RAG012k",
+          "unidad": "pa",
+          "descripcion_corta": "Ayudas albañilería a instalación eléctrica."
+        }
+      ],
+      "04 INSTALACIÓN ELÉCTRICA [TOTAL]": [
+        {
+          "total_capitulo": 7129.2
+        }
+      ],
+      "05 INSTALACIÓN FONTANERÍA": [
+        {
+          "codigo": "IFI010d",
+          "unidad": "Ud",
+          "descripcion_corta": "Acometida de agua general y llave de corte general."
+        },
+        {
+          "codigo": "IFI010c",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación fontanería cocina."
+        },
+        {
+          "codigo": "IFI010",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación interior baño 1."
+        },
+        {
+          "codigo": "IFI010b",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación interior baño 2."
+        },
+        {
+          "codigo": "IGI005b",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación desegüe para máquina centralizada de ACC."
+        },
+        {
+          "codigo": "RAG012h",
+          "unidad": "pa",
+          "descripcion_corta": "Ayudas albañilería a fontanería."
+        }
+      ],
+      "05 INSTALACIÓN FONTANERÍA [TOTAL]": [
+        {
+          "total_capitulo": 4355.0
+        }
+      ],
+      "06 INSTALACIÓN CLIMATIZACIÓN": [
+        {
+          "codigo": "ICX010i",
+          "unidad": "Ud",
+          "descripcion_corta": "Suministro y montaje de red de conductos."
+        },
+        {
+          "codigo": "ICX010g",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación de máquina de climatización por conductos."
+        },
+        {
+          "codigo": "RAG012m",
+          "unidad": "pa",
+          "descripcion_corta": "Ayudas albañilería a climatización."
+        }
+      ],
+      "06 INSTALACIÓN CLIMATIZACIÓN [TOTAL]": [
+        {
+          "total_capitulo": 6234.0
+        }
+      ],
+      "13 ILUMINACIÓN": [
+        {
+          "codigo": "III200b",
+          "unidad": "m",
+          "descripcion_corta": "Perfil metálico con tira led, 3000k 24W."
+        },
+        {
+          "codigo": "III200",
+          "unidad": "m",
+          "descripcion_corta": "Tira de Led 3000K 24W."
+        },
+        {
+          "codigo": "III200c",
+          "unidad": "m",
+          "descripcion_corta": "Tira de Led 4000K 24W."
+        },
+        {
+          "codigo": "ILU009",
+          "unidad": "h",
+          "descripcion_corta": "Instalación de luminarias y electrodomésticos no integrados."
+        }
+      ],
+      "13 ILUMINACIÓN [TOTAL]": [
+        {
+          "total_capitulo": 1750.43
+        }
+      ],
+      "14 VARIOS": [
+        {
+          "codigo": "RAG012g",
+          "unidad": "pa",
+          "descripcion_corta": "Trabajos verticales."
+        },
+        {
+          "codigo": "RAG012i",
+          "unidad": "Ud",
+          "descripcion_corta": "Contenedor de escombros."
+        }
+      ],
+      "14 VARIOS [TOTAL]": [
+        {
+          "total_capitulo": 2600.0
+        }
+      ]
+    },
+    "oficio": "Contratista general",
+    "contratista": "Cyss_v1_myp"
+  },
+  {
+    "archivo": "Contratista general__Cyss_v1_resumen.txt",
+    "formato": "cyss_resumen",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "fecha": "2025-10-17",
+    "capitulos": [
+      {
+        "capitulo": "01",
+        "nombre": "DEMOLICIÓN",
+        "euros": 3587.67,
+        "porcentaje": 6.75
+      },
+      {
+        "capitulo": "02",
+        "nombre": "ALBAÑILERÍA",
+        "euros": 22700.96,
+        "porcentaje": 42.73
+      },
+      {
+        "capitulo": "03",
+        "nombre": "PLADUR",
+        "euros": 4767.86,
+        "porcentaje": 8.97
+      },
+      {
+        "capitulo": "04",
+        "nombre": "INSTALACIÓN ELÉCTRICA",
+        "euros": 7129.2,
+        "porcentaje": 13.42
+      },
+      {
+        "capitulo": "05",
+        "nombre": "INSTALACIÓN FONTANERÍA",
+        "euros": 4355.0,
+        "porcentaje": 8.2
+      },
+      {
+        "capitulo": "06",
+        "nombre": "INSTALACIÓN CLIMATIZACIÓN",
+        "euros": 6234.0,
+        "porcentaje": 11.73
+      },
+      {
+        "capitulo": "13",
+        "nombre": "ILUMINACIÓN",
+        "euros": 1750.43,
+        "porcentaje": 3.29
+      },
+      {
+        "capitulo": "14",
+        "nombre": "VARIOS",
+        "euros": 2600.0,
+        "porcentaje": 4.89
+      }
+    ],
+    "total_ejecucion_material": 53125.12,
+    "iva_pct": 10.0,
+    "importe_iva": 5312.51,
+    "total_con_iva": 58437.63,
+    "oficio": "Contratista general",
+    "contratista": "Cyss_v1_resumen"
+  },
+  {
+    "archivo": "Contratista general__Cyss_v2.0_myp.txt",
+    "formato": "cyss_myp",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "fecha": "2026-06-04",
+    "total_ejecucion_material": 51525.4,
+    "capitulos": {
+      "01 DEMOLICIÓN": [
+        {
+          "codigo": "DSM010c",
+          "unidad": "Ud",
+          "descripcion_corta": "Demolición de cocina completa."
+        },
+        {
+          "codigo": "DSM010b",
+          "unidad": "Ud",
+          "descripcion_corta": "Demolición de baño completo."
+        },
+        {
+          "codigo": "DPT020c",
+          "unidad": "m²",
+          "descripcion_corta": "Demolición de partición interior de fábrica revestida."
+        },
+        {
+          "codigo": "DPT020",
+          "unidad": "m²",
+          "descripcion_corta": "Demolición de falso techo continuo."
+        },
+        {
+          "codigo": "DPT020d",
+          "unidad": "m²",
+          "descripcion_corta": "Ampliación hueco ventana."
+        },
+        {
+          "codigo": "DRS011c",
+          "unidad": "m²",
+          "descripcion_corta": "Levantado de pavimento cerámico."
+        },
+        {
+          "codigo": "DRS011",
+          "unidad": "m",
+          "descripcion_corta": "Levantado de rodapié de terrazo."
+        },
+        {
+          "codigo": "DFC010c",
+          "unidad": "Ud",
+          "descripcion_corta": "Levantado de ventana."
+        },
+        {
+          "codigo": "DFC010",
+          "unidad": "Ud",
+          "descripcion_corta": "Levantado de ventanal."
+        },
+        {
+          "codigo": "DPP020",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje de puerta interior de paso de carpintería de madera."
+        },
+        {
+          "codigo": "DPP020c",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje de armario empotrado."
+        },
+        {
+          "codigo": "DPP020d",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje calentador de gas natural."
+        },
+        {
+          "codigo": "DPP020e",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje de slpit sin recuperación."
+        },
+        {
+          "codigo": "DPP020b",
+          "unidad": "Ud",
+          "descripcion_corta": "Desmontaje de slpit con recuperación."
+        }
+      ],
+      "01 DEMOLICIÓN [TOTAL]": [
+        {
+          "total_capitulo": 4571.48
+        }
+      ],
+      "02 ALBAÑILERÍA": [
+        {
+          "codigo": "PTZ010e",
+          "unidad": "m²",
+          "descripcion_corta": "Fachada de dos hojas, de fábrica de ladrillo cerámico."
+        },
+        {
+          "codigo": "FCL060c",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de ventana con modifición de hueco."
+        },
+        {
+          "codigo": "FCL060k",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de ventana sin modifición de hueco."
+        },
+        {
+          "codigo": "FCL060p",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de ventanal sin modifición de huecos."
+        },
+        {
+          "codigo": "FCL060b",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de ventanal con modifición de huecos."
+        },
+        {
+          "codigo": "FCL060q",
+          "unidad": "Ud",
+          "descripcion_corta": "Premarco de madera de pino hoja de 203x72,5x3,5 cm."
+        },
+        {
+          "codigo": "FRV010",
+          "unidad": "m",
+          "descripcion_corta": "Vierteaguas de piedra."
+        },
+        {
+          "codigo": "FCL060o",
+          "unidad": "Ud",
+          "descripcion_corta": "Colocación de casoneto en tabique de pladur."
+        },
+        {
+          "codigo": "RAG012",
+          "unidad": "m²",
+          "descripcion_corta": "Colocación de pavimento porcelánico imitación madera formato 25x"
+        },
+        {
+          "codigo": "RAG012c",
+          "unidad": "m²",
+          "descripcion_corta": "Colocación de pavimento porcelánico formato imitación marmol tra"
+        },
+        {
+          "codigo": "RAG012b",
+          "unidad": "m²",
+          "descripcion_corta": "Alicatado con azulejo porcelánico 60x120cm."
+        },
+        {
+          "codigo": "RAG012q",
+          "unidad": "m",
+          "descripcion_corta": "Ejecución de inglete en azulejos."
+        },
+        {
+          "codigo": "RAG012f",
+          "unidad": "Ud",
+          "descripcion_corta": "Hornacina baño 60x21cm con balda de porcelánico."
+        },
+        {
+          "codigo": "SMS020",
+          "unidad": "Ud",
+          "descripcion_corta": "Colocación de plato de ducha de resina."
+        },
+        {
+          "codigo": "SMS020b",
+          "unidad": "Ud",
+          "descripcion_corta": "Colocación de bañera de resina."
+        },
+        {
+          "codigo": "FCL060",
+          "unidad": "Ud",
+          "descripcion_corta": "Falcado de cisterna empotrada."
+        },
+        {
+          "codigo": "PTW070d",
+          "unidad": "Ud",
+          "descripcion_corta": "Rejilla ventilación de baño."
+        },
+        {
+          "codigo": "PTW070",
+          "unidad": "Ud",
+          "descripcion_corta": "Tubo flexible de 150mm para campana extractora cocina."
+        },
+        {
+          "codigo": "DPP100b",
+          "unidad": "Ud",
+          "descripcion_corta": "Picado de pilar para dejarlo visto."
+        },
+        {
+          "codigo": "RIP035",
+          "unidad": "m²",
+          "descripcion_corta": "Pintura plástica con textura lisa."
+        }
+      ],
+      "02 ALBAÑILERÍA [TOTAL]": [
+        {
+          "total_capitulo": 13880.05
+        }
+      ],
+      "03 PLADUR": [
+        {
+          "codigo": "PTW070f",
+          "unidad": "m²",
+          "descripcion_corta": "Tabique de pladur, de 94 mm de espesor total, (2x120)+45+(2x120)"
+        },
+        {
+          "codigo": "PTW070c",
+          "unidad": "m²",
+          "descripcion_corta": "Trasdosado autoportante de pladur, de 60 mm de espesor total 150"
+        },
+        {
+          "codigo": "PTW070b",
+          "unidad": "m²",
+          "descripcion_corta": "Falso techo continuo de pladur con lana de roca encapsulada de 5"
+        },
+        {
+          "codigo": "PTW070g",
+          "unidad": "m²",
+          "descripcion_corta": "Incremento por colocación de placa hidrófuga de pladur."
+        },
+        {
+          "codigo": "PTW070i",
+          "unidad": "m",
+          "descripcion_corta": "Oscuro de placa de pladur."
+        },
+        {
+          "codigo": "PTW070e",
+          "unidad": "m",
+          "descripcion_corta": "Tabica de placa de pladur."
+        },
+        {
+          "codigo": "PTW070h",
+          "unidad": "Ud",
+          "descripcion_corta": "Refuerzos en montantes de estructura de cartón-yeso para campana"
+        },
+        {
+          "codigo": "PTW070j",
+          "unidad": "Ud",
+          "descripcion_corta": "Registro máquina interior ACC 40x60cm."
+        }
+      ],
+      "03 PLADUR [TOTAL]": [
+        {
+          "total_capitulo": 10448.45
+        }
+      ],
+      "04 INSTALACIÓN ELÉCTRICA": [
+        {
+          "codigo": "IEC020",
+          "unidad": "Ud",
+          "descripcion_corta": "Cuadro eléctrico elevado vertical."
+        },
+        {
+          "codigo": "IEC020j",
+          "unidad": "Ud",
+          "descripcion_corta": "Cuadro telecomunicaciones."
+        },
+        {
+          "codigo": "IEC020c",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de enchufe 16A."
+        },
+        {
+          "codigo": "IEC020g",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de enchufe 25A."
+        },
+        {
+          "codigo": "IEC020f",
+          "unidad": "Ud",
+          "descripcion_corta": "Interruptores, conmutadores y cruces."
+        },
+        {
+          "codigo": "IEC020h",
+          "unidad": "Ud",
+          "descripcion_corta": "Suministro y colocación telefonillo universal."
+        },
+        {
+          "codigo": "IEC020e",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de luz con pulsador y timbre."
+        },
+        {
+          "codigo": "IEC020d",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de luz Techo/Pared 10A."
+        },
+        {
+          "codigo": "IEC020i",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto TV."
+        },
+        {
+          "codigo": "IEC020b",
+          "unidad": "Ud",
+          "descripcion_corta": "Punto de Datos 16A."
+        },
+        {
+          "codigo": "RAG012k",
+          "unidad": "pa",
+          "descripcion_corta": "Ayudas albañilería a instalación eléctrica."
+        }
+      ],
+      "04 INSTALACIÓN ELÉCTRICA [TOTAL]": [
+        {
+          "total_capitulo": 7129.2
+        }
+      ],
+      "05 INSTALACIÓN FONTANERÍA": [
+        {
+          "codigo": "IFI010d",
+          "unidad": "Ud",
+          "descripcion_corta": "Acometida de agua general y llave de corte general."
+        },
+        {
+          "codigo": "IFI010c",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación fontanería cocina."
+        },
+        {
+          "codigo": "IFI010",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación interior baño 1."
+        },
+        {
+          "codigo": "IFI010b",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación interior baño 2."
+        },
+        {
+          "codigo": "IGI005b",
+          "unidad": "Ud",
+          "descripcion_corta": "Instalación desegüe para máquina centralizada de ACC."
+        },
+        {
+          "codigo": "RAG012h",
+          "unidad": "pa",
+          "descripcion_corta": "Ayudas albañilería a fontanería."
+        }
+      ],
+      "05 INSTALACIÓN FONTANERÍA [TOTAL]": [
+        {
+          "total_capitulo": 4400.0
+        }
+      ],
+      "06 INSTALACIÓN CLIMATIZACIÓN": [
+        {
+          "codigo": "ICX010i",
+          "unidad": "Ud",
+          "descripcion_corta": "Suministro y montaje de red de conductos."
+        },
+        {
+          "codigo": "ICX010h",
+          "unidad": "Ud",
+          "descripcion_corta": "Suministro y montaje de máquina de climatización por conductos"
+        },
+        {
+          "codigo": "ICX010b",
+          "unidad": "m",
+          "descripcion_corta": "Preinstalaciones de líneas frigoríficas de cobre mas cable de in"
+        },
+        {
+          "codigo": "RAG012m",
+          "unidad": "pa",
+          "descripcion_corta": "Ayudas albañilería a climatización."
+        }
+      ],
+      "06 INSTALACIÓN CLIMATIZACIÓN [TOTAL]": [
+        {
+          "total_capitulo": 6594.0
+        }
+      ],
+      "13 ILUMINACIÓN": [
+        {
+          "codigo": "III200b",
+          "unidad": "m",
+          "descripcion_corta": "Perfil metálico con tira led, 3000k 24W."
+        },
+        {
+          "codigo": "III200",
+          "unidad": "m",
+          "descripcion_corta": "Tira de Led 3000K 24W."
+        },
+        {
+          "codigo": "III200c",
+          "unidad": "m",
+          "descripcion_corta": "Tira de Led 4000K 24W."
+        },
+        {
+          "codigo": "ILU009",
+          "unidad": "h",
+          "descripcion_corta": "Instalación de luminarias y electrodomésticos no integrados."
+        }
+      ],
+      "13 ILUMINACIÓN [TOTAL]": [
+        {
+          "total_capitulo": 1552.22
+        }
+      ],
+      "14 VARIOS": [
+        {
+          "codigo": "RAG012g",
+          "unidad": "pa",
+          "descripcion_corta": "Trabajos verticales."
+        },
+        {
+          "codigo": "RAG012i",
+          "unidad": "Ud",
+          "descripcion_corta": "Contenedor de escombros."
+        }
+      ],
+      "14 VARIOS [TOTAL]": [
+        {
+          "total_capitulo": 2950.0
+        }
+      ]
+    },
+    "oficio": "Contratista general",
+    "contratista": "Cyss_v2.0_myp"
+  },
+  {
+    "archivo": "Contratista general__Cyss_v2.0_resumen.txt",
+    "formato": "cyss_resumen",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "fecha": "2026-06-04",
+    "capitulos": [
+      {
+        "capitulo": "01",
+        "nombre": "DEMOLICIÓN",
+        "euros": 4571.48,
+        "porcentaje": 8.87
+      },
+      {
+        "capitulo": "02",
+        "nombre": "ALBAÑILERÍA",
+        "euros": 13880.05,
+        "porcentaje": 26.94
+      },
+      {
+        "capitulo": "03",
+        "nombre": "PLADUR",
+        "euros": 10448.45,
+        "porcentaje": 20.28
+      },
+      {
+        "capitulo": "04",
+        "nombre": "INSTALACIÓN ELÉCTRICA",
+        "euros": 7129.2,
+        "porcentaje": 13.84
+      },
+      {
+        "capitulo": "05",
+        "nombre": "INSTALACIÓN FONTANERÍA",
+        "euros": 4400.0,
+        "porcentaje": 8.54
+      },
+      {
+        "capitulo": "06",
+        "nombre": "INSTALACIÓN CLIMATIZACIÓN",
+        "euros": 6594.0,
+        "porcentaje": 12.8
+      },
+      {
+        "capitulo": "13",
+        "nombre": "ILUMINACIÓN",
+        "euros": 1552.22,
+        "porcentaje": 3.01
+      },
+      {
+        "capitulo": "14",
+        "nombre": "VARIOS",
+        "euros": 2950.0,
+        "porcentaje": 5.73
+      }
+    ],
+    "total_ejecucion_material": 51525.4,
+    "iva_pct": 10.0,
+    "importe_iva": 5152.54,
+    "total_con_iva": 56677.94,
+    "oficio": "Contratista general",
+    "contratista": "Cyss_v2.0_resumen"
+  },
+  {
+    "archivo": "Demolición__desconocido_Demolición.txt",
+    "formato": "desconocido",
+    "oficio": "Demolición",
+    "contratista": "desconocido_Demolición"
+  },
+  {
+    "archivo": "Detalle baños__desconocido_Detalle baños.txt",
+    "formato": "desconocido",
+    "oficio": "Detalle baños",
+    "contratista": "desconocido_Detalle baños"
+  },
+  {
+    "archivo": "Electricidad__Paracon_2026-7 TONI AMORES.txt",
+    "formato": "paracon_estancias",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "fecha": "2026-03-23",
+    "num_presupuesto": "2026-7",
+    "cliente_cabecera": "TONI AMORES",
+    "estancias": [
+      {
+        "estancia": "CUADRO ELECTRICO",
+        "mecanismos": []
+      }
+    ],
+    "base_imponible": 5005.0,
+    "importe_iva": 1051.05,
+    "total_con_iva": 6056.05,
+    "forma_de_pago": [
+      {
+        "pct": 15,
+        "hito": "FIRMA DE CONTRATO"
+      },
+      {
+        "pct": 35,
+        "hito": "TERMINAR CANALIZACION"
+      },
+      {
+        "pct": 35,
+        "hito": "TERMINAR CABLEADO"
+      }
+    ],
+    "oficio": "Electricidad",
+    "contratista": "Paracon"
+  },
+  {
+    "archivo": "Electricidad__Poveda_Presupuesto borrador 2025-11-06.txt",
+    "formato": "poveda",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "num_borrador": "9",
+    "fecha": "2025-11-06",
+    "partidas": [
+      {
+        "concepto": "PUNTO DE LUZ BASICO ( SERIE S27,LEGRAND VALENA O NIESSEN",
+        "cantidad": 86,
+        "precio_unitario": 37.5,
+        "iva_pct": 21,
+        "subtotal": 3225.0
+      },
+      {
+        "concepto": "DOWNLIGHT COB EMPOTRADO AL 8W EDISON IP23",
+        "cantidad": 27,
+        "precio_unitario": 28.0,
+        "iva_pct": 21,
+        "subtotal": 756.0
+      },
+      {
+        "concepto": "RED DE TELECOMUNICACIONES DE ENTRADA A LA VIVIENDA",
+        "cantidad": 1,
+        "precio_unitario": 560.0,
+        "iva_pct": 21,
+        "subtotal": 560.0
+      },
+      {
+        "concepto": "VIDEOPORTERO A COLOR CON TELEFONILLO AUXILIAR",
+        "cantidad": 1,
+        "precio_unitario": 400.0,
+        "iva_pct": 21,
+        "subtotal": 400.0
+      }
+    ],
+    "base_imponible": 5291.0,
+    "iva_pct": 21,
+    "importe_iva": 1111.11,
+    "total_con_iva": 6402.11,
+    "valido_hasta": "2025-11-16",
+    "oficio": "Electricidad",
+    "contratista": "Poveda"
+  },
+  {
+    "archivo": "Electricidad__desconocido_Electricidad.txt",
+    "formato": "desconocido",
+    "oficio": "Electricidad",
+    "contratista": "desconocido_Electricidad"
+  },
+  {
+    "archivo": "Encimeras__desconocido_Encimeras.txt",
+    "formato": "desconocido",
+    "oficio": "Encimeras",
+    "contratista": "desconocido_Encimeras"
+  },
+  {
+    "archivo": "Fontanería__David Barat_Presupuesto 1-000079.txt",
+    "formato": "david_barat",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "num_presupuesto": "000079",
+    "fecha": "2025-11-04",
+    "partidas": [],
+    "total_con_iva": 4065.6,
+    "oficio": "Fontanería",
+    "contratista": "David Barat"
+  },
+  {
+    "archivo": "Fontanería__David Barat_Presupuesto 1-000022 DEF.txt",
+    "formato": "david_barat",
+    "moneda": "EUR",
+    "iva_incluido": true,
+    "num_presupuesto": "000022",
+    "fecha": "2026-03-10",
+    "partidas": [],
+    "total_con_iva": 11927.23,
+    "oficio": "Fontanería",
+    "contratista": "David Barat"
+  },
+  {
+    "archivo": "Fontanería__desconocido_Fontanería.txt",
+    "formato": "desconocido",
+    "oficio": "Fontanería",
+    "contratista": "desconocido_Fontanería"
+  },
+  {
+    "archivo": "Pladur__desconocido_Pladur.txt",
+    "formato": "desconocido",
+    "oficio": "Pladur",
+    "contratista": "desconocido_Pladur"
+  },
+  {
+    "archivo": "Planos__distribución.txt",
+    "formato": "desconocido",
+    "oficio": "Planos",
+    "contratista": "distribución"
+  },
+  {
+    "archivo": "Planos__estado inicial.txt",
+    "formato": "desconocido",
+    "oficio": "Planos",
+    "contratista": "estado inicial"
+  }
+]

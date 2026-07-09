@@ -1,0 +1,113 @@
+{
+  "archivo": "Presupuesto/Presupuesto.xlsx",
+  "hojas": {
+    "Hoja1": {
+      "dim": [
+        10,
+        8
+      ],
+      "filas": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "ALBAÑILERÍA",
+          22055,
+          22135,
+          80,
+          6700,
+          null,
+          "Techos a 30",
+          null
+        ],
+        [
+          "PLADUR",
+          3900,
+          9583,
+          null,
+          null,
+          null,
+          "Oscuros a 54",
+          null
+        ],
+        [
+          "FONTANERÍA",
+          3360,
+          3965,
+          null,
+          null,
+          null,
+          "Tabicas a 30",
+          null
+        ],
+        [
+          "ELECTRICIDAD",
+          4535,
+          5005,
+          "sin luz",
+          null,
+          null,
+          "Registro a 60",
+          null
+        ],
+        [
+          "CLIMA",
+          6177,
+          7962,
+          null,
+          null,
+          null,
+          "Refuerzo a 25",
+          null
+        ],
+        [
+          "CARPINTERÍA EXT",
+          8386,
+          8386,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "CARPINTERÍA INT",
+          22433,
+          22433,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          70846,
+          79469,
+          8623,
+          null,
+          null,
+          null,
+          " "
+        ]
+      ]
+    }
+  }
+}
