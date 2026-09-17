@@ -84,11 +84,13 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 │   ├── auditoria.json          extraction audit (pages, character counts, warnings per PDF)
 │   ├── excel.json              Presupuesto.xlsx → parsed columns B & C
 │   ├── planos3d.json           3D model data: walls, glass, rooms, footprint, texture rect
-│   └── imagenes/
-│       ├── planta_textura.jpg  cropped plan used as the 3D floor texture
-│       └── geometria_debug.png overlay to verify extracted walls/rooms
+│   ├── imagenes/
+│   │   ├── planta_textura.jpg  cropped plan used as the 3D floor texture
+│   │   ├── geometria_debug.png overlay to verify extracted walls/rooms
+│   │   └── plano_aires_recorte.jpg  cropped client markup of the AC duct plan
+│   ├── reales/                 client-provided reference images (renders, AC plan, site photo)
 │   └── texto/                  (gitignored) raw text dumps per PDF
-├── informes/                   29 Markdown reports
+├── informes/                   30 Markdown reports
 │   ├── RESUMEN_EJECUTIVO.md           ← start here
 │   ├── AUDITORIA_PDFS.md              extraction quality log
 │   ├── COMPARATIVA_CYSS.md            Cyss v1 → v2.0 deltas
@@ -117,7 +119,8 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 │   ├── DO_CHECKLIST_MATERIALES.md materials checklist
 │   ├── DO_ACTAS_VISITA.md site visit reports
 │   ├── DO_PROTOCOLO_PRUEBAS_FINALES.md final testing protocol
-│   └── DISTRIBUCION_POR_ESTANCIAS.md room-by-room distribution
+│   ├── DISTRIBUCION_POR_ESTANCIAS.md room-by-room distribution
+│   └── RENDERS_Y_PLANO_AIRES.md      renders vs budget + AC duct plan findings
 └── scripts/
     ├── extraer_pdfs.py          pdftotext fallback to pdfplumber → data/texto/
     ├── parsear_presupuestos.py   per-contractor parsers → data/presupuestos.json + .csv
@@ -181,6 +184,8 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución (no
 - Se abre desde `file://`; Three.js va inline (sin CDN ni módulos ES). Solo Google Fonts es externo.
 - La detección de estancias (watershed + sellado de huecos) se valida contra las cotas del arquitecto: p. ej. Dormitorio 1 = 8,08 m² vs 8,1 m² etiquetado, Baño 1 = 4,46 m² vs 4,5 m².
 - `data/imagenes/geometria_debug.png` es el overlay de control: colores por tipo de muro y áreas detectadas. Revisarlo tras cambiar el plano.
+- Botón **Galería** y ficha por estancia: muestran los renders de `data/reales/` (salón, cocina, dormitorio principal, baño) además del plano de aires y la foto de la plataforma en fachada. Si se añaden imágenes nuevas, actualizar el mapa `RENDERS`/`GALERIA` en `scripts/generar_visor3d.py`.
+- **Aviso**: el plano de aires marcado por el instalador rotula una distribución distinta al PE.A.02 (cocina 12,9 m² cerrada y vestidor 6,2 m² que no existen en el modelo). Ver `informes/RENDERS_Y_PLANO_AIRES.md` antes de dar por buenas las superficies.
 
 ## Agentes / Skills del proyecto (skills/)
 

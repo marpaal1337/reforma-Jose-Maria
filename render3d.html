@@ -105,6 +105,35 @@ input[type=range]{width:100%;accent-color:var(--accent);height:18px}
 .stats div span{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:3px}
 .stats div b{font-family:var(--serif);font-weight:600;font-size:16px}
 #card .note{margin:12px 0 0;font-size:10.5px;line-height:1.5;color:var(--muted)}
+#card .render{display:none;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#card .render img{display:block;width:100%;height:124px;object-fit:cover}
+#card .render figcaption{font-size:10px;color:var(--muted);padding:5px 8px;background:rgba(0,0,0,.025)}
+.thumbs{display:none;gap:6px;margin:0 0 12px}
+.thumbs.on{display:flex}
+.thumbs button{width:58px;height:35px;padding:0;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:none;cursor:pointer;transition:.2s}
+.thumbs button img{width:100%;height:100%;object-fit:cover;display:block;opacity:.7}
+.thumbs button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.thumbs button[aria-pressed="true"] img{opacity:1}
+
+#galeria{position:fixed;inset:0;z-index:60;overflow:auto;padding:76px 24px 48px;
+  background:rgba(26,24,20,.88);backdrop-filter:blur(7px)}
+#galeria[hidden]{display:none}
+#galeria .gal-head{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;
+  align-items:center;padding:16px 22px;color:#F5F1EA;background:linear-gradient(rgba(20,18,15,.75),transparent)}
+#galeria h2{font-family:var(--serif);font-size:21px;margin:0;font-weight:600}
+#galeria .gal-sub{font-size:11px;color:#C9BFAD;margin-top:2px}
+#galeria .close{border:1px solid rgba(245,241,234,.35);background:transparent;color:#F5F1EA;
+  width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:15px}
+#galeria .close:hover{background:rgba(245,241,234,.12)}
+#galeria .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;max-width:1180px;margin:0 auto}
+#galeria figure{margin:0;background:var(--paper);border-radius:12px;overflow:hidden;cursor:zoom-in;
+  box-shadow:0 18px 44px -20px rgba(0,0,0,.6);transition:transform .3s}
+#galeria figure:hover{transform:translateY(-3px)}
+#galeria figure.zoom{grid-column:1/-1;cursor:zoom-out}
+#galeria img{display:block;width:100%;height:auto}
+#galeria figure.zoom img{max-height:74vh;width:auto;max-width:100%;margin:0 auto}
+#galeria figcaption{padding:9px 12px;font-size:11.5px;color:var(--ink-2);font-family:var(--sans)}
+#galeria figcaption b{font-family:var(--serif);font-weight:600;color:var(--ink)}
 
 /* ── etiquetas 3D ── */
 #labels{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:10}
@@ -182,6 +211,7 @@ footer{
         <button id="m-zonas" aria-pressed="false">Zonas</button>
       </div>
       <button class="btn" id="b-labels" aria-pressed="true">Etiquetas</button>
+      <button class="btn" id="b-galeria">Galería</button>
       <button class="btn" id="b-panel" aria-pressed="true">Panel</button>
       <button class="btn" id="b-export">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
@@ -219,6 +249,11 @@ footer{
     <div class="swatch-lg" id="card-color"></div>
     <h3 id="card-name">—</h3>
     <div class="sub" id="card-sub">—</div>
+    <figure class="render" id="card-render">
+      <img id="card-render-img" alt="">
+      <figcaption id="card-render-cap"></figcaption>
+    </figure>
+    <div class="thumbs" id="card-thumbs"></div>
     <div class="stats">
       <div><span>Superficie</span><b id="card-area" class="num">—</b></div>
       <div><span>% útil</span><b id="card-share" class="num">—</b></div>
@@ -227,6 +262,17 @@ footer{
     </div>
     <p class="note" id="card-note"></p>
   </section>
+
+  <div id="galeria" hidden>
+    <div class="gal-head">
+      <div>
+        <h2>Ambientación y documentación</h2>
+        <div class="gal-sub" id="gal-sub"></div>
+      </div>
+      <button class="close" id="gal-close" aria-label="Cerrar galería">✕</button>
+    </div>
+    <div class="grid" id="gal-grid"></div>
+  </div>
 
   <footer>
     <div class="hint">
@@ -281,6 +327,26 @@ const STYLE = {
   "terraza":        {c:0xA97A4E, label:"Terraza"}
 };
 const ZONES = PLAN.estancias.filter(e => STYLE[e.id]);
+
+/* renders y documentación en data/reales/ (aportados por el cliente) */
+const RENDERS = {
+  "salon": [
+    {src:"data/reales/salon-render.jpeg",        cap:"Salón · ventanal a terraza"},
+    {src:"data/reales/salon2-render.jpeg",       cap:"Salón · pilar visto y mueble de TV"},
+    {src:"data/reales/salon-cocina_render.jpeg", cap:"Salón-comedor · cocina al fondo"},
+    {src:"data/reales/cocina-render.jpeg",       cap:"Cocina · península de piedra"}
+  ],
+  "dorm-principal": [{src:"data/reales/dormitorio-principal-render.jpeg", cap:"Dormitorio principal · armario y cabecero de listones"}],
+  "bano-1": [{src:"data/reales/baño-principal-render.jpeg", cap:"Baño · bañera y revestimiento pétreo"}],
+  "bano-2": [{src:"data/reales/baño-principal-render.jpeg", cap:"Baño · bañera y revestimiento pétreo"}]
+};
+const GALERIA = [
+  ...RENDERS["salon"],
+  ...RENDERS["dorm-principal"],
+  ...RENDERS["bano-1"],
+  {src:"data/imagenes/plano_aires_recorte.jpg", cap:"Plano de conductos de clima marcado por el instalador (otra versión de distribución: cocina 12,9 m² y vestidor 6,2 m²)", tag:"Obra"},
+  {src:"data/reales/grua al 7º piso.jpeg", cap:"Medios auxiliares: plataforma articulada en fachada para el 7º piso", tag:"Obra"}
+];
 const INTERIOR = ZONES.filter(e => e.id !== "terraza");
 const AREA_INT = INTERIOR.reduce((s,e)=>s+e.area,0);
 
@@ -612,6 +678,28 @@ function select(id){
   });
   const card = $("#card");
   if(!z){ card.classList.remove("show"); return; }
+  const rs = RENDERS[z.id] || [];
+  const fig = $("#card-render"), strip = $("#card-thumbs");
+  strip.innerHTML = "";
+  if(rs.length){
+    fig.style.display = "block";
+    setCardRender(rs[0]);
+    rs.forEach((r,i)=>{
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(i===0));
+      b.innerHTML = `<img src="${r.src}" alt="${r.cap}" loading="lazy">`;
+      b.addEventListener("click", ()=>{
+        setCardRender(r);
+        strip.querySelectorAll("button").forEach((x,j)=>x.setAttribute("aria-pressed", String(j===i)));
+      });
+      strip.appendChild(b);
+    });
+    strip.classList.toggle("on", rs.length>1);
+  }else{
+    fig.style.display = "none";
+    strip.classList.remove("on");
+  }
   const st = STYLE[z.id];
   $("#card-color").style.background = `#${st.c.toString(16).padStart(6,"0")}`;
   $("#card-name").textContent = st.label;
@@ -633,6 +721,14 @@ $("#card-close").addEventListener("click", ()=>{ selected=null; select(null); })
 const ZONA_USO = {"dorm-principal":"Noche","dorm-1":"Noche","dorm-2":"Noche","dorm-3":"Noche",
   "bano-1":"Servicio","bano-2":"Servicio","salon":"Día","pasillo":"Circulación",
   "recibidor":"Circulación","terraza":"Exterior"};
+
+function setCardRender(r){
+  const img = $("#card-render-img");
+  img.src = r.src;
+  img.alt = r.cap;
+  img.onerror = ()=>{ img.parentElement.style.display = "none"; };
+  $("#card-render-cap").textContent = r.cap;
+}
 
 function zoneBounds(pts){
   const xs = pts.map(p=>p[0]), zs = pts.map(p=>p[1]);
@@ -689,6 +785,26 @@ $("#s-sol").addEventListener("input", e=>{
   sun.position.set(Math.cos(rad)*16, 15, Math.sin(rad)*16);
 });
 $("#b-export").addEventListener("click", exportPNG);
+let galeriaConstruida = false;
+function abrirGaleria(){
+  const g = $("#galeria");
+  if(!galeriaConstruida){
+    const grid = $("#gal-grid");
+    GALERIA.forEach(item=>{
+      const fig = document.createElement("figure");
+      fig.innerHTML = `<img src="${item.src}" alt="${item.cap}" loading="lazy"><figcaption><b>${item.tag || "Render"}</b> · ${item.cap}</figcaption>`;
+      fig.addEventListener("click", ()=>fig.classList.toggle("zoom"));
+      grid.appendChild(fig);
+    });
+    $("#gal-sub").textContent = "Renders de ambientación, plano de conductos y medios auxiliares · " + GALERIA.length + " imágenes";
+    galeriaConstruida = true;
+  }
+  g.hidden = false;
+}
+function cerrarGaleria(){ $("#galeria").hidden = true; }
+$("#b-galeria").addEventListener("click", abrirGaleria);
+$("#gal-close").addEventListener("click", cerrarGaleria);
+$("#galeria").addEventListener("click", e=>{ if(e.target === $("#galeria")) cerrarGaleria(); });
 addEventListener("keydown", e=>{
   if(e.target.tagName==="INPUT") return;
   const k = e.key.toLowerCase();
@@ -697,8 +813,9 @@ addEventListener("keydown", e=>{
   else if(k==="l") $("#b-labels").click();
   else if(k==="r") $("#b-reset").click();
   else if(k==="p") $("#b-planta").click();
+  else if(k==="g") abrirGaleria();
   else if(k==="e") exportPNG();
-  else if(k==="escape") select(null);
+  else if(k==="escape"){ select(null); cerrarGaleria(); }
 });
 
 function setWallHeight(h){
