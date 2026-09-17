@@ -64,7 +64,7 @@ Within each trade folder, files are named `<Contratista>_<Doc>.pdf`. The legacy 
 - New Cyss versions follow `Cyss_v<version>_<myp|resumen>.pdf`.
 - Do not delete the `Zone.Identifier` files.
 
-## Analysis pipeline (scripts/, data/, informes/, index.html)
+## Analysis pipeline (scripts/, data/, informes/, index.html, planos.html, render3d.html)
 
 The repository now includes an **analysis pipeline** that extracts, parses, and visualises all PDFs. The pipeline is fully **reproducible** — run the scripts in order to regenerate all artefacts from scratch.
 
@@ -74,11 +74,19 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 .
 ├── .gitignore                  ignores data/texto/ and __pycache__
 ├── index.html                  interactive dashboard (33 KB, self-contained except Google Fonts CDN)
+├── planos.html                 2D plan viewer (Leaflet, self-contained)
+├── render3d.html               interactive 3D model (Three.js inlined, self-contained)
+├── libs/
+│   └── three.min.js            vendored Three.js r147 (MIT) inlined into render3d.html
 ├── data/
 │   ├── presupuestos.json       master parsed data (27 records with line items)
 │   ├── presupuestos.csv        flat table for spreadsheet import
 │   ├── auditoria.json          extraction audit (pages, character counts, warnings per PDF)
 │   ├── excel.json              Presupuesto.xlsx → parsed columns B & C
+│   ├── planos3d.json           3D model data: walls, glass, rooms, footprint, texture rect
+│   └── imagenes/
+│       ├── planta_textura.jpg  cropped plan used as the 3D floor texture
+│       └── geometria_debug.png overlay to verify extracted walls/rooms
 │   └── texto/                  (gitignored) raw text dumps per PDF
 ├── informes/                   29 Markdown reports
 │   ├── RESUMEN_EJECUTIVO.md           ← start here
@@ -116,7 +124,9 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
     ├── leer_excel.py              openpyxl → data/excel.json
     ├── auditar.py                 rutaudit → data/auditoria.json + AUDITORIA_PDFS.md
     ├── analizar.py                reads JSONs → reports in informes/
-    └── generar_html.py            reads presupuestos.json → index.html
+    ├── generar_html.py            reads presupuestos.json → index.html
+    ├── generar_geometria3d.py     vector geometry of Planos/distribución.pdf → data/planos3d.json + texture
+    └── generar_visor3d.py         data/planos3d.json + libs/three.min.js → render3d.html
 ```
 
 ### How to regenerate
@@ -127,8 +137,12 @@ python3 scripts/parsear_presupuestos.py && \
 python3 scripts/auditar.py && \
 python3 scripts/leer_excel.py && \
 python3 scripts/analizar.py && \
-python3 scripts/generar_html.py
+python3 scripts/generar_html.py && \
+python3 scripts/generar_geometria3d.py && \
+python3 scripts/generar_visor3d.py
 ```
+
+`generar_geometria3d.py` only needs the plan (`Planos/distribución.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_visor3d.py` needs `libs/three.min.js` (already vendored) and `data/imagenes/planta_textura.jpg`.
 
 ### Key findings (as of 2026-07-09)
 
@@ -142,6 +156,7 @@ python3 scripts/generar_html.py
 | Encimeras | **Not priced** in Cyss — need a separate stoneworker quote |
 | Excel col B | 70.846 € (sum of subcontractor quotes) |
 | Excel col C | 79.469 € (alternative scenario — client self-managing) |
+| Interior medido del plano (render3d) | **102,9 m²** útiles + 7,5 m² terraza |
 
 ### Dashboard (`index.html`)
 
@@ -155,6 +170,17 @@ Opens from `file://` in any modern browser. Features:
 - Alert/action block with top recommendations
 
 Google Fonts (Inter + Source Serif 4) are loaded from CDN — requires internet. Fallback fonts are defined and the page is readable offline.
+
+### Visor 3D (`render3d.html`)
+
+Modelo 3D generado de la **geometría vectorial** del plano de distribución (no es una aproximación a ojo: la escala se calibró con las cotas del PDF y es exactamente 1:50, 56,69 pt/m).
+
+- Muros extruidos a 2,60 m clasificados por espesor (`estructural` ≥ 0,14 m, `tabique` ≥ 0,045 m, `vidrio` = carpinterías), suelos por estancia y alicatados de baños.
+- Dos modos de suelo: **Plano** (textura del plano recortada) y **Zonas** (color por estancia, superficie medida).
+- Slider de altura de muros, slider de posición solar (sombras en tiempo real), etiquetas, ficha por estancia con superficie y coste orientativo (reparto proporcional del total Cyss v2.0), exportación a PNG y vistas `Planta` / `Vista general`.
+- Se abre desde `file://`; Three.js va inline (sin CDN ni módulos ES). Solo Google Fonts es externo.
+- La detección de estancias (watershed + sellado de huecos) se valida contra las cotas del arquitecto: p. ej. Dormitorio 1 = 8,08 m² vs 8,1 m² etiquetado, Baño 1 = 4,46 m² vs 4,5 m².
+- `data/imagenes/geometria_debug.png` es el overlay de control: colores por tipo de muro y áreas detectadas. Revisarlo tras cambiar el plano.
 
 ## Agentes / Skills del proyecto (skills/)
 
