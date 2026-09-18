@@ -170,7 +170,15 @@ footer{
 #loader p{font-size:12px;color:var(--muted);margin:0 0 18px}
 .bar{height:3px;background:var(--line);border-radius:99px;overflow:hidden}
 .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
-#fallback{display:none;position:absolute;inset:0;z-index:50;place-items:center;background:var(--paper);text-align:center;padding:24px}
+#fallback{display:none;position:absolute;inset:0;z-index:50;place-items:center;background:var(--paper);text-align:left;padding:24px;overflow:auto}
+#fallback .fb-box{max-width:560px;margin:auto}
+#fallback h2{font-family:var(--serif);font-size:24px;margin:0 0 8px}
+#fallback .fb-why{font-size:12px;color:var(--warn,#B5410F);margin:0 0 14px;min-height:1em;word-break:break-word}
+#fallback .fb-steps{font-size:13.5px;line-height:1.6;color:var(--ink-2);padding-left:20px;margin:0 0 16px}
+#fallback .fb-steps li{margin-bottom:8px}
+#fallback code{background:rgba(0,0,0,.06);border-radius:4px;padding:1px 5px;font-size:12.5px}
+#fallback .fb-alt{font-size:12px;color:var(--muted)}
+#fallback a{color:var(--accent-2)}
 #fallback h2{font-family:var(--serif);font-size:24px}
 #fallback a{color:var(--accent-2)}
 
@@ -295,9 +303,17 @@ footer{
     </div>
   </div>
   <div id="fallback">
-    <div>
+    <div class="fb-box">
       <h2>Tu navegador no puede mostrar WebGL</h2>
-      <p>Puedes seguir consultando la reforma en el visor 2D <a href="planos.html">planos.html</a> o en el panel <a href="index.html">index.html</a>.</p>
+      <p id="fb-why" class="fb-why"></p>
+      <ol class="fb-steps">
+        <li><b>Chrome / Edge:</b> Ajustes → Sistema → activa «Usar aceleración gráfica cuando esté disponible» y reinicia. Comprueba el motivo en <code>chrome://gpu</code>.</li>
+        <li><b>Firefox:</b> en <code>about:config</code> pon <code>webgl.disabled</code> = <code>false</code>; si sigue, <code>webgl.force-enabled</code> = <code>true</code>. Mira <code>about:support</code> → Graphics.</li>
+        <li><b>Sin GPU / VM / escritorio remoto:</b> en Chrome ≥137 arranca con <code>--enable-unsafe-swiftshader</code>; en Firefox prueba <code>LIBGL_ALWAYS_SOFTWARE=1 firefox</code>.</li>
+        <li>Actualiza el navegador y los drivers de la gráfica (<code>libgl1-mesa-dri</code> en Linux) y comprueba en <a href="https://get.webgl.org/" target="_blank" rel="noopener">get.webgl.org</a>.</li>
+      </ol>
+      <p><button class="btn" type="button" onclick="location.reload()">Reintentar</button></p>
+      <p class="fb-alt">Mientras tanto: <a href="render3d.html">vista 3D</a> · <a href="planos.html">planos 2D</a> · <a href="index.html">presupuestos</a></p>
     </div>
   </div>
 </div>
@@ -372,6 +388,8 @@ try{
 }catch(e){
   $("#loader").classList.add("done");
   $("#fallback").style.display="grid";
+  const w = $("#fb-why");
+  if(w) w.textContent = "Detalle técnico: " + (e && e.message ? e.message : "no se pudo crear el contexto WebGL");
   throw e;
 }
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
