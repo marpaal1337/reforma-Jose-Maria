@@ -28,6 +28,7 @@ OUT = ROOT / "tour3d.html"
 PANOS = CAM["panos"]
 PDF = "renders/panos"
 TEX = PLAN["textura"]["rect_m"]
+TEXTURA_JPG = ROOT / "data" / "imagenes" / "planta_textura.jpg"
 
 HTML = r"""<!DOCTYPE html>
 <html lang="es">
@@ -162,7 +163,7 @@ kbd{font:600 10px var(--sans);background:rgba(0,0,0,.07);border-radius:4px;paddi
 <div id="hud">
   <div id="plano">
     <div class="mapa">
-      <img id="mini" src="data/imagenes/planta_textura.jpg" alt="Planta de la vivienda">
+      <img id="mini" src="__TEXTURA__" alt="Planta de la vivienda">
     </div>
     <div class="cap"><b id="cuarto">—</b><span class="micro" id="pos">—</span></div>
   </div>
@@ -507,9 +508,13 @@ PANOS_JS = json.dumps(
       "file": f"{PDF}/{p['id']}.jpg", "src": url_pano(p["id"])} for p in PANOS],
     ensure_ascii=False, separators=(",", ":"))
 
+TEXTURA_SRC = ("data:image/jpeg;base64," + base64.b64encode(TEXTURA_JPG.read_bytes()).decode("ascii")
+               if EMBEBER else "data/imagenes/planta_textura.jpg")
+
 html = (HTML
         .replace("__THREE__", THREE)
         .replace("__PANOS__", PANOS_JS)
+        .replace("__TEXTURA__", TEXTURA_SRC)
         .replace("__TEX_RECT__", json.dumps(TEX))
         .replace("__FECHA__", date.today().strftime("%d/%m/%Y")))
 OUT.write_text(html, encoding="utf-8")

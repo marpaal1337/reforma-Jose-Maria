@@ -82,7 +82,8 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 │   ├── panos/                  12 equirectangular panoramas 4096×2048
 │   └── stills/                 4 perspective stills 1920×1080
 ├── libs/
-│   └── three.min.js            vendored Three.js r147 (MIT) inlined into render3d.html
+│   ├── three.min.js            vendored Three.js r147 (MIT) inlined into render3d.html
+│   └── GLTFLoader.js           vendored Three.js r147 GLTFLoader (MIT) inlined too
 ├── data/
 │   ├── presupuestos.json       master parsed data (27 records with line items)
 │   ├── presupuestos.csv        flat table for spreadsheet import
@@ -91,6 +92,8 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 │   ├── planos3d.json           3D model data: walls, glass, rooms, footprint, texture rect
 │   ├── ventanas.json           V01–V08 measured from PEI.05/06 + north + facade mapping
 │   ├── camaras.json            pano/still camera definitions for the Blender tour
+│   ├── mobiliario.glb          furniture + joinery exported from escena.blend (glTF)
+│   ├── texturas/               tileable finishes (roble, tarima, mármol, azulejo, tejidos…)
 │   ├── imagenes/
 │   │   ├── planta_textura.jpg  cropped plan used as the 3D floor texture
 │   │   ├── geometria_debug.png overlay to verify extracted walls/rooms
@@ -136,9 +139,11 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
     ├── analizar.py                reads JSONs → reports in informes/
     ├── generar_html.py            reads presupuestos.json → index.html
     ├── generar_geometria3d.py     vector geometry of Planos/distribución.pdf → data/planos3d.json + texture
-    ├── generar_visor3d.py         data/planos3d.json + libs/three.min.js → render3d.html
+    ├── generar_texturas.py        procedural tileable finishes → data/texturas/*.jpg
     ├── extraer_ventanas.py        Carpintería exterior PDF → data/ventanas.json
     ├── generar_blender.py         planos3d + ventanas + camaras → renders/escena.blend
+    ├── exportar_glb.py            escena.blend → data/mobiliario.glb (UVs + texturas)
+    ├── generar_visor3d.py         planos3d + three.min.js + GLTFLoader + GLB + texturas → render3d.html
     ├── render_blender.py          renders one camera from escena.blend (Cycles CPU)
     └── generar_tour3d.py          renders/panos + camaras.json → tour3d.html
 ```
@@ -153,11 +158,26 @@ python3 scripts/leer_excel.py && \
 python3 scripts/analizar.py && \
 python3 scripts/generar_html.py && \
 python3 scripts/generar_geometria3d.py && \
-python3 scripts/extraer_ventanas.py && \
-python3 scripts/generar_visor3d.py
+python3 scripts/generar_texturas.py && \
+python3 scripts/extraer_ventanas.py
 ```
 
-`generar_geometria3d.py` only needs the plan (`Planos/distribución.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_visor3d.py` needs `libs/three.min.js` (already vendored) and `data/imagenes/planta_textura.jpg`.
+El mobiliario del visor 3D se exporta desde Blender (los pasos de texturas y
+`escena.blend` son requisitos previos):
+
+```bash
+source /tmp/opencode/blender_env.sh
+"$BLENDER" -b --factory-startup -noaudio -P scripts/generar_blender.py   # escena
+"$BLENDER" -b renders/escena.blend -noaudio -P scripts/exportar_glb.py   # data/mobiliario.glb
+python3 scripts/generar_visor3d.py            # embebe el GLB en render3d.html
+python3 scripts/generar_visor3d.py --no-embed # variante ligera (necesita servidor local)
+```
+
+`--no-embed` carga `data/mobiliario.glb` y `data/texturas/` por ruta relativa;
+desde `file://` el navegador bloquea esos `fetch`/CORS, así que esa variante
+solo funciona sirviendo el directorio por HTTP (p. ej. `python3 -m http.server`).
+
+`generar_geometria3d.py` only needs the plan (`Planos/distribución.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_texturas.py` needs `numpy`, `pillow`. `generar_visor3d.py` needs `libs/three.min.js` y `libs/GLTFLoader.js` (ya vendored), `data/imagenes/planta_textura.jpg`, `data/texturas/` y `data/mobiliario.glb` (si falta el GLB, el visor arranca sin mobiliario).
 
 ### Tour 360 (Blender)
 
@@ -206,9 +226,12 @@ Google Fonts (Inter + Source Serif 4) are loaded from CDN — requires internet.
 Modelo 3D generado de la **geometría vectorial** del plano de distribución (no es una aproximación a ojo: la escala se calibró con las cotas del PDF y es exactamente 1:50, 56,69 pt/m).
 
 - Muros extruidos a 2,60 m clasificados por espesor (`estructural` ≥ 0,14 m, `tabique` ≥ 0,045 m, `vidrio` = carpinterías), suelos por estancia y alicatados de baños.
-- Dos modos de suelo: **Plano** (textura del plano recortada) y **Zonas** (color por estancia, superficie medida).
+- **Mobiliario real** de `data/mobiliario.glb` (exportado de la escena Blender con bevel, UVs y texturas) + acabados de `data/texturas/`: tarima, azulejo y tarima exterior en los suelos, microcemento en los muros.
+- **Tres modos de cámara**: `Órbita` (maqueta, techo oculto), `Caminar` (pointer lock, WASD, colisiones con muros y petos, altura de ojo 1,62 m) y `Vuelo` (libre, `Espacio`/`Q` subir/bajar). En táctil, joystick a la izquierda y arrastre para mirar a la derecha.
+- Dos modos de suelo: **Plano** (textura del plano recortada) y **Zonas** (suelo texturizado por estancia, superficies medidas).
 - Slider de altura de muros, slider de posición solar (sombras en tiempo real), etiquetas, ficha por estancia con superficie y coste orientativo (reparto proporcional del total Cyss v2.0), exportación a PNG y vistas `Planta` / `Vista general`.
-- Se abre desde `file://`; Three.js va inline (sin CDN ni módulos ES). Solo Google Fonts es externo.
+- El forjado del GLB (`techo`) se muestra solo si la cámara está por debajo de 2,45 m; así la vista de maqueta y la planta quedan abiertas.
+- Se abre desde `file://`; Three.js + GLTFLoader van inline (sin CDN ni módulos ES). Solo Google Fonts es externo. `python3 scripts/generar_visor3d.py --no-embed` genera la variante ligera (necesita `data/mobiliario.glb` y `data/texturas/` por HTTP: desde `file://` el navegador bloquea esos `fetch`/CORS).
 - La detección de estancias (watershed + sellado de huecos) se valida contra las cotas del arquitecto: p. ej. Dormitorio 1 = 8,08 m² vs 8,1 m² etiquetado, Baño 1 = 4,46 m² vs 4,5 m².
 - `data/imagenes/geometria_debug.png` es el overlay de control: colores por tipo de muro y áreas detectadas. Revisarlo tras cambiar el plano.
 - Botón **Galería** y ficha por estancia: muestran los renders de `data/reales/` (salón, cocina, dormitorio principal, baño) además del plano de aires y la foto de la plataforma en fachada. Si se añaden imágenes nuevas, actualizar el mapa `RENDERS`/`GALERIA` en `scripts/generar_visor3d.py`.
@@ -220,6 +243,7 @@ Tour virtual navegable con **12 panoramas equirectangulares** renderizados en Bl
 
 - Esfera equirectangular (Three.js inline), arrastrar para mirar, rueda para zoom, teclado (`←/→` mirar, `Av/Pág` estancias, `Espacio` girar).
 - **Hotspots** hacia las estancias vecinas (calculados con las coordenadas reales del plano), tira de navegación inferior y **miniplano** con la posición actual (clic para saltar).
+- Es **autocontenido** (12 panoramas + plano del miniplano + Three.js en base64/inline, ~7,6 MB): se puede compartir el `tour3d.html` suelto. Solo fallan los enlaces a `index.html`/`planos.html`/`render3d.html` y las fuentes de Google (caen a las del sistema). `python3 scripts/generar_tour3d.py --no-embed` genera la variante ligera que sí necesita `renders/panos/` y `data/imagenes/`.
 - Los stills 1920×1080 (`renders/stills/`) complementan la galería de `render3d.html`.
 - Aviso: los renders de `data/reales/` (IA) son solo referencia estética; el tour se construye con la geometría del plano y las ventanas V01–V08 medidas del PEI.05/06.
 
