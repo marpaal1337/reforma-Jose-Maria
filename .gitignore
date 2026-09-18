@@ -2,3 +2,5 @@ data/texto/
 __pycache__/
 *.pyc
 .DS_Store
+renders/*.blend
+renders/*.blend1

@@ -87,3 +87,24 @@ Materiales que muestran y su estado en el proyecto:
 3. Presupuestar los acabados de los renders si son vinculantes: roble a medida, piedra, grifería cobre, iluminación.
 4. Validar con David Barat el recorrido del plano de aires (rejillas por estancia, posición de máquina y registro).
 5. Documentar la plataforma de fachada y su ventana temporal en la planificación.
+
+## 7. Tour 360 propio (Blender)
+
+Se ha añadido un **tour virtual navegable** (`tour3d.html`) con 12 panoramas equirectangulares renderizados en Blender 4.2 (Cycles CPU) a partir de la geometría exacta del PE.A.02:
+
+| Contenido | Panorama |
+|---|---|
+| Recibidor · Pasillo | `p01_recibidor` · `p02_pasillo` |
+| Salón (ventanal, TV/pilar, comedor) | `p03` · `p04` · `p05` |
+| Cocina | `p06_cocina` |
+| Dormitorio principal · Dormitorio 2 · Dormitorio 3 | `p07` · `p08` · `p09` |
+| Baño 1 · Baño 2 | `p10` · `p11` |
+| Terraza | `p12_terraza` |
+
+Además, 4 stills 1920×1080 en `renders/stills/`.
+
+**Materiales** según memoria de calidades (porcelánico imitación madera, imitación mármol en recibidor, alicatado 60×120 en baños, piedra en frente de TV, península de piedra negra, roble en carpintería, grifería cobre) y **ventanas V01–V08 medidas del PEI.05/06** (incluidas las bandas de fachada norte y la vidriera sur del salón).
+
+**Mobiliario nivel B**: volúmenes aproximados colocados según el plano (cama y armarios, sofá y mueble de TV con pilar visto, cocina con isla y taburetes, mesa de comedor, baños con ducha/bañera, terraza con hamacas). No pretende reproducir el mobiliario exacto de los renders de `data/reales/` (que siguen siendo la referencia estética, no documental).
+
+**Limitaciones**: sin GPU, 20 núcleos CPU, ~20 min por panorama a 320 muestras; los acabados pétreos/roble a medida siguen pendientes de presupuesto (ver §4).

@@ -187,6 +187,7 @@ footer{
 .credit{text-align:right;font-size:10.5px;color:var(--muted);line-height:1.55;max-width:38ch}
 .credit b{color:var(--ink-2);font-weight:500}
 .credit a{color:var(--accent-2)}
+.btn{text-decoration:none}
 
 /* ── carga / avisos ── */
 #loader{position:absolute;inset:0;display:grid;place-items:center;z-index:40;background:var(--paper);
@@ -240,6 +241,7 @@ footer{
       </div>
       <button class="btn" id="b-labels" aria-pressed="true">Etiquetas</button>
       <button class="btn" id="b-galeria">Galería</button>
+      <a class="btn" href="tour3d.html">Tour 360</a>
       <button class="btn" id="b-panel" aria-pressed="true">Panel</button>
       <button class="btn" id="b-export">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
@@ -815,6 +817,7 @@ function abrirGaleria(){
     GALERIA.forEach(item=>{
       const fig = document.createElement("figure");
       fig.innerHTML = `<img src="${item.src}" alt="${item.cap}" loading="lazy"><figcaption><b>${item.tag || "Render"}</b> · ${item.cap}</figcaption>`;
+      fig.querySelector("img").addEventListener("error", ()=>fig.remove());
       fig.addEventListener("click", ()=>fig.classList.toggle("zoom"));
       grid.appendChild(fig);
     });

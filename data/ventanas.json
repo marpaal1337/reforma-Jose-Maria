@@ -1,0 +1,407 @@
+{
+ "generado": "2026-09-18",
+ "fuente": {
+  "ventanas": "Carpintería exterior/desconocido_Carpintería exterior.pdf",
+  "norte": "Planos/distribución.pdf",
+  "planos3d": "data/planos3d.json"
+ },
+ "escalas": {
+  "planta_PEI.05": "1:50",
+  "alzados_PEI.06": "1:30",
+  "pt_por_m_1_50": 56.6929,
+  "pt_por_m_1_30": 94.4882
+ },
+ "paginas": {
+  "indice_0": "PEI.05 planta 1:50 (etiquetas V0x)",
+  "indice_1": "PEI.06 alzados 1:30 (medidas y cuadro)",
+  "campo_pagina_ventanas": "índice 0-based de la página del alzado"
+ },
+ "unidades_cota": "Las cotas del cuadro son metros con coma decimal (2,98 = 2,98 m). La geometría a 1:30 lo confirma: p.ej. la cota 2,98 m mide 281,6 pt (281,6/94,488 = 2,98). En data/texto/*.txt hay artefactos del extractor antiguo con los dígitos invertidos (93,0=0,39; 12,1=1,21; 98,0=0,89; 24,1=1,42; 52,1=1,25; 40,1=1,04; 17,0=0,71); con page.get_text('words') los valores salen correctos.",
+ "norte_grados": 42.54,
+ "norte_notas": "Aguja del cajetín de distribución.pdf: punta desde el centro (1125.8, 797.6) hasta (1136.7, 787.6); ángulo 42.54° CCW respecto a +x de la página (sentido matemático). Cross-check OSM: la calle junto al nº2 (way 23549990) corre a 269,2°/88,8° y la fachada de calle es paralela; con esta aguja las fachadas del modelo quedan a 42,5°/132,5°, unos 46° de discrepancia. El símbolo se repite idéntico en todas las hojas (distribución, estado inicial, carpintería, demolición), por lo que es el norte del proyecto, pero conviene confirmarlo con el arquitecto.",
+ "notas_fachadas": "La orientación de cada hueco usa los ejes del modelo de planos3d (norte=z mínimo, sur=z máximo, este=x máximo, oeste=x mínimo), que es la convención de AGENTS.md. AVISO: según la aguja del norte, los ejes del plano estarían girados ~42,5°; ver norte_notas. Clasificación del informe ARQUITECTO_ANALISIS_DISTRIBUCION.md: V01-V04 fachada principal (salón-comedor y dormitorio principal) y V05-V08 fachada trasera/patio (dormitorios 2, 3 y cocina).",
+ "huecos_planos3d": [
+  {
+   "fachada": "este",
+   "orientacion": "v",
+   "centro": [
+    8.0,
+    -1.9
+   ],
+   "longitud_m": 1.36
+  },
+  {
+   "fachada": "este",
+   "orientacion": "v",
+   "centro": [
+    8.0,
+    1.99
+   ],
+   "longitud_m": 2.98
+  },
+  {
+   "fachada": "sur-dormitorios",
+   "orientacion": "h",
+   "centro": [
+    -4.28,
+    3.0
+   ],
+   "longitud_m": 1.18
+  },
+  {
+   "fachada": "sur-dormitorios",
+   "orientacion": "h",
+   "centro": [
+    -2.4,
+    3.0
+   ],
+   "longitud_m": 1.0
+  },
+  {
+   "fachada": "sur-galera",
+   "orientacion": "h",
+   "centro": [
+    -0.32,
+    2.5
+   ],
+   "longitud_m": 0.8
+  },
+  {
+   "fachada": "sur-bay",
+   "orientacion": "h",
+   "centro": [
+    -0.56,
+    4.4
+   ],
+   "longitud_m": 1.28
+  },
+  {
+   "fachada": "sur-bay",
+   "orientacion": "h",
+   "centro": [
+    1.22,
+    4.4
+   ],
+   "longitud_m": 0.9
+  },
+  {
+   "fachada": "norte",
+   "orientacion": "h",
+   "centro": [
+    -6.71,
+    -3.35
+   ],
+   "longitud_m": 0.95
+  }
+ ],
+ "muros_vidrio_planos3d": [
+  {
+   "indices": [
+    4,
+    5
+   ],
+   "centro": [
+    5.86,
+    -3.21
+   ],
+   "longitud_m": 4.74,
+   "orientacion": "horizontal",
+   "espesor_m": 0.03
+  },
+  {
+   "indices": [
+    6,
+    7
+   ],
+   "centro": [
+    -5.12,
+    -3.21
+   ],
+   "longitud_m": 2.23,
+   "orientacion": "horizontal",
+   "espesor_m": 0.03
+  },
+  {
+   "indices": [
+    22,
+    23,
+    24,
+    25
+   ],
+   "centro": [
+    -1.27,
+    -2.39
+   ],
+   "longitud_m": 1.7,
+   "orientacion": "vertical",
+   "espesor_m": 0.03
+  },
+  {
+   "indices": [
+    26,
+    27,
+    38,
+    39
+   ],
+   "centro": [
+    1.8,
+    -1.57
+   ],
+   "longitud_m": 0.1,
+   "orientacion": "horizontal",
+   "espesor_m": 0.019
+  },
+  {
+   "indices": [
+    30,
+    31,
+    32,
+    33,
+    36,
+    37,
+    40,
+    41
+   ],
+   "centro": [
+    -4.66,
+    -1.53
+   ],
+   "longitud_m": 0.1,
+   "orientacion": "horizontal",
+   "espesor_m": 0.013
+  },
+  {
+   "indices": [
+    46,
+    47
+   ],
+   "centro": [
+    1.8,
+    -0.55
+   ],
+   "longitud_m": 0.1,
+   "orientacion": "horizontal",
+   "espesor_m": 0.019
+  },
+  {
+   "indices": [
+    48,
+    49
+   ],
+   "centro": [
+    -4.66,
+    -0.55
+   ],
+   "longitud_m": 0.1,
+   "orientacion": "horizontal",
+   "espesor_m": 0.019
+  },
+  {
+   "indices": [
+    56,
+    57
+   ],
+   "centro": [
+    -3.58,
+    -0.47
+   ],
+   "longitud_m": 0.1,
+   "orientacion": "vertical",
+   "espesor_m": 0.029
+  },
+  {
+   "indices": [
+    60,
+    61
+   ],
+   "centro": [
+    5.84,
+    -0.39
+   ],
+   "longitud_m": 4.79,
+   "orientacion": "horizontal",
+   "espesor_m": 0.029
+  }
+ ],
+ "ventanas": [
+  {
+   "id": "V01",
+   "pagina": 1,
+   "ancho_m": 2.98,
+   "alto_m": 2.13,
+   "antepecho_m": null,
+   "tipologia": "3 hojas correderas | Bicolor Cobre ext/Blanco int | Persiana mecanismo eléctrico | Nudo central minimalista",
+   "color": "Bicolor Cobre ext/Blanco int",
+   "notas": "geometría alzado 1:30: ancho_m=2.98, alto_m=2.13. cotas de texto en metros: ancho_m=2.98, alto_m=2.13. sin cota de antepecho (arranque no acotado)",
+   "hueco_plano": {
+    "indices_vidrio": [],
+    "centro": [
+     8.09,
+     1.99
+    ],
+    "longitud_m": 3.0,
+    "fachada": "este",
+    "confianza": "alta",
+    "metodo": "raster_muros",
+    "notas": "Luz medida en planta 1:50 (raster_muros): 3.00 m vs cota de alzado 2.98 m. Coincide con hueco vectorial de planos3d (este)."
+   }
+  },
+  {
+   "id": "V02",
+   "pagina": 1,
+   "ancho_m": 1.39,
+   "alto_m": 1.42,
+   "antepecho_m": 0.71,
+   "tipologia": "2 hoja + 2 fijos | 1 oscilo | Bicolor Cobre ext/Blanco int | Persiana tirador derecha",
+   "color": "Bicolor Cobre ext/Blanco int",
+   "notas": "geometría alzado 1:30: ancho_m=1.39, alto_m=1.42, antepecho_m=0.71. cotas de texto en metros: ancho_m=1.39, alto_m=1.42, antepecho_m=0.71",
+   "hueco_plano": {
+    "indices_vidrio": [],
+    "centro": [
+     8.09,
+     -1.9
+    ],
+    "longitud_m": 1.38,
+    "fachada": "este",
+    "confianza": "alta",
+    "metodo": "raster_muros",
+    "notas": "Luz medida en planta 1:50 (raster_muros): 1.38 m vs cota de alzado 1.39 m. Coincide con hueco vectorial de planos3d (este)."
+   }
+  },
+  {
+   "id": "V03",
+   "pagina": 1,
+   "ancho_m": 1.17,
+   "alto_m": 1.25,
+   "antepecho_m": 1.04,
+   "tipologia": "2 hojas correderas | Blanco | Cristal traslúcido",
+   "color": "Blanco",
+   "notas": "geometría alzado 1:30: ancho_m=1.17, alto_m=1.251, antepecho_m=1.04. cotas de texto en metros: ancho_m=1.17, alto_m=1.25, antepecho_m=1.04",
+   "hueco_plano": {
+    "indices_vidrio": [],
+    "centro": [
+     -0.56,
+     4.32
+    ],
+    "longitud_m": 1.29,
+    "fachada": "sur",
+    "confianza": "media",
+    "metodo": "lineas_marco",
+    "notas": "Luz medida en planta 1:50 (lineas_marco): 1.29 m vs cota de alzado 1.17 m. Coincide con hueco vectorial de planos3d (sur-bay). Ventana de esquina (esquinero 90°): el hueco se dibuja con líneas finas, centro/longitud aproximados."
+   }
+  },
+  {
+   "id": "V04",
+   "pagina": 1,
+   "ancho_m": 1.24,
+   "alto_m": 1.25,
+   "antepecho_m": 1.04,
+   "tipologia": "2 hojas correderas | Blanco | Cristal traslúcido",
+   "color": "Blanco",
+   "notas": "geometría alzado 1:30: ancho_m=1.24, alto_m=1.251, antepecho_m=1.04. cotas de texto en metros: ancho_m=1.24, alto_m=1.25, antepecho_m=1.04",
+   "hueco_plano": {
+    "indices_vidrio": [],
+    "centro": [
+     -1.18,
+     3.74
+    ],
+    "longitud_m": 1.21,
+    "fachada": "oeste",
+    "confianza": "media",
+    "metodo": "lineas_marco",
+    "notas": "Luz medida en planta 1:50 (lineas_marco): 1.21 m vs cota de alzado 1.24 m. No hay hueco vectorial equivalente en planos3d.json. Ventana de esquina (esquinero 90°): el hueco se dibuja con líneas finas, centro/longitud aproximados."
+   }
+  },
+  {
+   "id": "V05",
+   "pagina": 1,
+   "ancho_m": 0.8,
+   "alto_m": 2.2,
+   "antepecho_m": null,
+   "tipologia": "1 hoja oscilo | Apertura exterior | Blanco | Cristal traslúcido",
+   "color": "Blanco",
+   "notas": "geometría alzado 1:30: ancho_m=0.8, alto_m=2.2. cotas de texto en metros: ancho_m=0.8, alto_m=2.2. puerta-galería de altura completa; sin antepecho acotado",
+   "hueco_plano": {
+    "indices_vidrio": [],
+    "centro": [
+     -0.31,
+     2.49
+    ],
+    "longitud_m": 0.81,
+    "fachada": "sur",
+    "confianza": "alta",
+    "metodo": "raster_muros",
+    "notas": "Luz medida en planta 1:50 (raster_muros): 0.81 m vs cota de alzado 0.80 m. Coincide con hueco vectorial de planos3d (sur-galera)."
+   }
+  },
+  {
+   "id": "V06",
+   "pagina": 1,
+   "ancho_m": 1.0,
+   "alto_m": 1.21,
+   "antepecho_m": 0.89,
+   "tipologia": "2 hoja | 1 oscilo | Blanco | Persiana tirador derecha",
+   "color": "Blanco",
+   "notas": "geometría alzado 1:30: ancho_m=1.0, alto_m=1.211, antepecho_m=0.89. cotas de texto en metros: ancho_m=1.0, alto_m=1.21, antepecho_m=0.89. quitamiedos a 1,10 m del suelo; el alféizar queda a 0,89 m",
+   "hueco_plano": {
+    "indices_vidrio": [],
+    "centro": [
+     -2.4,
+     3.01
+    ],
+    "longitud_m": 1.01,
+    "fachada": "sur",
+    "confianza": "alta",
+    "metodo": "raster_muros",
+    "notas": "Luz medida en planta 1:50 (raster_muros): 1.01 m vs cota de alzado 1.00 m. Coincide con hueco vectorial de planos3d (sur-dormitorios)."
+   }
+  },
+  {
+   "id": "V07",
+   "pagina": 1,
+   "ancho_m": 1.17,
+   "alto_m": 1.21,
+   "antepecho_m": 0.89,
+   "tipologia": "2 hoja | 1 oscilo | Blanco | Persiana tirador derecha",
+   "color": "Blanco",
+   "notas": "geometría alzado 1:30: ancho_m=1.17, alto_m=1.211, antepecho_m=0.89. cotas de texto en metros: ancho_m=1.17, alto_m=1.21, antepecho_m=0.89. quitamiedos a 1,10 m del suelo; el alféizar queda a 0,89 m",
+   "hueco_plano": {
+    "indices_vidrio": [],
+    "centro": [
+     -4.27,
+     3.01
+    ],
+    "longitud_m": 1.2,
+    "fachada": "sur",
+    "confianza": "alta",
+    "metodo": "raster_muros",
+    "notas": "Luz medida en planta 1:50 (raster_muros): 1.20 m vs cota de alzado 1.17 m. Coincide con hueco vectorial de planos3d (sur-dormitorios)."
+   }
+  },
+  {
+   "id": "V08",
+   "pagina": 1,
+   "ancho_m": 1.17,
+   "alto_m": 1.21,
+   "antepecho_m": 0.89,
+   "tipologia": "2 hoja | 1 oscilo | Blanco | Persiana tirador derecha",
+   "color": "Blanco",
+   "notas": "geometría alzado 1:30: ancho_m=1.17, alto_m=1.211, antepecho_m=0.89. cotas de texto en metros: ancho_m=1.17, alto_m=1.21, antepecho_m=0.89. quitamiedos a 1,10 m del suelo; el alféizar queda a 0,89 m",
+   "hueco_plano": {
+    "indices_vidrio": [
+     6,
+     7
+    ],
+    "centro": [
+     -6.71,
+     -3.31
+    ],
+    "longitud_m": 0.97,
+    "fachada": "norte",
+    "confianza": "media",
+    "metodo": "raster_muros",
+    "notas": "Luz medida en planta 1:50 (raster_muros): 0.97 m vs cota de alzado 1.17 m. Coincide con hueco vectorial de planos3d (norte). planos3d no abre hueco en el muro norte (el muro se extrae continuo); la planta dibuja ~0,97 m frente a 1,17 m de cota."
+   }
+  }
+ ]
+}

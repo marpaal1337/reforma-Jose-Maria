@@ -58,7 +58,7 @@ SEEDS = [
 ]
 
 # Terraza (polígono manual, no está cerrada por muros en el plano)
-TERRAZA = {"id": "terraza", "nombre": "Terraza", "pts": [[7.6, -0.5], [9.5, -0.5], [9.5, 3.45], [7.6, 3.45]]}
+TERRAZA = {"id": "terraza", "nombre": "Terraza", "pts": [[8.23, -0.5], [9.5, -0.5], [9.5, 3.45], [8.23, 3.45]]}
 
 
 def vis_transform(page):

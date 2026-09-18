@@ -76,6 +76,11 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 ├── index.html                  interactive dashboard (33 KB, self-contained except Google Fonts CDN)
 ├── planos.html                 2D plan viewer (Leaflet, self-contained)
 ├── render3d.html               interactive 3D model (Three.js inlined, self-contained)
+├── tour3d.html                 360° virtual tour (Blender panoramas + Three.js)
+├── renders/
+│   ├── escena.blend            Blender scene (gitignored; regenerate with the script)
+│   ├── panos/                  12 equirectangular panoramas 4096×2048
+│   └── stills/                 4 perspective stills 1920×1080
 ├── libs/
 │   └── three.min.js            vendored Three.js r147 (MIT) inlined into render3d.html
 ├── data/
@@ -84,6 +89,8 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 │   ├── auditoria.json          extraction audit (pages, character counts, warnings per PDF)
 │   ├── excel.json              Presupuesto.xlsx → parsed columns B & C
 │   ├── planos3d.json           3D model data: walls, glass, rooms, footprint, texture rect
+│   ├── ventanas.json           V01–V08 measured from PEI.05/06 + north + facade mapping
+│   ├── camaras.json            pano/still camera definitions for the Blender tour
 │   ├── imagenes/
 │   │   ├── planta_textura.jpg  cropped plan used as the 3D floor texture
 │   │   ├── geometria_debug.png overlay to verify extracted walls/rooms
@@ -129,7 +136,11 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
     ├── analizar.py                reads JSONs → reports in informes/
     ├── generar_html.py            reads presupuestos.json → index.html
     ├── generar_geometria3d.py     vector geometry of Planos/distribución.pdf → data/planos3d.json + texture
-    └── generar_visor3d.py         data/planos3d.json + libs/three.min.js → render3d.html
+    ├── generar_visor3d.py         data/planos3d.json + libs/three.min.js → render3d.html
+    ├── extraer_ventanas.py        Carpintería exterior PDF → data/ventanas.json
+    ├── generar_blender.py         planos3d + ventanas + camaras → renders/escena.blend
+    ├── render_blender.py          renders one camera from escena.blend (Cycles CPU)
+    └── generar_tour3d.py          renders/panos + camaras.json → tour3d.html
 ```
 
 ### How to regenerate
@@ -142,10 +153,26 @@ python3 scripts/leer_excel.py && \
 python3 scripts/analizar.py && \
 python3 scripts/generar_html.py && \
 python3 scripts/generar_geometria3d.py && \
+python3 scripts/extraer_ventanas.py && \
 python3 scripts/generar_visor3d.py
 ```
 
 `generar_geometria3d.py` only needs the plan (`Planos/distribución.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_visor3d.py` needs `libs/three.min.js` (already vendored) and `data/imagenes/planta_textura.jpg`.
+
+### Tour 360 (Blender)
+
+Los panoramas se renderizan con **Blender 4.2 LTS headless** (CPU, sin GPU). En esta máquina Blender no está instalado: se descargó el tarball oficial a `/tmp/opencode/blender-4.2.3-linux-x64` y se resolvieron `libSM`/`libICE` extrayendo los `.deb` de Ubuntu en `/tmp/opencode/blender-deps` (sin root). El entorno está en `/tmp/opencode/blender_env.sh`:
+
+```bash
+source /tmp/opencode/blender_env.sh
+"$BLENDER" -b --factory-startup -noaudio -P scripts/generar_blender.py        # escena
+"$BLENDER" -b renders/escena.blend -noaudio -P scripts/render_blender.py -- \
+    --cam p03_salon_ventanal --out renders/panos/p03_salon_ventanal.jpg \
+    --samples 320 --res 4096x2048                                            # pano
+python3 scripts/generar_tour3d.py                                            # tour html
+```
+
+Tiempos medidos: ~20 min por panorama 4096×2048 a 320 muestras (Cycles CPU, 20 hilos, 2 en paralelo). `renders/escena.blend` no se versiona (se regenera).
 
 ### Key findings (as of 2026-07-09)
 
@@ -186,6 +213,15 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución (no
 - `data/imagenes/geometria_debug.png` es el overlay de control: colores por tipo de muro y áreas detectadas. Revisarlo tras cambiar el plano.
 - Botón **Galería** y ficha por estancia: muestran los renders de `data/reales/` (salón, cocina, dormitorio principal, baño) además del plano de aires y la foto de la plataforma en fachada. Si se añaden imágenes nuevas, actualizar el mapa `RENDERS`/`GALERIA` en `scripts/generar_visor3d.py`.
 - **Aviso**: el plano de aires marcado por el instalador rotula una distribución distinta al PE.A.02 (cocina 12,9 m² cerrada y vestidor 6,2 m² que no existen en el modelo). Ver `informes/RENDERS_Y_PLANO_AIRES.md` antes de dar por buenas las superficies.
+
+### Tour 360 (`tour3d.html`)
+
+Tour virtual navegable con **12 panoramas equirectangulares** renderizados en Blender desde la geometría del PE.A.02, con mobiliario aproximado (nivel B), materiales según memoria de calidades y luz de mediodía difuso (cielo Nishita + portales en ventanas + downlights cálidos).
+
+- Esfera equirectangular (Three.js inline), arrastrar para mirar, rueda para zoom, teclado (`←/→` mirar, `Av/Pág` estancias, `Espacio` girar).
+- **Hotspots** hacia las estancias vecinas (calculados con las coordenadas reales del plano), tira de navegación inferior y **miniplano** con la posición actual (clic para saltar).
+- Los stills 1920×1080 (`renders/stills/`) complementan la galería de `render3d.html`.
+- Aviso: los renders de `data/reales/` (IA) son solo referencia estética; el tour se construye con la geometría del plano y las ventanas V01–V08 medidas del PEI.05/06.
 
 ## Agentes / Skills del proyecto (skills/)
 
