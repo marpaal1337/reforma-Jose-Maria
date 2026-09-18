@@ -13,7 +13,9 @@ Uso:
 """
 from __future__ import annotations
 
+import base64
 import json
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -193,7 +195,7 @@ const TEX_RECT = __TEX_RECT__;
 const SRC = i => PANOS[i].src;
 
 let renderer, scene, camera, sphere, mat, tex = null, actual = -1, giro = false;
-let yaw = 0, pitch = 0, yawT = 0, pitchT = 0, fovT = 75;
+let yaw = 0, pitch = 0, yawT = 0, pitchT = 0, fovT = 75, arrancado = false;
 const $ = s => document.querySelector(s);
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const R = 120;
@@ -265,13 +267,37 @@ const vDir = new THREE.Vector3();
 function dirCamara(){ camera.getWorldDirection(vDir); return vDir; }
 
 /* ── navegación ── */
-const loader = new THREE.TextureLoader();
+/* Nota: cargamos los panoramas con <img> sin crossOrigin y creamos la textura a
+   mano. Con THREE.TextureLoader (crossOrigin='anonymous') el navegador bloquea
+   las imágenes al abrir el visor con file:// y la pantalla queda en negro. */
+function cargarPano(i, cb){
+  const img = new Image();
+  img.decoding = "async";
+  img.onload = () => {
+    const t = new THREE.Texture(img);
+    t.needsUpdate = true;
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    cb(t);
+  };
+  img.onerror = () => cb(null);
+  img.src = SRC(i);
+}
+function errorPanos(msg){
+  const el = $("#load");
+  el.classList.remove("done");
+  el.querySelector("h2").textContent = "No se pueden cargar los panoramas";
+  el.querySelector("p").innerHTML = msg;
+  el.querySelector(".bar").style.display = "none";
+}
 function ir(i, deGolpe){
   if (i === actual || i < 0 || i >= PANOS.length) return;
   const aplicar = () => {
-    loader.load(SRC(i), t => {
-      t.encoding = THREE.sRGBEncoding;
-      t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    cargarPano(i, t => {
+      if (!t){
+        errorPanos("No se ha podido cargar el panorama <b>" + (PANOS[i].file || PANOS[i].id) + "</b>.");
+        return;
+      }
       if (tex) tex.dispose();
       tex = t;
       mat.map = t;
@@ -423,27 +449,52 @@ montarTira();
 requestAnimationFrame(tick);
 
 let pendientes = PANOS.length, listos = 0;
+const pre = {};
 $("#loadbar").style.width = "8%";
-PANOS.forEach(p => {
+PANOS.forEach((p, i) => {
   const im = new Image();
-  im.onload = im.onerror = () => {
-    listos++;
+  im.onload = () => { pre[i] = true; listos++; avanza(); };
+  im.onerror = () => { pre[i] = false; listos++; avanza(); };
+  im.src = p.src;
+});
+function avanza(){
+  {
+    listos = listos;
     $("#loadbar").style.width = (8 + 92 * listos / pendientes) + "%";
-    if (listos === pendientes){
+    if (listos === pendientes && !arrancado){
+      arrancado = true;
+      const ok = Object.values(pre).filter(Boolean).length;
+      if (ok === 0){
+        errorPanos("No se ha podido cargar ningún panorama." + (PANOS[0].src.indexOf("data:") === 0 ? "" :
+          "<br>Abre <b>tour3d.html</b> desde la carpeta del proyecto (junto a " +
+          "<b>renders/panos/</b>) o usa la versión autocontenida."));
+        return;
+      }
       $("#load").classList.add("done");
       ir(0, true);
     }
-  };
-  im.src = p.src;
-});
+  }
+}
 </script>
 </body>
 </html>
 """
 
+EMBEBER = "--no-embed" not in sys.argv
+
+
+def url_pano(pid: str) -> str:
+    f = ROOT / PDF / f"{pid}.jpg"
+    if not EMBEBER:
+        return f"{PDF}/{pid}.jpg"
+    if not f.exists():
+        raise SystemExit(f"Falta {f} (genera antes los panoramas)")
+    return "data:image/jpeg;base64," + base64.b64encode(f.read_bytes()).decode("ascii")
+
+
 PANOS_JS = json.dumps(
     [{"id": p["id"], "nombre": p["nombre"], "x": p["x"], "z": p["z"], "yaw": p["yaw"],
-      "src": f"{PDF}/{p['id']}.jpg"} for p in PANOS],
+      "file": f"{PDF}/{p['id']}.jpg", "src": url_pano(p["id"])} for p in PANOS],
     ensure_ascii=False, separators=(",", ":"))
 
 html = (HTML
