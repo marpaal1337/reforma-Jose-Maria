@@ -1008,6 +1008,9 @@ def main() -> None:
     <div class="sub">C/ José María Mortes Lerma 2, 7º PTA 28 · 46018 Valencia · informe generado el {hoy}</div>
   </div>
   <div class="actions">
+    <a href="planos.html" class="btn" title="Visor interactivo de planos">🗺 Planos</a>
+    <a href="render3d.html" class="btn" title="Visor 3D del plano de distribución">Vista 3D</a>
+    <a href="tour3d.html" class="btn" title="Tour virtual 360 por las estancias">Tour 360</a>
     <button id="theme" class="btn" title="Cambiar tema">◐ Tema</button>
     <button class="btn" onclick="window.print()" title="Imprimir o guardar como PDF">⎙ Imprimir</button>
   </div>

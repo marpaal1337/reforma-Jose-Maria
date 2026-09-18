@@ -70,6 +70,14 @@ SIDEBAR = '''<nav id="sidebar" role="navigation">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
       <span>Planos</span>
     </button>
+    <a class="sb-btn" href="render3d.html" title="Vista 3D">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <span>3D</span>
+    </a>
+    <a class="sb-btn" href="tour3d.html" title="Tour 360">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      <span>Tour</span>
+    </a>
     <button class="sb-btn" data-module="escenarios" title="Escenarios">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
       <span>Escenarios</span>
@@ -383,7 +391,7 @@ body { display: flex; }
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   background: none; border: none; color: var(--muted); cursor: pointer;
   padding: 8px 4px; border-radius: 6px; font-size: 9px; transition: all .15s;
-  font-family: inherit; width: 100%;
+  font-family: inherit; width: 100%; text-decoration: none;
 }
 .sb-btn:hover { background: var(--line); color: var(--ink); }
 .sb-btn.active { background: var(--accent); color: var(--paper); }
@@ -412,6 +420,8 @@ body { display: flex; }
   padding: 12px 16px; border-radius: 4px; margin-bottom: 24px;
   font-size: 14px; color: var(--ink-2);
 }
+.module-cta { display: flex; gap: 8px; flex-wrap: wrap; margin: -8px 0 16px; }
+.module-cta .btn { text-decoration: none; }
 
 /* Dashboard KPIs */
 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
@@ -553,7 +563,12 @@ NEW_HTML = '''<!DOCTYPE html>
   </div>
 
   <div class="module" data-module="planos">
-    <section><h2>📐 Planos Interactivos</h2><div class="module-intro">Comparativa visual entre estado inicial y distribución reformada. Arrastra el separador en modo Lateral.</div></section>
+    <section><h2>📐 Planos Interactivos</h2><div class="module-intro">Comparativa visual entre estado inicial y distribución reformada. Arrastra el separador en modo Lateral.</div>
+    <div class="module-cta">
+      <a class="btn" href="planos.html">Planos 2D interactivos</a>
+      <a class="btn" href="render3d.html">Vista 3D del piso</a>
+      <a class="btn" href="tour3d.html">Tour virtual 360</a>
+    </div></section>
 %(planos)s
   </div>
 
