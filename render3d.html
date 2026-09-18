@@ -183,7 +183,17 @@ footer{
 #fallback a{color:var(--accent-2)}
 
 @media (max-width:860px){
-  header{flex-direction:column;gap:8px;padding:12px}
+  header{flex-direction:column;gap:6px;padding:10px 12px}
+  .title-block .eyebrow{font-size:9px}
+  h1{font-size:17.5px;margin:2px 0 0}
+  .label{padding:3px 8px 4px}
+  .label b{font-size:10.5px}
+  .label i{font-size:9.5px;margin-left:4px}
+  aside{max-height:40vh}
+  .ctl{padding:9px 14px}
+  .rooms button{padding:7px 9px;font-size:12px}
+  #card{padding:14px 16px 16px}
+  .stats div b{font-size:15px}
   .title-block .eyebrow::before{width:14px}
   h1{font-size:19px;margin:3px 0 0;max-width:26ch}
   .title-block p{display:none}
@@ -228,7 +238,7 @@ footer{
         PNG
       </button>
       <button class="btn" id="b-planta">Planta</button>
-      <button class="btn" id="b-reset">Vista general</button>
+      <button class="btn" id="b-reset" title="Vista general">Vista</button>
     </div>
   </header>
 
@@ -585,6 +595,22 @@ const ctrl = {
   target:new THREE.Vector3(0,0,0.6), theta:VIEW0.theta, phi:VIEW0.phi, dist:D0,
   target2:new THREE.Vector3(0,0,0.6), theta2:VIEW0.theta, phi2:VIEW0.phi, dist2:D0
 };
+let interactuado = false;
+function vistaInicial(){
+  const retrato = innerHeight > innerWidth * 1.05;
+  const theta = VIEW0.theta + (retrato ? Math.PI / 2 : 0);
+  const phi = retrato ? 0.58 : VIEW0.phi;
+  return {theta, phi, dist: fitDist(phi, theta)};
+}
+function aplicarVistaInicial(){
+  const v = vistaInicial();
+  ctrl.theta = ctrl.theta2 = v.theta;
+  ctrl.phi = ctrl.phi2 = v.phi;
+  ctrl.dist = ctrl.dist2 = v.dist;
+  ctrl.target.set(0, 0, 0.6);
+  ctrl.target2.copy(ctrl.target);
+  interactuado = false;
+}
 function applyCamera(snap){
   if(snap){ ctrl.target.copy(ctrl.target2); ctrl.theta=ctrl.theta2; ctrl.phi=ctrl.phi2; ctrl.dist=ctrl.dist2; }
   const sp = new THREE.Spherical(ctrl.dist, ctrl.phi, ctrl.theta);
@@ -592,6 +618,7 @@ function applyCamera(snap){
   camera.lookAt(ctrl.target);
 }
 function flyTo(o){
+  interactuado = true;
   ctrl.target2.set(o.x??ctrl.target.x, o.y??0, o.z??ctrl.target.z);
   ctrl.theta2 = o.theta ?? ctrl.theta;
   ctrl.phi2 = Math.min(Math.max(o.phi ?? ctrl.phi, 0.12), 1.5);
@@ -605,6 +632,7 @@ cvs.addEventListener("pointerdown", e=>{
   cvs.setPointerCapture(e.pointerId);
   drag = {x:e.clientX, y:e.clientY, pan:(e.button===2||e.shiftKey)};
   downAt = {x:e.clientX, y:e.clientY};
+  interactuado = true;
 });
 cvs.addEventListener("pointermove", e=>{
   if(!drag) return;
@@ -624,6 +652,7 @@ addEventListener("pointerup", ()=>{ drag=null; });
 cvs.addEventListener("contextmenu", e=>e.preventDefault());
 cvs.addEventListener("wheel", e=>{
   e.preventDefault();
+  interactuado = true;
   ctrl.dist2 = Math.min(Math.max(ctrl.dist2 * (1 + Math.sign(e.deltaY)*0.09), 3.5), 70);
 },{passive:false});
 
@@ -768,7 +797,12 @@ INTERIOR.slice().sort((a,b)=>b.area-a.area).forEach(z=>{
   list.appendChild(li);
 });
 $("#panel-count").textContent = `${INTERIOR.length} estancias`;
-if(innerWidth < 860){ $("#panel").classList.add("hidden"); $("#b-panel").setAttribute("aria-pressed","false"); }
+if(innerWidth < 860){
+  $("#panel").classList.add("hidden");
+  $("#b-panel").setAttribute("aria-pressed","false");
+  labelsOn = false;
+  $("#b-labels").setAttribute("aria-pressed","false");
+}
 $("#total").textContent = fmt(AREA_INT)+" m²";
 
 /* ── controles ── */
@@ -786,12 +820,14 @@ $("#b-panel").addEventListener("click", e=>{
 $("#b-reset").addEventListener("click", ()=>resetView());
 function resetView(){
   select(null);
-  const d = fitDist(VIEW0.phi, VIEW0.theta);
-  flyTo({x:0,z:0.6,theta:VIEW0.theta,phi:VIEW0.phi,dist:d});
+  const v = vistaInicial();
+  flyTo({x:0,z:0.6,theta:v.theta,phi:v.phi,dist:v.dist});
 }
 $("#b-planta").addEventListener("click", ()=>{
   select(null);
-  flyTo({x:0,z:0.6,theta:0,phi:0.02,dist:fitDist(0.02,0)});
+  const retrato = innerHeight > innerWidth * 1.05;
+  const theta = retrato ? Math.PI / 2 : 0;
+  flyTo({x:0,z:0.6,theta,phi:0.02,dist:fitDist(0.02, theta)});
 });
 $("#s-altura").addEventListener("input", e=>{
   const h = parseFloat(e.target.value);
@@ -904,9 +940,11 @@ function resize(){
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight, false);
+  if(!interactuado) aplicarVistaInicial();
 }
 addEventListener("resize", resize);
 resize();
+aplicarVistaInicial();
 applyCamera(true);
 setMode("plan");
 
