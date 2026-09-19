@@ -34,6 +34,8 @@ ACABADOS = {
     "azulejo": ("azulejo.jpg", 0.22, 0.0, 1.0),
     "travertino": ("travertino.jpg", 0.55, 0.0, 1.0),
     "roble": ("roble.jpg", 0.42, 0.0, 1.0),
+    "roble_h": ("roble.jpg", 0.42, 0.0, 1.0),
+    "alfombra": ("tejido_claro.jpg", 0.95, 0.0, 1.0),
     "piedra_negra": ("piedra_negra.jpg", 0.20, 0.0, 1.0),
     "tejido": ("tejido.jpg", 0.95, 0.0, 1.0),
     "tejido_claro": ("tejido_claro.jpg", 0.95, 0.0, 1.0),
@@ -41,6 +43,8 @@ ACABADOS = {
 }
 COLORES = {
     "negro_mate": (0.02, 0.02, 0.02, 0.6),
+    "blanco_laca": (0.93, 0.93, 0.91, 0.35),
+    "vidrio_acido": (0.92, 0.94, 0.93, 0.45),
     "pantalla": (0.012, 0.012, 0.014, 0.08),
     "planta": (0.07, 0.16, 0.055, 0.7),
     "maceta": (0.85, 0.84, 0.80, 0.7),
@@ -48,9 +52,15 @@ COLORES = {
     "aluminio": (0.12, 0.115, 0.11, 0.35),
     "espejo": (0.95, 0.95, 0.95, 0.03),
     "cristal": (1.0, 1.0, 1.0, 0.02),
+    "metal_negro": (0.035, 0.035, 0.037, 0.42),
+    "cuero": (0.25, 0.11, 0.05, 0.5),
+    "cortina": (0.96, 0.95, 0.92, 0.6),
+    "lampara_pantalla": (0.95, 0.93, 0.88, 0.85),
+    "lienzo": (0.88, 0.85, 0.79, 0.9),
+    "tierra": (0.045, 0.032, 0.022, 0.95),
 }
-METALES = {"cobre", "aluminio", "espejo"}
-TRANSPARENTES = {"cristal"}
+METALES = {"cobre", "aluminio", "espejo", "metal_negro"}
+TRANSPARENTES = {"cristal": 0.18, "vidrio_acido": 0.55, "cortina": 0.5}
 ESCALA_TEX = {"marmol": 1.5, "azulejo": 1.5, "travertino": 1.2}
 
 
@@ -105,7 +115,7 @@ def aplicar_acabado(mat: bpy.types.Material) -> None:
         bsdf.inputs["Roughness"].default_value = rough
         bsdf.inputs["Metallic"].default_value = 1.0 if nombre in METALES else 0.0
         if nombre in TRANSPARENTES:
-            bsdf.inputs["Alpha"].default_value = 0.18
+            bsdf.inputs["Alpha"].default_value = TRANSPARENTES[nombre]
             mat.blend_method = "BLEND"
 
 

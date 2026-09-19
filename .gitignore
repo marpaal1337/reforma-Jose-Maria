@@ -4,3 +4,5 @@ __pycache__/
 .DS_Store
 renders/*.blend
 renders/*.blend1
+.playwright-mcp/
+capturas/

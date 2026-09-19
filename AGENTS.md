@@ -90,10 +90,12 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
 │   ├── auditoria.json          extraction audit (pages, character counts, warnings per PDF)
 │   ├── excel.json              Presupuesto.xlsx → parsed columns B & C
 │   ├── planos3d.json           3D model data: walls, glass, rooms, footprint, texture rect
+│   ├── puertas.json            D0–D8 + PA02 measured from PE.A.02/PEI.07 (drives door openings, leaves, lintels)
 │   ├── ventanas.json           V01–V08 measured from PEI.05/06 + north + facade mapping
 │   ├── camaras.json            pano/still camera definitions for the Blender tour
 │   ├── mobiliario.glb          furniture + joinery exported from escena.blend (glTF)
 │   ├── texturas/               tileable finishes (roble, tarima, mármol, azulejo, tejidos…)
+│   ├── pbr/                    CC0 PBR maps (Poly Haven + ambientCG) for the Cycles render
 │   ├── imagenes/
 │   │   ├── planta_textura.jpg  cropped plan used as the 3D floor texture
 │   │   ├── geometria_debug.png overlay to verify extracted walls/rooms
@@ -139,6 +141,7 @@ The repository now includes an **analysis pipeline** that extracts, parses, and 
     ├── analizar.py                reads JSONs → reports in informes/
     ├── generar_html.py            reads presupuestos.json → index.html
     ├── generar_geometria3d.py     vector geometry of Planos/distribución.pdf → data/planos3d.json + texture
+    ├── medir_puertas.py           door openings detection on the plan texture → data/puertas.json (self-checking)
     ├── generar_texturas.py        procedural tileable finishes → data/texturas/*.jpg
     ├── extraer_ventanas.py        Carpintería exterior PDF → data/ventanas.json
     ├── generar_blender.py         planos3d + ventanas + camaras → renders/escena.blend
@@ -158,6 +161,7 @@ python3 scripts/leer_excel.py && \
 python3 scripts/analizar.py && \
 python3 scripts/generar_html.py && \
 python3 scripts/generar_geometria3d.py && \
+python3 scripts/medir_puertas.py && \
 python3 scripts/generar_texturas.py && \
 python3 scripts/extraer_ventanas.py
 ```
@@ -226,8 +230,10 @@ Google Fonts (Inter + Source Serif 4) are loaded from CDN — requires internet.
 Modelo 3D generado de la **geometría vectorial** del plano de distribución (no es una aproximación a ojo: la escala se calibró con las cotas del PDF y es exactamente 1:50, 56,69 pt/m).
 
 - Muros extruidos a 2,60 m clasificados por espesor (`estructural` ≥ 0,14 m, `tabique` ≥ 0,045 m, `vidrio` = carpinterías), suelos por estancia y alicatados de baños.
+- **Puertas D0–D8 + separador PA02 desde `data/puertas.json`** (medición del PE.A.02 verificada por `scripts/medir_puertas.py`, tipos PEI.07: lacadas blancas, correderas, vidriera P03, entrada existente). `generar_geometria3d.py` punzona los huecos en los muros (la detección de estancias usa los rellenos originales); `generar_blender.py:build_puertas()` pone marcos, hojas y dinteles; el visor solo muestra el mobiliario de `MOB_SALON` en `generar_visor3d.py` (salón estar + cocina, sin comedor ni dormitorios).
 - **Mobiliario real** de `data/mobiliario.glb` (exportado de la escena Blender con bevel, UVs y texturas) + acabados de `data/texturas/`: tarima, azulejo y tarima exterior en los suelos, microcemento en los muros.
-- **Tres modos de cámara**: `Órbita` (maqueta, techo oculto), `Caminar` (pointer lock, WASD, colisiones con muros y petos, altura de ojo 1,62 m) y `Vuelo` (libre, `Espacio`/`Q` subir/bajar). En táctil, joystick a la izquierda y arrastre para mirar a la derecha.
+- **Tres modos de cámara**: `Órbita` (maqueta, techo oculto), `Caminar` (pointer lock, WASD, colisiones con muros y petos, altura de ojo 1,62 m) y `Vuelo` (libre, `Espacio`/`Q` subir/bajar). En táctil, joystick a la izquierda (fijo o donde toques, con vibración) y arrastre para mirar a la derecha. Al volver a `Órbita` desde dentro de la vivienda recupera la vista general anterior (no deja la cámara dentro de un muro).
+- **UX móvil** (clase `body.movil` puesta por el script si `pointer:coarse` o ancho ≤860 px): barra inferior de 5 accesos (Plano/Zonas, Estancias, Etiquetas, Cámara cíclica, Más), hoja de acciones con Galería/Tour/PNG/Planta/Ayuda, panel de estancias y ficha como hojas deslizables (arrastra el asa o toca fuera; la ficha no es modal y deja girar el modelo), guía de primer uso (`localStorage.r3d_coach`), avisos tipo toast, safe-areas iOS, objetivos táctiles ≥44 px y menos sombras/pixel ratio en táctil. El PNG usa la hoja de compartir nativa cuando existe. La vista con ficha abierta sube la estancia sobre la hoja (`applyCamera`). El canvas `#c` se ajusta al viewport por CSS (necesario con `devicePixelRatio` >1; antes el modelo salía ampliado y recortado en pantallas retina).
 - Dos modos de suelo: **Plano** (textura del plano recortada) y **Zonas** (suelo texturizado por estancia, superficies medidas).
 - Slider de altura de muros, slider de posición solar (sombras en tiempo real), etiquetas, ficha por estancia con superficie y coste orientativo (reparto proporcional del total Cyss v2.0), exportación a PNG y vistas `Planta` / `Vista general`.
 - El forjado del GLB (`techo`) se muestra solo si la cámara está por debajo de 2,45 m; así la vista de maqueta y la planta quedan abiertas.
@@ -235,7 +241,7 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución (no
 - La detección de estancias (watershed + sellado de huecos) se valida contra las cotas del arquitecto: p. ej. Dormitorio 1 = 8,08 m² vs 8,1 m² etiquetado, Baño 1 = 4,46 m² vs 4,5 m².
 - `data/imagenes/geometria_debug.png` es el overlay de control: colores por tipo de muro y áreas detectadas. Revisarlo tras cambiar el plano.
 - Botón **Galería** y ficha por estancia: muestran los renders de `data/reales/` (salón, cocina, dormitorio principal, baño) además del plano de aires y la foto de la plataforma en fachada. Si se añaden imágenes nuevas, actualizar el mapa `RENDERS`/`GALERIA` en `scripts/generar_visor3d.py`.
-- **Aviso**: el plano de aires marcado por el instalador rotula una distribución distinta al PE.A.02 (cocina 12,9 m² cerrada y vestidor 6,2 m² que no existen en el modelo). Ver `informes/RENDERS_Y_PLANO_AIRES.md` antes de dar por buenas las superficies.
+- **Distribución vigente: PE.A.02 (confirmado por el cliente 2026-09-19)**. El plano de aires marcado por el instalador es solo su croquis de conductos (rotula cocina 12,9 m² y vestidor 6,2 m² que no existen en el modelo); no es una versión alternativa. Detalle en `informes/RENDERS_Y_PLANO_AIRES.md`.
 
 ### Tour 360 (`tour3d.html`)
 
@@ -246,6 +252,15 @@ Tour virtual navegable con **12 panoramas equirectangulares** renderizados en Bl
 - Es **autocontenido** (12 panoramas + plano del miniplano + Three.js en base64/inline, ~7,6 MB): se puede compartir el `tour3d.html` suelto. Solo fallan los enlaces a `index.html`/`planos.html`/`render3d.html` y las fuentes de Google (caen a las del sistema). `python3 scripts/generar_tour3d.py --no-embed` genera la variante ligera que sí necesita `renders/panos/` y `data/imagenes/`.
 - Los stills 1920×1080 (`renders/stills/`) complementan la galería de `render3d.html`.
 - Aviso: los renders de `data/reales/` (IA) son solo referencia estética; el tour se construye con la geometría del plano y las ventanas V01–V08 medidas del PEI.05/06.
+
+#### Calidad del render (actualizado 2026-09-19)
+
+`generar_blender.py` usa ahora **materiales PBR reales** de `data/pbr/` (Poly Haven + ambientCG, CC0): tarima (`oak_wood_planks`), roble (`oak_veneer_01`), travertino (`travertine`), hormigón (`brushed_concrete`), tejido (`cotton_jersey`), yute (`hessian_230`) y cuero (`brown_leather`). Si falta `data/pbr/`, cae a los materiales procedurales anteriores.
+
+- Las UV se generan con `uv_proyectar()` (proyección por cara según la normal dominante, UV en metros) y las texturas repiten a su tamaño real (`tex_m`). Esto también mejora el GLB que consume el visor 3D.
+- `vidrios_sin_sombra()` desactiva el sombreado de los vidrios para que el sol entre por los huecos (truco estándar de arquitectura).
+- Salón amueblado en calidad A: sofá de tres plazas con colchones y patas metálicas, butaca mariposa, mesa de centro de travertino y cristal, lámpara de pie con pantalla, planta de hojas grandes, cortinas térmicas del ventanal y arte en los cuadros.
+- PoC de referencia: `renders/stills/s4_salon_ventanal_poc.jpg` (still s4, 1920×1080, 1000 muestras + denoise, ~15 min CPU). El resto de estancias sigue con mobiliario nivel B hasta que se apruebe la calidad.
 
 ## Agentes / Skills del proyecto (skills/)
 

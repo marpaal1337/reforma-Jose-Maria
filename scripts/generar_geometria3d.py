@@ -129,6 +129,118 @@ def thinness(pts):
     return 2.0 * poly_area(pts) / max(poly_perimeter(pts), 1e-9)
 
 
+def _clip(poly, keep):
+    """Sutherland-Hodgman contra un semiplano. keep(p) dice si p se conserva."""
+    if len(poly) < 3:
+        return []
+    out = []
+    n = len(poly)
+    for i in range(n):
+        a, b = poly[i], poly[(i + 1) % n]
+        ka, kb = keep(a), keep(b)
+        if kb:
+            if not ka:
+                out.append(_cruce(a, b, keep))
+            out.append(b)
+        elif ka:
+            out.append(_cruce(a, b, keep))
+    return out
+
+
+def _cruce(a, b, keep):
+    """Punto donde el segmento a->b cruza el borde (búsqueda binaria)."""
+    lo, hi = 0.0, 1.0
+    ka = keep(a)
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        m = (a[0] + (b[0] - a[0]) * mid, a[1] + (b[1] - a[1]) * mid)
+        if keep(m) == ka:
+            lo = mid
+        else:
+            hi = mid
+    return (a[0] + (b[0] - a[0]) * hi, a[1] + (b[1] - a[1]) * hi)
+
+
+def resta_rect(poly, rect):
+    """Resta un rectángulo (x0,x1,z0,z1, en las mismas unidades) de un
+    polígono convexo. Devuelve la lista de piezas (hasta 4)."""
+    x0, x1, z0, z1 = rect
+    izq = _clip(poly, lambda p: p[0] <= x0)
+    der = _clip(poly, lambda p: p[0] >= x1)
+    mid = _clip(_clip(poly, lambda p: p[0] >= x0), lambda p: p[0] <= x1)
+    aba = _clip(mid, lambda p: p[1] <= z0)
+    arr = _clip(mid, lambda p: p[1] >= z1)
+    return [q for q in (izq, der, aba, arr)
+            if len(q) >= 3 and poly_area(q) > 1.0]
+
+
+def punzonar_puertas(muros_pdf, cx, cz):
+    """Abre los huecos de data/puertas.json en los rellenos de muro (coords
+    vis pt). Solo puertas con pared h/v y hueco real (no D7/D8/PA02, que no
+    llevan muro). Devuelve la lista de polígonos resultante."""
+    try:
+        puertas = json.loads((ROOT / "data" / "puertas.json")
+                             .read_text(encoding="utf-8"))["puertas"]
+    except (OSError, KeyError, ValueError):
+        return muros_pdf
+    rects = []
+    for p in puertas:
+        if p["tipo"] in ("corredera",) and p["id"] == "D7":
+            continue
+        if p["tipo"] in ("vidriera",):
+            continue
+        if p["pared"] not in ("h", "v"):
+            continue
+        cxm, czm = p["centro"]
+        w = p["ancho"] / 2 + 0.03
+        t = 0.20  # cubre cualquier espesor de muro/tabique
+        if p["pared"] == "h":
+            rects.append(((cxm - w) * PT_PER_M + cx, (cxm + w) * PT_PER_M + cx,
+                          (czm - t) * PT_PER_M + cz, (czm + t) * PT_PER_M + cz))
+        else:
+            rects.append(((cxm - t) * PT_PER_M + cx, (cxm + t) * PT_PER_M + cx,
+                          (czm - w) * PT_PER_M + cz, (czm + w) * PT_PER_M + cz))
+    if not rects:
+        return muros_pdf
+    out = []
+    for poly in muros_pdf:
+        pendientes = [poly]
+        for r in rects:
+            x0, x1, z0, z1 = r
+            if max(p[0] for p in poly) < x0 or min(p[0] for p in poly) > x1 \
+                    or max(p[1] for p in poly) < z0 or min(p[1] for p in poly) > z1:
+                continue
+            nuevos = []
+            for q in pendientes:
+                if max(p[0] for p in q) < x0 or min(p[0] for p in q) > x1 \
+                        or max(p[1] for p in q) < z0 or min(p[1] for p in q) > z1:
+                    nuevos.append(q)
+                    continue
+                partes = resta_rect(q, r)
+                if not partes:
+                    nuevos.append(q)  # el rectángulo lo cubre todo: conservar
+                    continue
+                hueco = _hueco_exact(q, r)
+                if abs(sum(poly_area(t) for t in partes)
+                       - (poly_area(q) - hueco)) > 0.01 * poly_area(q):
+                    nuevos.append(q)  # no convexo: se conserva sin punzonar
+                else:
+                    nuevos.extend(partes)
+            pendientes = nuevos
+        out.extend(pendientes)
+    print(f"muros: {len(muros_pdf)} polígonos -> {len(out)} tras abrir huecos")
+    return out
+
+
+def _hueco_exact(poly, rect):
+    """Área exacta de la intersección polígono×rect (para polígonos convexos;
+    si no lo es, el control de áreas de punzonar_puertas lo descarta)."""
+    x0, x1, z0, z1 = rect
+    q = _clip(_clip(poly, lambda p: p[0] >= x0), lambda p: p[0] <= x1)
+    q = _clip(_clip(q, lambda p: p[1] >= z0), lambda p: p[1] <= z1)
+    return poly_area(q) if len(q) >= 3 else 0.0
+
+
 def extract(page):
     fn = vis_transform(page)
     muros, alicatados = [], []
@@ -336,13 +448,68 @@ def main() -> int:
     def m(px, pz):
         return ((px - cx) / PT_PER_M, (pz - cz) / PT_PER_M)
 
+    # Huecos de puerta (data/puertas.json): se abren solo en la geometría de
+    # salida; el raster de estancias sigue usando los rellenos originales
+    # (las puertas se consideran cerradas para delimitar estancias).
+    muros_vista = punzonar_puertas(muros_pdf, cx, cz)
+
     muros = []
-    for poly in muros_pdf:
+    provisionales = []
+    for poly in muros_vista:
         t = thinness(poly) / PT_PER_M
         tipo = "estructural" if t >= 0.14 else ("tabique" if t >= 0.045 else "vidrio")
         pts = [m(*p) for p in poly]
-        muros.append({"tipo": tipo, "t": round(t, 3),
-                      "pts": [[round(a, 3), round(b, 3)] for a, b in pts]})
+        provisionales.append({"tipo": tipo, "t": t, "pts": pts})
+    # 2026-09-19: los rellenos finos (<4,5 cm) del CAD no son ventanas sino
+    # aristas duplicadas de muros macizos, restos de huecos de puerta y
+    # contornos de muebles (ver /tmp/opencode/vidrios_overlay.png: 35
+    # fragmentos "vidrio", p. ej. la partición D2/D3 que solo salió como
+    # tiras). Regla: se descartan los cortos (<0,8 m); los largos que solapan
+    # con un muro sólido se descartan como duplicados; los largos sin muro
+    # sólido debajo se conservan como tabique (no como vidrio).
+    solidos = [p for p in provisionales if p["tipo"] in ("estructural", "tabique")]
+    def caja(p):
+        xs = [a for a, _b in p["pts"]]
+        zs = [b for _a, b in p["pts"]]
+        return min(xs), max(xs), min(zs), max(zs)
+    cajas_sol = [caja(p) for p in solidos]
+    for p in provisionales:
+        if p["tipo"] in ("estructural", "tabique"):
+            muros.append({"tipo": p["tipo"], "t": round(p["t"], 3),
+                          "pts": [[round(a, 3), round(b, 3)] for a, b in p["pts"]]})
+            continue
+        x0p, x1p, z0p, z1p = caja(p)
+        largo = max(x1p - x0p, z1p - z0p)
+        if largo < 0.8:
+            continue  # resto de puerta, mueble o pelusa del CAD
+        horiz = (x1p - x0p) >= (z1p - z0p)
+        duplicado = False
+        for sx0, sx1, sz0, sz1 in cajas_sol:
+            if horiz:
+                if abs((sz0 + sz1) / 2 - (z0p + z1p) / 2) < 0.15 \
+                        and sx0 < x1p - 0.3 and sx1 > x0p + 0.3:
+                    duplicado = True
+                    break
+            else:
+                if abs((sx0 + sx1) / 2 - (x0p + x1p) / 2) < 0.15 \
+                        and sz0 < z1p - 0.3 and sz1 > z0p + 0.3:
+                    duplicado = True
+                    break
+        if duplicado:
+            continue  # arista duplicada de un muro ya extraído
+        muros.append({"tipo": "tabique", "t": round(max(p["t"], 0.07), 3),
+                      "pts": [[round(a, 3), round(b, 3)] for a, b in p["pts"]]})
+    print(f"muros: {len(provisionales)} polígonos -> {len(muros)} tras filtrar vidrios")
+
+    # 2026-09-19: jambas de la galería (V03 sur + V04 oeste, PEI.05). Los muros
+    # de la galería van en línea fina sin relleno gris, así que la extracción
+    # no los ve y los marcos V03/V04 flotaban exentos (la "esquina de cristal"
+    # reportada). Se añaden los dos tramos macizos que el plano sí dibuja:
+    # oeste-norte (del muro de cocina hasta V04) y sur-este (de V03 al pilar).
+    for x0j, z0j, x1j, z1j in ((-1.25, 2.50, -1.11, 3.12),
+                               (0.025, 4.25, 0.17, 4.39)):
+        muros.append({"tipo": "tabique", "t": 0.14,
+                      "pts": [[x0j, z0j], [x1j, z0j], [x1j, z1j], [x0j, z1j]]})
 
     alicatados = []
     for poly in alic_pdf:

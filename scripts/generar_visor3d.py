@@ -57,6 +57,8 @@ HTML = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <title>Render 3D · Reforma José María Mortés Lerma</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF7F2">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="description" content="Modelo 3D interactivo de la reforma, generado automáticamente del plano de distribución PE.A.02 (SOFIA PALACIOS arquitectura).">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -68,6 +70,9 @@ HTML = r"""<!DOCTYPE html>
   --good:#4A6B2E; --panel:rgba(250,247,242,.86); --shadow:0 18px 50px -18px rgba(40,32,24,.35);
   --serif:'Source Serif 4',Georgia,'Times New Roman',serif;
   --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+  --mbar:calc(68px + var(--sab));
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -75,16 +80,20 @@ body{
   margin:0;font-family:var(--sans);color:var(--ink);background:
     radial-gradient(120% 90% at 78% 8%, #FFFDF8 0%, #F6F2EA 42%, #EAE4D6 100%);
   overflow:hidden;-webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;-webkit-tap-highlight-color:transparent;
 }
+button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #app{position:fixed;inset:0}
 canvas{display:block;touch-action:none}
+#c{position:absolute;inset:0;width:100%;height:100%}
 .micro{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .num{font-family:var(--serif);font-variant-numeric:tabular-nums}
 
 /* ── cabecera ── */
 header{
   position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
-  align-items:flex-start;padding:18px 20px;pointer-events:none;z-index:20;gap:12px;
+  align-items:flex-start;pointer-events:none;z-index:20;gap:12px;
+  padding:calc(18px + var(--sat)) calc(20px + var(--sar)) 18px calc(20px + var(--sal));
 }
 .title-block{pointer-events:auto;max-width:52ch}
 .title-block .eyebrow{display:flex;align-items:center;gap:8px}
@@ -223,6 +232,72 @@ body.libre.pointerlock #c{cursor:none}
 .credit b{color:var(--ink-2);font-weight:500}
 .credit a{color:var(--accent-2)}
 .btn{text-decoration:none}
+.btn.solid{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.solid:hover{border-color:var(--ink);color:#fff;opacity:.92}
+
+/* ── barra inferior móvil ── */
+#mbar{display:none}
+#mbar button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:14px;
+  font:600 9px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 2px;min-height:52px;transition:.2s}
+#mbar button svg{width:22px;height:22px;flex:none}
+#mbar button[aria-pressed="true"]{color:var(--accent-2);background:rgba(181,101,29,.11)}
+#mbar button:active{transform:scale(.93)}
+.btn.ghost{border-color:transparent;background:transparent;box-shadow:none}
+.btn.ghost:hover{border-color:var(--line);background:var(--panel)}
+
+/* ── fondo atenuado de hojas móviles ── */
+#scrim{position:fixed;inset:0;z-index:17;background:rgba(24,20,16,.4);
+  opacity:0;pointer-events:none;transition:opacity .3s}
+#scrim.on{opacity:1;pointer-events:auto}
+
+/* ── asa de las hojas ── */
+.grip{display:none;padding:8px 0 2px;touch-action:none;cursor:grab}
+.grip::before{content:"";display:block;width:44px;height:5px;border-radius:99px;background:#CFC6B6;margin:0 auto}
+.grip::after{content:"";display:block;height:14px}
+
+/* ── aviso breve ── */
+#toast{position:fixed;left:50%;bottom:calc(var(--mbar) + 14px);transform:translate(-50%,10px);
+  z-index:23;max-width:84vw;text-align:center;background:rgba(26,24,20,.92);color:#F5F1EA;
+  font:500 12px/1.35 var(--sans);padding:10px 16px;border-radius:999px;box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;transition:.3s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ── hoja de acciones "Más" ── */
+#actions{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center}
+#actions[hidden]{display:none}
+#actions .scrim{position:absolute;inset:0;background:rgba(24,20,16,.42)}
+#actions .sheet{position:relative;width:100%;max-width:600px;background:var(--paper);
+  border-radius:22px 22px 0 0;padding:0 14px calc(16px + var(--sab));
+  box-shadow:0 -22px 60px -24px rgba(0,0,0,.55);animation:subir .28s cubic-bezier(.22,.8,.28,1)}
+#actions .sheet h2{font-family:var(--serif);font-size:16px;margin:2px 4px 0;font-weight:600}
+@keyframes subir{from{transform:translateY(34px);opacity:.4}}
+.actions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}
+.actions-grid a,.actions-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+  min-height:78px;padding:12px 6px;border:1px solid var(--line);border-radius:15px;background:#fff;
+  color:var(--ink-2);font:600 11px/1.2 var(--sans);text-decoration:none;cursor:pointer;transition:.2s}
+.actions-grid a:active,.actions-grid button:active{transform:scale(.95);border-color:var(--accent)}
+.actions-grid svg{width:23px;height:23px;color:var(--accent-2)}
+
+/* ── guía de primer uso ── */
+#coach{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:22px;
+  background:rgba(24,20,16,.58);backdrop-filter:blur(4px)}
+#coach[hidden]{display:none}
+.coach-card{background:var(--paper);border-radius:22px;max-width:410px;width:100%;
+  padding:22px 22px 18px;box-shadow:0 30px 70px -22px rgba(0,0,0,.6);animation:subir .32s}
+.coach-card h2{font-family:var(--serif);font-size:21px;margin:6px 0 14px;font-weight:600}
+.coach-card ul{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:11px}
+.coach-card ul[hidden]{display:none}
+.coach-card li{display:grid;grid-template-columns:36px 1fr;gap:11px;align-items:start;
+  font-size:12.5px;line-height:1.45;color:var(--muted)}
+.coach-card li b{display:block;color:var(--ink);font-size:12.5px}
+.coach-card .ic{width:36px;height:36px;border-radius:11px;background:rgba(181,101,29,.13);
+  display:grid;place-items:center;color:var(--accent-2)}
+.coach-card .ic svg{width:19px;height:19px}
+.coach-card .foot{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.coach-card .foot .micro{text-transform:none;letter-spacing:.02em;font-weight:500}
+.coach-card kbd{font:600 10px var(--sans);background:rgba(0,0,0,.06);border-radius:4px;padding:2px 5px;color:var(--ink-2)}
 
 /* ── carga / avisos ── */
 #loader{position:absolute;inset:0;display:grid;place-items:center;z-index:40;background:var(--paper);
@@ -245,31 +320,83 @@ body.libre.pointerlock #c{cursor:none}
 #fallback h2{font-family:var(--serif);font-size:24px}
 #fallback a{color:var(--accent-2)}
 
-@media (max-width:860px){
-  header{flex-direction:column;gap:6px;padding:10px 12px}
-  .title-block .eyebrow{font-size:9px}
-  h1{font-size:17.5px;margin:2px 0 0}
-  .label{padding:3px 8px 4px}
-  .label b{font-size:10.5px}
-  .label i{font-size:9.5px;margin-left:4px}
-  aside{max-height:40vh}
-  .ctl{padding:9px 14px}
-  .rooms button{padding:7px 9px;font-size:12px}
-  #card{padding:14px 16px 16px}
-  .stats div b{font-size:15px}
-  .title-block .eyebrow::before{width:14px}
-  h1{font-size:19px;margin:3px 0 0;max-width:26ch}
-  .title-block p{display:none}
-  .toolbar{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;max-width:100%;
-    scrollbar-width:none;padding-bottom:2px;-webkit-overflow-scrolling:touch}
-  .toolbar::-webkit-scrollbar{display:none}
-  .seg button,.btn{padding:7px 11px;font-size:10.5px}
-  aside{top:auto;bottom:12px;left:12px;right:12px;width:auto;max-height:46vh}
-  aside.hidden{transform:translateY(130%)}
-  #card{right:12px;left:12px;top:auto;bottom:12px;width:auto}
-  .hint{display:none}
-  footer{padding:8px 12px}
-  .credit{display:none}
+/* ── móvil (la clase body.movil la pone el script; cubre puntero táctil o ancho ≤860px) ── */
+body.movil header{flex-direction:column;gap:6px;padding:calc(12px + var(--sat)) calc(14px + var(--sar)) 0 calc(14px + var(--sal))}
+body.movil .title-block{max-width:none;width:100%}
+body.movil .title-block .eyebrow{font-size:9px}
+body.movil .title-block .eyebrow::before{width:14px}
+body.movil .title-block p{display:none}
+body.movil h1{font-size:17px;margin:3px 0 0;max-width:32ch;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.movil .toolbar{display:none}
+
+body.movil #mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:21;
+  align-items:stretch;justify-content:space-between;gap:2px;
+  padding:6px calc(6px + var(--sar)) calc(6px + var(--sab)) calc(6px + var(--sal));
+  background:var(--panel);border-top:1px solid var(--line);backdrop-filter:blur(14px);
+  box-shadow:0 -10px 30px -20px rgba(40,32,24,.5);transition:transform .3s}
+body.sheet-open #mbar,body.sheet-open #stick{transform:translateY(140%)}
+
+/* hojas inferiores: panel de estancias y ficha */
+body.movil aside{
+  top:auto;bottom:0;left:0;right:0;width:auto;max-height:min(74dvh,560px);
+  border-radius:22px 22px 0 0;border-bottom:0;
+  transition:transform .4s cubic-bezier(.22,.8,.28,1),opacity .3s;
+}
+body.movil aside.hidden{transform:translateY(112%);opacity:0;pointer-events:none}
+body.movil aside .panel-scroll{max-height:min(58dvh,430px);overscroll-behavior:contain}
+body.movil .grip{display:block}
+body.movil .panel-foot{padding-bottom:calc(14px + var(--sab))}
+body.movil .ctl{padding:11px 16px}
+body.movil .rooms button{padding:11px 9px;font-size:12.5px}
+body.movil #card{
+  top:auto;right:0;left:0;bottom:var(--mbar);width:auto;z-index:22;
+  max-height:min(60dvh,520px);overflow-y:auto;overscroll-behavior:contain;
+  border-radius:20px 20px 0 0;padding:0 18px 16px;
+  transform:translateY(110%);transition:transform .4s cubic-bezier(.22,.8,.28,1),opacity .3s;
+}
+body.movil #card.show{transform:none}
+body.movil #card .close{top:8px;right:6px;width:44px;height:44px;font-size:18px}
+body.movil #card .render img{height:132px}
+body.movil input[type=range]{height:34px}
+body.movil .ctl label{margin-bottom:2px}
+body.movil #card .stats{grid-template-columns:1fr 1fr 1fr;gap:10px 8px}
+body.movil .stats div b{font-size:15px}
+body.movil .stats div span{font-size:9px;letter-spacing:.08em}
+body.movil .label{padding:5px 10px 6px}
+body.movil .label b{font-size:11.5px}
+body.movil .label i{font-size:10px;margin-left:4px}
+body.movil #labels{pointer-events:none}
+
+body.movil footer{display:none}
+body.movil #stick{width:124px;height:124px;left:18px;bottom:calc(var(--mbar) + 18px);
+  pointer-events:auto;transition:transform .3s,opacity .3s}
+body.movil #stick i{width:52px;height:52px;margin:-26px 0 0 -26px}
+body.movil #stick.act{border-color:var(--accent);box-shadow:0 0 0 3px rgba(181,101,29,.18),var(--shadow)}
+body.movil #stick::after{content:"mover"}
+
+body.movil #galeria{padding:calc(74px + var(--sat)) 14px calc(28px + var(--sab))}
+body.movil #galeria .gal-head{padding:calc(14px + var(--sat)) 14px 14px}
+body.movil #galeria .grid{grid-template-columns:1fr}
+body.movil #galeria .close{width:44px;height:44px}
+body.movil #galeria h2{font-size:19px}
+body.movil .panel-scroll,body.movil #card,body.movil #galeria{scrollbar-width:none}
+body.movil .panel-scroll::-webkit-scrollbar,body.movil #card::-webkit-scrollbar,
+body.movil #galeria::-webkit-scrollbar{display:none}
+
+@media (orientation:landscape) and (max-height:520px){
+  body.movil aside{top:0;bottom:0;left:auto;right:0;width:min(370px,76vw);max-height:100dvh;
+    border-radius:18px 0 0 18px}
+  body.movil aside.hidden{transform:translateX(112%)}
+  body.movil aside .panel-scroll{max-height:calc(100dvh - 148px)}
+  body.movil #card{top:0;bottom:var(--mbar);left:auto;right:0;width:min(400px,82vw);max-height:none;
+    border-radius:18px 0 0 18px;padding-bottom:16px;transform:translateX(112%)}
+  body.movil #card.show{transform:none}
+  body.movil #card .render img{height:150px}
+  body.movil #card .stats{grid-template-columns:1fr 1fr}
+  body.movil h1{font-size:15px}
+  body.movil .actions-grid{grid-template-columns:repeat(6,1fr)}
+  body.movil .actions-grid a,body.movil .actions-grid button{min-height:66px;padding:8px 4px}
 }
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms!important;animation-duration:.01ms!important}
@@ -281,6 +408,7 @@ body.libre.pointerlock #c{cursor:none}
   <canvas id="c" aria-label="Modelo 3D de la vivienda"></canvas>
   <div id="labels"></div>
   <div id="stick" aria-hidden="true"><i></i></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 
   <header>
     <div class="title-block">
@@ -308,10 +436,14 @@ body.libre.pointerlock #c{cursor:none}
       </button>
       <button class="btn" id="b-planta">Planta</button>
       <button class="btn" id="b-reset" title="Vista general">Vista</button>
+      <button class="btn" id="b-help" title="Ayuda" aria-label="Ayuda">?</button>
     </div>
   </header>
 
+  <div id="scrim"></div>
+
   <aside id="panel">
+    <div class="grip" id="panel-grip" aria-hidden="true"></div>
     <div class="panel-head">
       <h2>Estancias</h2>
       <span class="micro" id="panel-count"></span>
@@ -333,7 +465,8 @@ body.libre.pointerlock #c{cursor:none}
     </div>
   </aside>
 
-  <section id="card" aria-live="polite">
+  <section id="card" role="dialog" aria-label="Ficha de estancia" aria-live="polite">
+    <div class="grip" id="card-grip" aria-hidden="true"></div>
     <button class="close" id="card-close" aria-label="Cerrar ficha">✕</button>
     <div class="swatch-lg" id="card-color"></div>
     <h3 id="card-name">—</h3>
@@ -374,6 +507,73 @@ body.libre.pointerlock #c{cursor:none}
       Consulta el detalle en <a href="index.html">index.html</a> y el alzado 2D en <a href="planos.html">planos.html</a>.
     </div>
   </footer>
+
+  <nav id="mbar" aria-label="Controles del visor">
+    <button id="mb-suelo" aria-label="Cambiar modo de suelo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
+      <span id="mb-suelo-txt">Plano</span>
+    </button>
+    <button id="mb-estancias" aria-controls="panel" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v15"/><path d="M9 21v-5h6v5"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01"/></svg>
+      <span>Estancias</span>
+    </button>
+    <button id="mb-labels" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-8.6-8.6a2 2 0 0 1-.6-1.4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 1.4.6L20.6 12a2 2 0 0 1 0 1.4Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+      <span>Etiquetas</span>
+    </button>
+    <button id="mb-cam" aria-label="Cambiar cámara">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7l-8-5Z"/><path d="M12 22V12M4 7l8 5 8-5"/></svg>
+      <span id="mb-cam-txt">Órbita</span>
+    </button>
+    <button id="mb-more" aria-haspopup="dialog" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+      <span>Más</span>
+    </button>
+  </nav>
+
+  <div id="actions" hidden role="dialog" aria-modal="true" aria-label="Más acciones">
+    <div class="scrim" id="actions-scrim"></div>
+    <div class="sheet">
+      <div class="grip" id="actions-grip" aria-hidden="true"></div>
+      <h2>Más acciones</h2>
+      <div class="actions-grid">
+        <button type="button" data-act="vista">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Vista general</button>
+        <button type="button" data-act="planta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 3v18"/></svg>Planta</button>
+        <button type="button" data-act="galeria">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 17 5-4 4 3 3-2 6 5"/></svg>Galería</button>
+        <a href="tour3d.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/><path d="M5.6 5.6c3.5 3 9.3 3 12.8 0M5.6 18.4c3.5-3 9.3-3 12.8 0"/></svg>Tour 360</a>
+        <button type="button" data-act="png">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Descargar PNG</button>
+        <button type="button" data-act="ayuda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.8 2.8 0 1 1 4 2.5c-.9.5-1.3 1-1.3 2"/><path d="M12 17h.01"/></svg>Ayuda</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="coach" hidden>
+    <div class="coach-card">
+      <div class="micro">Guía rápida</div>
+      <h2>Explora la reforma en 3D</h2>
+      <ul>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V12"/><path d="M14 12V6.5a1.5 1.5 0 0 1 3 0V13"/><path d="M17 13v-2a1.5 1.5 0 0 1 3 0v5a6 6 0 0 1-6 6h-2.3a5 5 0 0 1-3.5-1.4L4.5 17c-.6-.6-.6-1.6 0-2.2.7-.7 1.7-.6 2.3 0L8 16"/></svg></span><span><b>Girar y desplazar</b>Arrastra un dedo para orbitar la vivienda.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m18 0V5a2 2 0 0 0-2-2h-4m0 18h4a2 2 0 0 0 2-2v-4M3 15v4a2 2 0 0 0 2 2h4"/><circle cx="12" cy="12" r="2.5"/></svg></span><span><b>Zoom</b>Pellizca con dos dedos para acercarte.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v15"/><path d="M9 21v-5h6v5"/></svg></span><span><b>Estancias</b>Toca una habitación o ábrela en «Estancias» para ver su ficha.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m10 9 5 3-5 3V9Z"/></svg></span><span><b>Recorre la casa</b>Con «Cámara» pasa a Caminar o Vuelo y usa el joystick.</span></li>
+      </ul>
+      <ul class="coach-extra" id="coach-extra" hidden>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg></span><span><b>Plano / Zonas</b>Cambia el suelo entre la planta escaneada y los acabados por estancia.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-8.6-8.6a2 2 0 0 1-.6-1.4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 1.4.6L20.6 12a2 2 0 0 1 0 1.4Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg></span><span><b>Etiquetas</b>Muestra u oculta los nombres y superficies de cada estancia.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 3v18"/></svg></span><span><b>Planta y PNG</b>«Más» → Planta para ver el alzado 2D o Descargar PNG para guardar la vista.</span></li>
+      </ul>
+      <div class="foot">
+        <button class="btn ghost" id="coach-mas" type="button">Más ayuda</button>
+        <button class="btn solid" id="coach-ok" type="button">Entendido</button>
+      </div>
+    </div>
+  </div>
 
   <div id="loader">
     <div class="box">
@@ -440,7 +640,7 @@ const GALERIA = [
   ...RENDERS["salon"],
   ...RENDERS["dorm-principal"],
   ...RENDERS["bano-1"],
-  {src:"data/imagenes/plano_aires_recorte.jpg", cap:"Plano de conductos de clima marcado por el instalador (otra versión de distribución: cocina 12,9 m² y vestidor 6,2 m²)", tag:"Obra"},
+  {src:"data/imagenes/plano_aires_recorte.jpg", cap:"Plano de conductos de clima marcado por el instalador (croquis de conductos; la distribución vigente es el PE.A.02)", tag:"Obra"},
   {src:"data/reales/grua al 7º piso.jpeg", cap:"Medios auxiliares: plataforma articulada en fachada para el 7º piso", tag:"Obra"}
 ];
 const INTERIOR = ZONES.filter(e => e.id !== "terraza");
@@ -448,6 +648,18 @@ const AREA_INT = INTERIOR.reduce((s,e)=>s+e.area,0);
 
 /* ── utilidades ── */
 const $ = s => document.querySelector(s);
+const COARSE = matchMedia("(pointer:coarse)").matches;
+const esMovil = () => COARSE || innerWidth <= 860;
+function syncMovil(){ document.body.classList.toggle("movil", esMovil()); }
+syncMovil();
+let toastTO = 0;
+function toast(msg, ms=3400){
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("on");
+  clearTimeout(toastTO);
+  toastTO = setTimeout(()=>el.classList.remove("on"), ms);
+}
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const fmt = (v,d=1) => v.toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d});
 const eur = v => v.toLocaleString("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
@@ -470,7 +682,7 @@ try{
   if(w) w.textContent = "Detalle técnico: " + (e && e.message ? e.message : "no se pudo crear el contexto WebGL");
   throw e;
 }
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, COARSE ? 1.5 : 2));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.92;
@@ -500,7 +712,7 @@ scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xFFF2DE, 0.92);
 sun.position.set(-8,16,10);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048,2048);
+sun.shadow.mapSize.set(COARSE?1024:2048, COARSE?1024:2048);
 sun.shadow.camera.near = 1; sun.shadow.camera.far = 70;
 sun.shadow.camera.left = -14; sun.shadow.camera.right = 14;
 sun.shadow.camera.top = 14; sun.shadow.camera.bottom = -14;
@@ -644,6 +856,8 @@ function setMode(m){
   gAlicatados.visible = (m==="zonas");
   $("#m-plan").setAttribute("aria-pressed", String(m==="plan"));
   $("#m-zonas").setAttribute("aria-pressed", String(m==="zonas"));
+  $("#mb-suelo-txt").textContent = m==="plan" ? "Plano" : "Zonas";
+  $("#mb-suelo").setAttribute("aria-pressed", String(m==="zonas"));
 }
 
 /* ── etiquetas ── */
@@ -696,11 +910,15 @@ function aplicarVistaInicial(){
   ctrl.target2.copy(ctrl.target);
   interactuado = false;
 }
+const _look = new THREE.Vector3();
 function applyCamera(snap){
   if(snap){ ctrl.target.copy(ctrl.target2); ctrl.theta=ctrl.theta2; ctrl.phi=ctrl.phi2; ctrl.dist=ctrl.dist2; }
   const sp = new THREE.Spherical(ctrl.dist, ctrl.phi, ctrl.theta);
   camera.position.setFromSpherical(sp).add(ctrl.target);
-  camera.lookAt(ctrl.target);
+  /* con la ficha abierta en móvil, sube la estancia sobre la hoja */
+  const desvio = (esMovil() && $("#card").classList.contains("show")) ? ctrl.dist*0.17 : 0;
+  _look.set(ctrl.target.x, ctrl.target.y - desvio, ctrl.target.z);
+  camera.lookAt(_look);
 }
 function flyTo(o){
   interactuado = true;
@@ -725,6 +943,8 @@ let techoGLB = null;   // el forjado del GLB se oculta en órbita (vista de maqu
 const EYE = 1.62, RADIO = 0.30, V_WALK = 2.6, V_RUN = 5.0, V_FLY = 4.4, V_FLY_RUN = 9.0;
 const joy = {x:0, y:0};
 let camMode = "orbita";
+const CAM_TXT = {orbita:"Órbita", caminar:"Caminar", vuelo:"Vuelo"};
+const CAM_ORDEN = ["orbita","caminar","vuelo"];
 const clampPitch = v => Math.min(Math.max(v, -1.45), 1.45);
 
 function colisionar(p){
@@ -760,14 +980,24 @@ function dentroDeHuella(x, z){
   return dentro;
 }
 
+let orbitGuardada = null;
 function setCamMode(m){
   if(m===camMode) return;
+  if(m!=="orbita" && camMode==="orbita")
+    orbitGuardada = {target:ctrl.target2.clone(), theta:ctrl.theta2, phi:ctrl.phi2, dist:ctrl.dist2};
   camMode = m;
   if(m==="orbita"){
-    const fwd=camera.getWorldDirection(new THREE.Vector3());
-    ctrl.target2.copy(camera.position).addScaledVector(fwd, Math.max(5, ctrl.dist*0.45));
-    const sp=new THREE.Spherical().setFromVector3(camera.position.clone().sub(ctrl.target2));
-    ctrl.dist2=Math.max(3.5,sp.radius); ctrl.theta2=sp.theta; ctrl.phi2=clampPitch(sp.phi);
+    if(orbitGuardada && dentroDeHuella(camera.position.x, camera.position.z)){
+      /* si venimos de caminar por dentro, recupera la vista general anterior */
+      ctrl.target2.copy(orbitGuardada.target);
+      ctrl.theta2=orbitGuardada.theta; ctrl.phi2=orbitGuardada.phi; ctrl.dist2=orbitGuardada.dist;
+    }else{
+      const fwd=camera.getWorldDirection(new THREE.Vector3());
+      ctrl.target2.copy(camera.position).addScaledVector(fwd, Math.max(5, ctrl.dist*0.45));
+      const sp=new THREE.Spherical().setFromVector3(camera.position.clone().sub(ctrl.target2));
+      ctrl.dist2=Math.max(3.5,sp.radius); ctrl.theta2=sp.theta; ctrl.phi2=clampPitch(sp.phi);
+    }
+    orbitGuardada = null;
     if(document.pointerLockElement) document.exitPointerLock();
     $("#stick").classList.remove("on");
     camera.fov=38;
@@ -794,6 +1024,12 @@ function setCamMode(m){
     .setAttribute("aria-pressed", String(k===camMode)));
   $("#hint-orbita").hidden = m!=="orbita";
   $("#hint-libre").hidden = m==="orbita";
+  $("#mb-cam-txt").textContent = CAM_TXT[m];
+  $("#mb-cam").setAttribute("aria-pressed", String(m!=="orbita"));
+  $("#mb-cam").setAttribute("aria-label", "Cámara: "+CAM_TXT[m]);
+  if(esMovil() && m!=="orbita")
+    toast(m==="caminar" ? "Joystick para caminar · arrastra a la derecha para mirar"
+                        : "Joystick para volar · toca «Cámara» para volver a Órbita");
   interactuado = true;
 }
 
@@ -857,7 +1093,20 @@ function stickMove(e){
   joy.y = Math.max(-1,Math.min(1,(e.clientY-cy)/max));
   stickKnob.style.transform = `translate(${joy.x*max*0.6}px,${joy.y*max*0.6}px)`;
 }
-function stickReset(){ joy.x=joy.y=0; stickKnob.style.transform=""; stickId=null; }
+function stickReset(){ joy.x=joy.y=0; stickKnob.style.transform=""; stickId=null; stick.classList.remove("act"); }
+/* el propio joystick también se puede agarrar directamente */
+stick.addEventListener("pointerdown", e=>{
+  if(camMode==="orbita" || stickId!==null) return;
+  e.preventDefault();
+  stick.setPointerCapture(e.pointerId);
+  stickId = e.pointerId;
+  stick.classList.add("act");
+  navigator.vibrate && navigator.vibrate(8);
+  stickMove(e);
+});
+stick.addEventListener("pointermove", e=>{
+  if(e.pointerId===stickId) stickMove(e);
+});
 
 /* órbita propia (ratón + táctil) */
 const cvs = $("#c");
@@ -874,10 +1123,12 @@ cvs.addEventListener("pointerdown", e=>{
   cvs.setPointerCapture(e.pointerId);
   if(e.clientX < innerWidth*0.45 && stickId===null){
     stickId = e.pointerId;
-    const s = 108;
+    const s = stick.getBoundingClientRect().width || 124;
     stick.style.left = (e.clientX-s/2)+"px";
     stick.style.top = (e.clientY-s/2)+"px";
     stick.style.bottom = "auto";
+    stick.classList.add("act");
+    navigator.vibrate && navigator.vibrate(8);
     stickMove(e);
   }else if(lookId===null){
     lookId = e.pointerId;
@@ -991,7 +1242,7 @@ function select(id){
     if(zoneOutlines[m.userData.zone.id]) zoneOutlines[m.userData.zone.id].position.y = on?0.045:0.005;
   });
   const card = $("#card");
-  if(!z){ card.classList.remove("show"); return; }
+  if(!z){ card.classList.remove("show"); actualizarScrim(); return; }
   const rs = RENDERS[z.id] || [];
   const fig = $("#card-render"), strip = $("#card-thumbs");
   strip.innerHTML = "";
@@ -1026,6 +1277,12 @@ function select(id){
   $("#card-zona").textContent = ZONA_USO[z.id] ?? "—";
   $("#card-note").textContent = "Superficie medida sobre el plano (escala 1:50). Coste orientativo: reparto proporcional del presupuesto Cyss v2.0 entre las estancias interiores; el desglose real está en index.html.";
   card.classList.add("show");
+  if(esMovil()){
+    cerrarPanel();
+    navigator.vibrate && navigator.vibrate(10);
+  }
+  actualizarScrim();
+  if(camMode!=="orbita") setCamMode("orbita");
   const box = zoneBounds(z.pts);
   const d = Math.max(box.w, box.h);
   flyTo({x:box.cx, z:box.cz, dist: Math.max(8, d*1.7), phi:0.62});
@@ -1062,26 +1319,119 @@ INTERIOR.slice().sort((a,b)=>b.area-a.area).forEach(z=>{
   list.appendChild(li);
 });
 $("#panel-count").textContent = `${INTERIOR.length} estancias`;
-if(innerWidth < 860){
+if(esMovil()){
   $("#panel").classList.add("hidden");
   $("#b-panel").setAttribute("aria-pressed","false");
+  $("#mb-estancias").setAttribute("aria-expanded","false");
   labelsOn = false;
   $("#b-labels").setAttribute("aria-pressed","false");
+  $("#mb-labels").setAttribute("aria-pressed","false");
 }
 $("#total").textContent = fmt(AREA_INT)+" m²";
 
 /* ── controles ── */
+function setLabels(on){
+  labelsOn = on;
+  $("#b-labels").setAttribute("aria-pressed", String(on));
+  $("#mb-labels").setAttribute("aria-pressed", String(on));
+}
 $("#m-plan").addEventListener("click", ()=>setMode("plan"));
 $("#m-zonas").addEventListener("click", ()=>setMode("zonas"));
-$("#b-labels").addEventListener("click", e=>{
-  labelsOn = !labelsOn;
-  e.currentTarget.setAttribute("aria-pressed", String(labelsOn));
+$("#b-labels").addEventListener("click", ()=>setLabels(!labelsOn));
+$("#mb-labels").addEventListener("click", ()=>setLabels(!labelsOn));
+$("#mb-suelo").addEventListener("click", ()=>setMode(mode==="plan" ? "zonas" : "plan"));
+$("#mb-cam").addEventListener("click", ()=>{
+  const i = CAM_ORDEN.indexOf(camMode);
+  setCamMode(CAM_ORDEN[(i+1)%CAM_ORDEN.length]);
 });
-$("#b-panel").addEventListener("click", e=>{
-  const aside = $("#panel");
-  aside.classList.toggle("hidden");
-  e.currentTarget.setAttribute("aria-pressed", String(!aside.classList.contains("hidden")));
+
+/* hojas móviles: panel de estancias y ficha de estancia */
+const scrim = $("#scrim");
+function actualizarScrim(){
+  const panelAbierto = !$("#panel").classList.contains("hidden");
+  /* la ficha no es modal: queda sobre la barra y deja girar el modelo */
+  const modal = esMovil() && panelAbierto;
+  scrim.classList.toggle("on", modal);
+  document.body.classList.toggle("sheet-open", modal);
+  $("#mb-estancias").setAttribute("aria-expanded", String(panelAbierto));
+  $("#b-panel").setAttribute("aria-pressed", String(panelAbierto));
+}
+function abrirPanel(){
+  $("#panel").classList.remove("hidden");
+  actualizarScrim();
+}
+function cerrarPanel(){
+  $("#panel").classList.add("hidden");
+  actualizarScrim();
+}
+function togglePanel(){ $("#panel").classList.contains("hidden") ? abrirPanel() : cerrarPanel(); }
+$("#b-panel").addEventListener("click", togglePanel);
+$("#mb-estancias").addEventListener("click", togglePanel);
+scrim.addEventListener("click", cerrarPanel);
+/* asa: arrastrar hacia abajo para cerrar */
+function hojaArrastrable(hoja, cerrar){
+  const grip = hoja.querySelector(".grip");
+  if(!grip) return;
+  let id=null, y0=0, dy=0, t0=0;
+  grip.addEventListener("pointerdown", e=>{
+    if(e.button!==0) return;
+    id=e.pointerId; y0=e.clientY; dy=0; t0=performance.now();
+    grip.setPointerCapture(id);
+    hoja.style.transition="none";
+  });
+  grip.addEventListener("pointermove", e=>{
+    if(e.pointerId!==id) return;
+    dy=Math.max(0, e.clientY-y0);
+    hoja.style.transform=`translateY(${dy}px)`;
+  });
+  const fin = e=>{
+    if(e.pointerId!==id) return;
+    id=null;
+    hoja.style.transition=""; hoja.style.transform="";
+    if(dy>80 || (dy>24 && dy/(performance.now()-t0)>0.55)) cerrar();
+    dy=0;
+  };
+  grip.addEventListener("pointerup", fin);
+  grip.addEventListener("pointercancel", fin);
+}
+hojaArrastrable($("#panel"), cerrarPanel);
+hojaArrastrable($("#card"), ()=>select(null));
+
+/* hoja de acciones «Más» */
+const actions = $("#actions");
+function abrirAcciones(){ actions.hidden=false; $("#mb-more").setAttribute("aria-expanded","true"); }
+function cerrarAcciones(){ actions.hidden=true; $("#mb-more").setAttribute("aria-expanded","false"); }
+$("#mb-more").addEventListener("click", abrirAcciones);
+$("#actions-scrim").addEventListener("click", cerrarAcciones);
+hojaArrastrable(actions.querySelector(".sheet"), cerrarAcciones);
+actions.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click", ()=>{
+  const act = b.dataset.act;
+  cerrarAcciones();
+  if(act==="vista") $("#b-reset").click();
+  else if(act==="planta") $("#b-planta").click();
+  else if(act==="galeria") abrirGaleria();
+  else if(act==="png") exportPNG();
+  else if(act==="ayuda") abrirCoach();
+}));
+
+/* guía de primer uso */
+const coach = $("#coach");
+let coachVisto = false;
+try{ coachVisto = localStorage.getItem("r3d_coach")==="1"; }catch(e){}
+function abrirCoach(){ coach.hidden=false; }
+function cerrarCoach(){
+  coach.hidden=true;
+  try{ localStorage.setItem("r3d_coach","1"); }catch(e){}
+}
+$("#coach-ok").addEventListener("click", cerrarCoach);
+$("#coach-mas").addEventListener("click", ()=>{
+  const ex = $("#coach-extra");
+  ex.hidden = !ex.hidden;
+  $("#coach-mas").textContent = ex.hidden ? "Más ayuda" : "Menos ayuda";
 });
+$("#b-help").addEventListener("click", abrirCoach);
+coach.addEventListener("click", e=>{ if(e.target===coach) cerrarCoach(); });
+
 $("#b-reset").addEventListener("click", ()=>resetView());
 function resetView(){
   setCamMode("orbita");
@@ -1140,7 +1490,15 @@ addEventListener("keydown", e=>{
       e.preventDefault();
     }
   }
-  if(e.key==="Escape" && document.pointerLockElement) document.exitPointerLock();
+  if(e.key==="Escape"){
+    if(document.pointerLockElement){ document.exitPointerLock(); return; }
+    if(!actions.hidden){ cerrarAcciones(); return; }
+    if(!coach.hidden){ cerrarCoach(); return; }
+    if(!$("#galeria").hidden){ cerrarGaleria(); return; }
+    if(!$("#panel").classList.contains("hidden")){ cerrarPanel(); return; }
+    if($("#card").classList.contains("show")){ select(null); return; }
+    if(camMode!=="orbita"){ setCamMode("orbita"); return; }
+  }
   if(e.target.tagName==="INPUT") return;
   if(k==="o") setCamMode("orbita");
   else if(k==="c" && !e.ctrlKey && !e.metaKey) setCamMode("caminar");
@@ -1156,7 +1514,6 @@ addEventListener("keydown", e=>{
   else if(k==="p") $("#b-planta").click();
   else if(k==="g") abrirGaleria();
   else if(k==="e") exportPNG();
-  else if(k==="escape"){ select(null); cerrarGaleria(); }
 });
 addEventListener("keyup", e=>keys.delete(e.key.toLowerCase()));
 
@@ -1167,20 +1524,34 @@ function setWallHeight(h){
   });
 }
 
-/* exportar PNG a 2x */
+/* exportar PNG a 2x (en móvil usa la hoja de compartir si está disponible) */
+function descargar(blob, nombre){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
 function exportPNG(){
   const w = innerWidth, h = innerHeight;
-  const pr = Math.min(devicePixelRatio, 2);
+  const pr = Math.min(devicePixelRatio, COARSE ? 1.5 : 2);
   renderer.setPixelRatio(pr*2);
   renderer.setSize(w, h, false);
   renderer.render(scene, camera);
-  const url = renderer.domElement.toDataURL("image/png");
-  renderer.setPixelRatio(pr);
-  renderer.setSize(w, h, false);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "render3d_reforma_Mortes_"+new Date().toISOString().slice(0,10)+".png";
-  a.click();
+  const nombre = "render3d_reforma_Mortes_"+new Date().toISOString().slice(0,10)+".png";
+  renderer.domElement.toBlob(blob=>{
+    renderer.setPixelRatio(pr);
+    renderer.setSize(w, h, false);
+    if(!blob){ toast("No se pudo generar la imagen"); return; }
+    const file = new File([blob], nombre, {type:"image/png"});
+    if(esMovil() && navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file], title:"Reforma José María Mortés Lerma"})
+        .catch(err=>{ if(!err || err.name!=="AbortError") descargar(blob, nombre); });
+    }else{
+      descargar(blob, nombre);
+      if(esMovil()) toast("Imagen guardada en Descargas", 2600);
+    }
+  }, "image/png");
 }
 
 /* ── etiquetas en pantalla ── */
@@ -1235,9 +1606,14 @@ function resize(){
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight, false);
+  syncMovil();
+  actualizarScrim();
+  setLabels(labelsOn);
+  setMode(mode);
   if(!interactuado) aplicarVistaInicial();
 }
 addEventListener("resize", resize);
+addEventListener("orientationchange", ()=>setTimeout(()=>{ resize(); }, 260));
 resize();
 aplicarVistaInicial();
 applyCamera(true);
@@ -1284,14 +1660,33 @@ function base64AB(b64){
   for(let i=0;i<bin.length;i++) buf[i] = bin.charCodeAt(i);
   return buf.buffer;
 }
+/* Solo se muestra el mobiliario del espacio abierto salón·cocina (sin el
+   conjunto de comedor: mesa, sillas y taburetes) y de la cocina;
+   el resto de habitaciones queda sin amueblar (arquitectura intacta). */
+const MOB_ESTRUCTURA = ["suelo", "pav_", "techo", "muro_", "marco_",
+  "vidrio_", "mont_", "dintel_", "antepecho_", "pmarco_", "pdintel_", "phoja_",
+  "dl_disco_", "peto_"];
+/* 2026-09-19: "banda_" excluido a propósito — las 5 bandas de cinta no
+   existen en el PEI.05 (ver generar_blender.build_bandas). El GLB viejo aún
+   las trae; el visor las descarta hasta regenerar la escena con Blender. */
+const MOB_SALON = ["tv_", "tv", "pilar_visto", "sofa_", "cojin_", "alfombra",
+  "mesa_centro", "butaca", "aparador", "cuadro_", "coc_", "isla", "isla_tapa",
+  "placa", "campana", "lampara_", "planta_", "cortina_"];
+function mobConservar(nombre){
+  if(MOB_ESTRUCTURA.some(p => p === nombre || nombre.indexOf(p) === 0)) return true;
+  if(MOB_SALON.some(p => p === nombre || nombre.indexOf(p) === 0)) return true;
+  return false;
+}
 function cargarMobiliario(){
   if(typeof THREE.GLTFLoader !== "function" || (!MOBILIARIO_B64 && !MOBILIARIO_SRC))
     return Promise.resolve(null);
   return new Promise(res=>{
     const onLoad = g=>{
       const petos = [];
+      const quitar = [];
       g.scene.traverse(o=>{
         if(!o.isMesh) return;
+        if(!mobConservar(o.name)){ quitar.push(o); return; }
         o.castShadow = true;
         o.receiveShadow = true;
         if(o.name.indexOf("peto_")===0) petos.push(o);
@@ -1307,6 +1702,7 @@ function cargarMobiliario(){
           }
         });
       });
+      quitar.forEach(o=>{ if(o.parent) o.parent.remove(o); });
       /* los petos de terraza no están en el plano: colisionar con su caja */
       petos.forEach(o=>{
         const b = new THREE.Box3().setFromObject(o);
@@ -1338,6 +1734,7 @@ Promise.all(tareas).then(()=>{
     setWallHeight(reduceMotion ? ALTURA : 0);
     intro = reduceMotion ? 1 : 0;
     ready = true;
+    if(esMovil() && !coachVisto) setTimeout(abrirCoach, 650);
   });
 }).catch(err=>{
   console.warn(err);

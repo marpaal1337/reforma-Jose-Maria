@@ -17,9 +17,11 @@ _Generado el 2026-09-18 a partir de las imágenes aportadas en `data/reales/`._
 
 Los renders se muestran en el visor `render3d.html` (botón **Galería** y ficha de cada estancia). El plano de aires se ha recortado a `data/imagenes/plano_aires_recorte.jpg` para la galería.
 
-## 2. Hallazgo principal: el plano marcado no coincide con el PE.A.02
+## 2. Versión vigente de la distribución: PE.A.02 (confirmado 2026-09-19)
 
-El plano de aires lleva rótulos de estancias con superficie y altura que **no coinciden con el plano de distribución PE.A.02** sobre el que se generó el modelo 3D:
+El cliente confirma que la distribución vigente es la del **plano PE.A.02 (Junio/25)**, sobre la que están generados el modelo 3D, las mediciones y el reparto de costes. No hay que regenerar nada.
+
+El plano de aires lleva rótulos de estancias con superficie y altura que **no coinciden con el PE.A.02** — es un croquis de trabajo del instalador de clima (trazado de conductos), no una versión de distribución:
 
 | Estancia rotulada en el plano de aires | Sup. rotulada | h | Equivalente medido en PE.A.02 (`data/planos3d.json`) |
 |---|---:|---:|---|
@@ -31,11 +33,11 @@ El plano de aires lleva rótulos de estancias con superficie y altura que **no c
 | Recibidor | 2,7 m² | 2,30 m | Recibidor = 6,3 m² (recinto mayor) |
 | Vestidor | 6,2 m² | 2,30 m | **No existe** en PE.A.02 |
 
-**Interpretación**: es una **versión distinta de la distribución** (probablemente anterior o una variante con cocina cerrada y vestidor) o el plano de trabajo del instalador de clima. No se puede decidir cuál es la vigente desde el repositorio.
+**Interpretación (cerrado 2026-09-19)**: es el **croquis de trabajo del instalador de clima**, no una distribución alternativa. La referencia válida para superficies y mediciones es el PE.A.02 (`data/planos3d.json`).
 
 **Acciones**:
-1. Confirmar con el arquitecto (SOFIA PALACIOS) cuál es la versión vigente. Si es la del plano marcado, hay que regenerar el modelo 3D y las mediciones: basta aportar el PDF vectorial de esa versión y re-ejecutar `scripts/generar_geometria3d.py`.
-2. Hasta confirmarlo, tratar las superficies del visor 3D como **PE.A.02, Junio/25**.
+1. ~~Confirmar con el arquitecto (SOFIA PALACIOS) cuál es la versión vigente~~ — confirmado por el cliente: **PE.A.02 vigente**.
+2. Hasta confirmarlo, tratar las superficies del visor 3D como **PE.A.02, Junio/25** — vigente confirmado; sin cambios.
 
 ## 3. Trazado de clima (lectura del plano de aires)
 
@@ -82,7 +84,7 @@ Materiales que muestran y su estado en el proyecto:
 
 ## 6. Resumen de acciones
 
-1. **Confirmar versión vigente de la distribución** (PE.A.02 vs plano de aires). Bloquea mediciones y reparto de costes.
+1. ~~**Confirmar versión vigente de la distribución** (PE.A.02 vs plano de aires). Bloquea mediciones y reparto de costes.~~ **Cerrado 2026-09-19: PE.A.02 vigente** (confirmado por el cliente); el plano de aires es solo croquis de conductos.
 2. Cerrar el presupuesto de **encimeras** (DEKTON/SILESTONE), ya identificado como crítico.
 3. Presupuestar los acabados de los renders si son vinculantes: roble a medida, piedra, grifería cobre, iluminación.
 4. Validar con David Barat el recorrido del plano de aires (rejillas por estancia, posición de máquina y registro).
@@ -108,3 +110,16 @@ Además, 4 stills 1920×1080 en `renders/stills/`.
 **Mobiliario nivel B**: volúmenes aproximados colocados según el plano (cama y armarios, sofá y mueble de TV con pilar visto, cocina con isla y taburetes, mesa de comedor, baños con ducha/bañera, terraza con hamacas). No pretende reproducir el mobiliario exacto de los renders de `data/reales/` (que siguen siendo la referencia estética, no documental).
 
 **Limitaciones**: sin GPU, 20 núcleos CPU, ~20 min por panorama a 320 muestras; los acabados pétreos/roble a medida siguen pendientes de presupuesto (ver §4).
+
+## 8. PoC de calidad A del salón (2026-09-19)
+
+Antes de re-renderizar la casa entera se ha hecho una **prueba de concepto** sobre el still `s4_salon_ventanal`:
+
+| Aspecto | Antes (nivel B) | PoC (calidad A) |
+|---|---|---|
+| Materiales | Procedurales (wave/voronoi) | **PBR CC0** de `data/pbr/` (Poly Haven + ambientCG) con UVs en metros |
+| Mobiliario | Prismas sin colchones | Sofá con colchones y patas, butaca mariposa, mesa de travertino+cristal, lámpara con pantalla, planta real |
+| Luz | Portales difusos uniformes | Sol direccional por V01 (vidrios sin sombra) + relleno frontal + downlights |
+| Imagen | 1920×1080 a 320 muestras | **1920×1080 a 1000 muestras + denoise (~15 min CPU)** |
+
+Resultado en `renders/stills/s4_salon_ventanal_poc.jpg`. Si se aprueba, el siguiente paso es extender el nivel A al resto de estancias antes de re-renderizar los 12 panos del tour.
