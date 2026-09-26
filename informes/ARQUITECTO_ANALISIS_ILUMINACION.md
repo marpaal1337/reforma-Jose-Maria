@@ -4,6 +4,8 @@
 **Fuentes**: Cyss v2.0 capítulo 13 (ILUMINACIÓN), oferta Poveda, oferta Paracon, planos PEI.03 (electricidad e iluminación)
 **Fecha del informe**: Julio 2026
 
+> **Nota 2026-09-26**: los PDFs de presupuestos se eliminaron del repositorio. Los importes y códigos de partida que queden en este documento son referencias a ofertas ya eliminadas: válidos como propuesta de diseño, no como cifras para contratar.
+
 ---
 
 ## 1. RESUMEN DEL CAPÍTULO 13 DE CYSS V2.0

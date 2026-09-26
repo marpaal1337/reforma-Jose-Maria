@@ -51,7 +51,7 @@ Coherencia con lo presupuestado:
 |---|---|---|
 | Máquina por conductos Mitsubishi MGPEZ-71 VJA PRO | Sí (~90 m²) | Cyss v2.0 `ICX010h` |
 | Red de conductos Climaver + rejillas de impulsión y retorno | Sí | Cyss v2.0 `ICX010i` |
-| Instalación de clima por conductos + rejillas por plenum | 6.177,10 € | David Barat 1-000084 |
+| Instalación de clima por conductos + rejillas por plenum | — (oferta eliminada del repo el 2026-09-26) |
 
 Los conductos discurren por el **falso techo (h = 2,30 m)**, coherente con los 93,4 m² de pladur de Cyss. **Verificar**: posición final de la máquina y registro de acceso (el plano la sitúa sobre el hueco técnico entre baños), y que la campana de cocina sale a fachada/conducto (`PTW070`), no en recirculación.
 

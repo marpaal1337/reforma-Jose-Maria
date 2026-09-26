@@ -134,4 +134,4 @@ Outputs de diseño en `informes/` con prefijo `ARQUITECTO_`, más `ANALISIS_PLAN
 
 There is nothing to build, lint, or test. `ls <folder>/` + `git status` is the only verification needed.
 
-Do not reintroduce budget files, prices, client names, addresses, or `index.html`. Visor/tour/planos must stay free of `€`, `Cyss`, `Mort`, `pta 28`, `46018` and `index.html` links (check ignoring base64 blobs).
+Do not reintroduce budget files, prices, client names, addresses, or dashboard links. Visor/tour/planos must stay free of currency amounts, contractor names, client surnames, street addresses and postal codes (spot-check ignoring base64 blobs).

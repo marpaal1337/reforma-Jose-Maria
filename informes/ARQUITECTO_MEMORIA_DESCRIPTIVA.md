@@ -7,6 +7,8 @@
 **Planos**: PEA.01 (estado inicial) y PEA.02 (distribución), Junio25, E 1:50 (A3)
 **Fecha del informe**: Julio 2026
 
+> **Nota 2026-09-26**: los PDFs de presupuestos se eliminaron del repositorio. Los importes por partida que queden en este documento son referencias a ofertas ya eliminadas: no usar para decisiones económicas sin pedir oferta actualizada.
+
 ---
 
 ## 1. ESTADO ACTUAL
@@ -267,14 +269,7 @@ Según los datos del presupuesto de Cyss v2.0, la nueva distribución comprende:
 
 ## 7. DATOS ECONÓMICOS
 
-| Concepto | Importe |
-|---|---|
-| Cyss v2.0 (ejecución material) | 51.525,40 € |
-| Cyss v2.0 (con IVA 10%) | 56.677,94 € |
-| Carpintería exterior Nacher | 10.151,48 € |
-| Carpintería interior Valenzuela | 27.146,92 € |
-| Encimeras (DEKTON + SILESTONE) | Pendiente de presupuesto |
-| **Total estimado del proyecto** | **~93.976 € + encimeras** |
+_Sección eliminada el 2026-09-26 junto con los presupuestos del repositorio. Este documento conserva solo la descripción de diseño y calidades._
 
 ---
 
