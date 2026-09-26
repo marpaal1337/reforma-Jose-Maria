@@ -16,12 +16,16 @@ This repo is a **3D design viewer for a home renovation in Valencia** (Spanish-l
 │   ├── mobiliario.glb       furniture + joinery exported from escena.blend (glTF)
 │   ├── texturas/            tileable finishes (roble, tarima, mármol, azulejo, tejidos…)
 │   ├── pbr/                 CC0 PBR maps (Poly Haven + ambientCG) for the Cycles render
+│   │   └── hdri/            venice_sunset_4k.hdr (Poly Haven CC0, sol medido en HDRI_SOL)
+│   │                        + venice_sunset_env.jpg (1024×512 LDR para el visor web)
+│   ├── assets/              CC0 glTF 2k de Poly Haven (plantas, jarrones) solo para el
+│   │                        render Blender; `exportar_glb.py` los excluye (prefijo `asset_`)
 │   ├── imagenes/            planta_textura.jpg, geometria_debug.png, plano_aires_recorte.jpg
 │   ├── reales/              client-provided reference images (renders, AC plan, site photo)
 │   └── planos_b64.json      base64 plans for planos.html
 ├── renders/
 │   ├── panos/               12 equirectangular panoramas 4096×2048
-│   └── stills/              perspective stills 1920×1080
+│   └── stills/              perspective stills 2560×1440 (s4…) + s4_salon_ventanal_poc.jpg
 ├── libs/                    vendored Three.js r147 (MIT) inlined into render3d.html
 ├── informes/                7 design-only Markdown reports (no prices)
 │   ├── ANALISIS_PLANOS.md
@@ -59,6 +63,7 @@ scripts/
 ├── generar_texturas.py      procedural tileable finishes → data/texturas/*.jpg
 ├── extraer_ventanas.py      window schedule → data/ventanas.json (reads Planos/ only)
 ├── generar_blender.py       planos3d + ventanas + camaras → renders/escena.blend
+├── medir_sol_hdri.py        mide el azimut/elevación del sol en un HDRI (para HDRI_SOL)
 ├── exportar_glb.py          escena.blend → data/mobiliario.glb (UVs + texturas)
 ├── generar_visor3d.py       planos3d + three.min.js + GLTFLoader + GLB + texturas → render3d.html
 ├── render_blender.py        renders one camera from escena.blend (Cycles CPU)
@@ -88,6 +93,15 @@ python3 scripts/generar_visor3d.py
 python3 scripts/generar_tour3d.py
 ```
 
+#### Calidad del render (actualizado 2026-09-26)
+
+`generar_blender.py` usa **materiales PBR reales** de `data/pbr/` (Poly Haven + ambientCG, CC0). Si falta `data/pbr/`, cae a procedurales.
+
+- **Cielo**: HDRI real `data/pbr/hdri/venice_sunset_4k.hdr` (CC0) + sol direccional alineado (`SOL_AZ`); light portals reales en cada hueco de `ventanas.json` + relleno suave por hueco; downlights como **spot 70°**; exposición +1,4 EV, AgX Base Contrast, light tree y cáusticas off. La viñeta del compositor solo se aplica a los stills (en panos, `render_blender.py` la desactiva).
+- **Detalle**: pintura con micro-bump y albedo realista, vidrio IOR 1,52, **rodapiés** por estancia, bevel 4 mm en muros, mármol y mosaico PBR en baños.
+- **Atrezzo CC0** (`data/assets/`, Poly Haven): plantas en maceta y jarrones con fallback procedural; se excluyen del GLB del visor (`asset_*`).
+- Stills a **2560×1440 con DOF f/5,6**.
+
 `generar_geometria3d.py` only needs the plan (`Planos/distribución.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_visor3d.py` needs `libs/three.min.js` y `libs/GLTFLoader.js` (ya vendored), `data/imagenes/planta_textura.jpg`, `data/texturas/` y `data/mobiliario.glb` (si falta el GLB, el visor arranca sin mobiliario).
 
 Tiempos medidos: ~20 min por panorama 4096×2048 a 320 muestras (Cycles CPU, 20 hilos, 2 en paralelo). `renders/escena.blend` no se versiona (se regenera).
@@ -98,7 +112,8 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución (es
 
 - Muros extruidos a 2,60 m clasificados por espesor (`estructural` ≥ 0,14 m, `tabique` ≥ 0,045 m, `vidrio` = carpinterías), suelos por estancia y alicatados de baños.
 - **Puertas D0–D8 + separador PA02 desde `data/puertas.json`**. `generar_geometria3d.py` punzona los huecos en los muros; `generar_blender.py:build_puertas()` pone marcos, hojas y dinteles.
-- **Mobiliario real** de `data/mobiliario.glb` + acabados de `data/texturas/`.
+- **Mobiliario real** de `data/mobiliario.glb` + acabados de `data/texturas/`. El atrezzo CC0 del render (`asset_*`) no viaja al GLB para no disparar el tamaño.
+- Entorno de reflejos PBR desde el propio HDRI reducido (`data/pbr/hdri/venice_sunset_env.jpg`, inline) con degradado de respaldo.
 - **Tres modos de cámara**: `Órbita`, `Caminar` (pointer lock, WASD, altura de ojo 1,62 m) y `Vuelo`. En táctil, joystick + arrastre para mirar.
 - Dos modos de suelo: **Plano** y **Zonas**. Slider de altura de muros, slider solar, etiquetas, ficha por estancia con **superficie (sin costes)**, exportación a PNG y vistas `Planta` / `Vista general`.
 - Se abre desde `file://`; Three.js + GLTFLoader van inline. Solo Google Fonts es externo.
@@ -113,10 +128,6 @@ Tour virtual con **12 panoramas equirectangulares** desde la geometría del PE.A
 - Esfera equirectangular (Three.js inline), arrastrar para mirar, rueda para zoom, teclado.
 - **Hotspots** a estancias vecinas, tira de navegación inferior y **miniplano** (clic para saltar).
 - Autocontenido (~7,5 MB). Solo fallan las fuentes de Google sin internet.
-
-#### Calidad del render
-
-`generar_blender.py` usa **materiales PBR reales** de `data/pbr/` (Poly Haven + ambientCG, CC0). Si falta `data/pbr/`, cae a procedurales.
 
 ## Skills (skills/)
 

@@ -26,6 +26,7 @@ def parse_args():
     p.add_argument("--samples", type=int, default=384)
     p.add_argument("--threshold", type=float, default=0.01)
     p.add_argument("--res", default="4096x2048")
+    p.add_argument("--exposure", type=float, default=None)
     return p.parse_args(argv)
 
 
@@ -38,6 +39,14 @@ def main():
     scene.camera = cam
     scene.cycles.samples = a.samples
     scene.cycles.adaptive_threshold = a.threshold
+    if a.exposure is not None:
+        scene.view_settings.exposure = a.exposure
+    if scene.use_nodes and cam.data.type == "PANO":
+        # la viñeta y el glare no tienen sentido en una panorámica 360
+        for n in ("glare_soft", "vineta"):
+            nodo = scene.node_tree.nodes.get(n)
+            if nodo:
+                nodo.mute = True
     w, h = (int(v) for v in a.res.lower().split("x"))
     scene.render.resolution_x = w
     scene.render.resolution_y = h

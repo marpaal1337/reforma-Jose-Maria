@@ -29,6 +29,7 @@ EMBED = "--no-embed" not in sys.argv
 
 PLAN = json.loads((DATA / "planos3d.json").read_text(encoding="utf-8"))
 TEX_B64 = base64.b64encode((DATA / "imagenes" / "planta_textura.jpg").read_bytes()).decode("ascii")
+ENV_JPG = DATA / "pbr" / "hdri" / "venice_sunset_env.jpg"
 
 # texturas de acabados que usa la geometría del visor (muros y suelos)
 TEXTURAS_VISOR = ("suelo_madera", "azulejo", "terraza", "muro")
@@ -50,6 +51,7 @@ TEXTURAS_JS = {
 }
 MOB_B64 = b64(GLB) if (GLB.exists() and EMBED) else ""
 MOB_SRC = "" if EMBED else "data/mobiliario.glb"
+ENV_B64 = ("data:image/jpeg;base64," + b64(ENV_JPG)) if (ENV_JPG.exists() and EMBED) else ""
 
 HTML = r"""<!DOCTYPE html>
 <html lang="es">
@@ -602,6 +604,7 @@ body.movil #galeria::-webkit-scrollbar{display:none}
 "use strict";
 const PLAN = __DATA__;
 const TEX_SRC = "data:image/jpeg;base64,__TEXTURE__";
+const ENV_SRC = "__ENV_SRC__";
 const TEXTURAS_SRC = __TEXTURAS_JS__;
 const MOBILIARIO_B64 = "__MOB_B64__";
 const MOBILIARIO_SRC = "__MOB_SRC__";
@@ -690,18 +693,28 @@ scene = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(38, 1, 0.1, 300);
 camera.position.set(12,14,16);
 
-/* entorno suave para reflejos PBR (metales como cobre, aluminio o espejos) */
+/* entorno para reflejos PBR (el HDRI reducido del render; si no, degradado) */
 const pmrem = new THREE.PMREMGenerator(renderer);
+function aplicarEntorno(tex){
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  const vieja = scene.environment;
+  scene.environment = pmrem.fromEquirectangular(tex).texture;
+  if(vieja && vieja.dispose) vieja.dispose();
+  if(tex.dispose) tex.dispose();
+}
 const envCanvas = document.createElement("canvas");
 envCanvas.width = 64; envCanvas.height = 32;
 const ectx = envCanvas.getContext("2d");
 const grad = ectx.createLinearGradient(0, 0, 0, 32);
 grad.addColorStop(0, "#e8eef3"); grad.addColorStop(0.48, "#f7f2e8"); grad.addColorStop(1, "#a89c89");
 ectx.fillStyle = grad; ectx.fillRect(0, 0, 64, 32);
-const envTex = new THREE.CanvasTexture(envCanvas);
-envTex.mapping = THREE.EquirectangularReflectionMapping;
-scene.environment = pmrem.fromEquirectangular(envTex).texture;
-envTex.dispose(); pmrem.dispose();
+aplicarEntorno(new THREE.CanvasTexture(envCanvas));
+if(ENV_SRC){
+  const img = new Image();
+  img.onload = ()=>{ const t = new THREE.Texture(img); t.needsUpdate = true; aplicarEntorno(t); };
+  img.onerror = ()=>{ /* se queda el degradado */ };
+  img.src = ENV_SRC;
+}
 
 /* luces */
 const hemi = new THREE.HemisphereLight(0xFFFDF6, 0xCFC6B6, 0.66);
@@ -1748,6 +1761,7 @@ html = (HTML
         .replace("__TEXTURAS_JS__", json.dumps(TEXTURAS_JS, ensure_ascii=False, separators=(",", ":")))
         .replace("__MOB_B64__", MOB_B64)
         .replace("__MOB_SRC__", MOB_SRC)
+        .replace("__ENV_SRC__", ENV_B64)
         .replace("__TEXTURE__", TEX_B64)
         .replace("__DATA__", json.dumps(PLAN, ensure_ascii=False, separators=(",", ":")))
         .replace("__FECHA__", date.today().strftime("%d/%m/%Y"))

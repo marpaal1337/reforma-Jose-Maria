@@ -124,7 +124,8 @@ def main() -> None:
 
     quitados = []
     for ob in list(bpy.data.objects):
-        if ob.type in {"CAMERA", "LIGHT"} or ob.name.startswith("ext_"):
+        if ob.type in {"CAMERA", "LIGHT"} or ob.name.startswith("ext_") \
+                or ob.name.startswith("portal_") or ob.name.startswith("asset_"):
             quitados.append(ob.name)
             bpy.data.objects.remove(ob, do_unlink=True)
 
