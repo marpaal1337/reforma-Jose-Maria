@@ -1,0 +1,160 @@
+{
+ "generado": "medición plano PE.A.02 + PEI.07",
+ "puertas": [
+  {
+   "id": "D1",
+   "nombre": "Dormitorio 1",
+   "tipo": "abatible",
+   "pared": "h",
+   "centro": [
+    -7.85,
+    -0.47
+   ],
+   "ancho": 0.7,
+   "alto": 2.03,
+   "bisagra": "E",
+   "apertura": "S"
+  },
+  {
+   "id": "D2",
+   "nombre": "Dormitorio 2",
+   "tipo": "abatible",
+   "pared": "h",
+   "centro": [
+    -4.04,
+    -0.47
+   ],
+   "ancho": 0.76,
+   "alto": 2.03,
+   "bisagra": "E",
+   "apertura": "S"
+  },
+  {
+   "id": "D3",
+   "nombre": "Dormitorio 3",
+   "tipo": "abatible",
+   "pared": "h",
+   "centro": [
+    -3.14,
+    -0.47
+   ],
+   "ancho": 0.8,
+   "alto": 2.03,
+   "bisagra": "O",
+   "apertura": "S"
+  },
+  {
+   "id": "D4",
+   "nombre": "Dormitorio principal",
+   "tipo": "abatible",
+   "pared": "v",
+   "centro": [
+    1.9,
+    -0.97
+   ],
+   "ancho": 0.66,
+   "alto": 2.03,
+   "bisagra": "S",
+   "apertura": "E"
+  },
+  {
+   "id": "D5",
+   "nombre": "Baño 2 (en suite)",
+   "tipo": "abatible",
+   "pared": "v",
+   "centro": [
+    1.7,
+    -1.96
+   ],
+   "ancho": 0.8,
+   "alto": 2.03,
+   "bisagra": "S",
+   "apertura": "O"
+  },
+  {
+   "id": "D6",
+   "nombre": "Baño 1 (corredera vidriera)",
+   "tipo": "corredera",
+   "pared": "h",
+   "centro": [
+    -2.22,
+    -1.5
+   ],
+   "ancho": 0.82,
+   "alto": 2.03,
+   "bolsillo": "O",
+   "vidrio": true,
+   "hoja": "cerrada"
+  },
+  {
+   "id": "D7",
+   "nombre": "Casoneto P04 (corredera)",
+   "tipo": "corredera",
+   "pared": "h",
+   "centro": [
+    -0.1,
+    2.48
+   ],
+   "ancho": 0.6,
+   "alto": 2.03,
+   "bolsillo": "E",
+   "vidrio": false
+  },
+  {
+   "id": "D0",
+   "nombre": "Entrada (existente)",
+   "tipo": "existente",
+   "pared": "h",
+   "centro": [
+    1.19,
+    4.42
+   ],
+   "ancho": 0.82,
+   "alto": 2.0,
+   "hoja": "cerrada"
+  },
+  {
+   "id": "D8",
+   "nombre": "Distribuidor (vidriera P03)",
+   "tipo": "vidriera",
+   "pared": "v",
+   "centro": [
+    0.7,
+    4.01
+   ],
+   "ancho": 0.78,
+   "alto": 2.36,
+   "bisagra": "S",
+   "apertura": "E"
+  }
+ ],
+ "separadores": [
+  {
+   "id": "PA02",
+   "nombre": "Separador recibidor (vidrio fijo)",
+   "tipo": "fijo",
+   "tramos": [
+    {
+     "de": [
+      -0.66,
+      2.44
+     ],
+     "a": [
+      -0.1,
+      2.44
+     ]
+    },
+    {
+     "de": [
+      -0.1,
+      2.44
+     ],
+     "a": [
+      0.12,
+      3.19
+     ]
+    }
+   ]
+  }
+ ]
+}
