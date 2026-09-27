@@ -21,7 +21,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
-OUT = ROOT / "render3d.html"
+def _opcion(nombre, defecto):
+    return Path(sys.argv[sys.argv.index(nombre) + 1]) if nombre in sys.argv else defecto
+
+
+OUT = _opcion("--salida", ROOT / "render3d.html")  # HTML de pruebas fuera del repo
 THREE = ROOT / "libs" / "three.min.js"
 GLTF = ROOT / "libs" / "GLTFLoader.js"
 GLB = DATA / "mobiliario.glb"
@@ -53,6 +57,33 @@ MOB_B64 = b64(GLB) if (GLB.exists() and EMBED) else ""
 MOB_SRC = "" if EMBED else "data/mobiliario.glb"
 ENV_B64 = ("data:image/jpeg;base64," + b64(ENV_JPG)) if (ENV_JPG.exists() and EMBED) else ""
 
+# modo Realista: recursos horneados por scripts/hornear_visor.py (data/visor/)
+VISOR = _opcion("--visor", DATA / "visor")  # datos horneados alternativos
+
+
+def data_url(path: Path, mime: str) -> str:
+    return f"data:{mime};base64," + b64(path) if path.exists() else ""
+
+
+REAL = None
+if (VISOR / "visor.json").exists() and (VISOR / "interior.glb").exists() and EMBED:
+    _info = json.loads((VISOR / "visor.json").read_text(encoding="utf-8"))
+    _ent = json.loads((DATA / "entorno.json").read_text(encoding="utf-8"))
+    REAL = {
+        "info": _info,
+        "glb": b64(VISOR / "interior.glb"),
+        "lm": {g: data_url(VISOR / f"lm_{g}.jpg", "image/jpeg") for g in _info["K"]},
+        "suelo": {n: data_url(VISOR / f"suelo_{n}.jpg", "image/jpeg") for n in ("cerca", "lejos")},
+        "cielo": data_url(VISOR / "cielo.jpg", "image/jpeg"),
+        "reflejo": data_url(VISOR / "reflejo.jpg", "image/jpeg"),
+        "arbol": {"lado": data_url(VISOR / "arbol_lado.webp", "image/webp"),
+                  "planta": data_url(VISOR / "arbol_planta.webp", "image/webp")},
+        "edificios": [[b["pts"], b["plantas"]] for b in _ent["edificios"] if not b["propio"]],
+        "propios": [b["pts"] for b in _ent["edificios"] if b["propio"]],
+    }
+REAL_JS = (ROOT / "scripts" / "visor_realista.js").read_text(encoding="utf-8").replace(
+    "__REAL__", json.dumps(REAL, ensure_ascii=False, separators=(",", ":")) if REAL else "null")
+
 HTML = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -61,7 +92,7 @@ HTML = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FAF7F2">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="description" content="Modelo 3D interactivo de la reforma, generado automáticamente del plano de distribución PE.A.02 (SOFIA PALACIOS arquitectura).">
+<meta name="description" content="Modelo 3D interactivo de la reforma, generado automáticamente del plano de distribución PE.A.02 (arquitectura colegiada).">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -400,6 +431,7 @@ body.movil #galeria::-webkit-scrollbar{display:none}
   body.movil .actions-grid{grid-template-columns:repeat(6,1fr)}
   body.movil .actions-grid a,body.movil .actions-grid button{min-height:66px;padding:8px 4px}
 }
+body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:none}
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
@@ -414,7 +446,7 @@ body.movil #galeria::-webkit-scrollbar{display:none}
 
   <header>
     <div class="title-block">
-      <div class="eyebrow micro">SOFIA PALACIOS · Plano PE.A.02 · Junio/25</div>
+      <div class="eyebrow micro">Arquitectura colegiada · Plano PE.A.02 · Junio/25</div>
       <h1>Reforma vivienda Valencia</h1>
       <p><b>Modelo 3D generado del plano de distribución a escala 1:50</b></p>
     </div>
@@ -428,6 +460,7 @@ body.movil #galeria::-webkit-scrollbar{display:none}
         <button id="c-caminar" aria-pressed="false">Caminar</button>
         <button id="c-vuelo" aria-pressed="false">Vuelo</button>
       </div>
+      <button class="btn" id="b-real" aria-pressed="false" title="Luz de Cycles horneada y la ciudad real alrededor">Realista</button>
       <button class="btn" id="b-labels" aria-pressed="true">Etiquetas</button>
       <button class="btn" id="b-galeria">Galería</button>
       <a class="btn" href="tour3d.html">Tour 360</a>
@@ -455,7 +488,7 @@ body.movil #galeria::-webkit-scrollbar{display:none}
         <label class="micro" for="s-altura">Altura de muros <output id="o-altura">2,60 m</output></label>
         <input id="s-altura" type="range" min="0" max="2.6" step="0.05" value="2.6">
       </div>
-      <div class="ctl">
+      <div class="ctl" id="ctl-sol">
         <label class="micro" for="s-sol">Posición del sol <output id="o-sol">140°</output></label>
         <input id="s-sol" type="range" min="0" max="359" step="1" value="140">
       </div>
@@ -661,6 +694,7 @@ function toast(msg, ms=3400){
   toastTO = setTimeout(()=>el.classList.remove("on"), ms);
 }
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let realista = false;   // modo Realista (ver scripts/visor_realista.js)
 const fmt = (v,d=1) => v.toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d});
 const eur = v => v.toLocaleString("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
 
@@ -674,7 +708,8 @@ function shapeFrom(pts){
 /* ── escena ── */
 let renderer, scene, camera;
 try{
-  renderer = new THREE.WebGLRenderer({canvas:$("#c"),antialias:true,alpha:true,preserveDrawingBuffer:true});
+  renderer = new THREE.WebGLRenderer({canvas:$("#c"),antialias:true,alpha:true,preserveDrawingBuffer:true,
+    logarithmicDepthBuffer:true});
 }catch(e){
   $("#loader").classList.add("done");
   $("#fallback").style.display="grid";
@@ -861,9 +896,9 @@ PLAN.alicatados.forEach(a=>{
 let mode = "plan";
 function setMode(m){
   mode = m;
-  gSuelo.visible = (m==="plan");
-  gZonas.visible = (m==="zonas");
-  gAlicatados.visible = (m==="zonas");
+  gSuelo.visible = (m==="plan") && !realista;
+  gZonas.visible = (m==="zonas") && !realista;
+  gAlicatados.visible = (m==="zonas") && !realista;
   $("#m-plan").setAttribute("aria-pressed", String(m==="plan"));
   $("#m-zonas").setAttribute("aria-pressed", String(m==="zonas"));
   $("#mb-suelo-txt").textContent = m==="plan" ? "Plano" : "Zonas";
@@ -1526,6 +1561,7 @@ addEventListener("keydown", e=>{
 addEventListener("keyup", e=>keys.delete(e.key.toLowerCase()));
 
 function setWallHeight(h){
+  planoCorte.constant = h >= ALTURA - 1e-3 ? 99 : Math.max(h, 0.001);
   wallMeshes.forEach(({mesh, def})=>{
     const base = def.tipo==="vidrio" ? Math.min(PLAN.altura_vidrio, h) : h;
     mesh.scale.y = Math.max(base, 0.0001)/ALTURA;
@@ -1601,6 +1637,7 @@ window.__visor = {scene, camera, renderer, gMob, free, setCamMode,
   if(techoGLB) techoGLB.visible = camera.position.y < 2.45;
   sun.target.position.set(camera.position.x, 0, camera.position.z);
   sun.target.updateMatrixWorld();
+  actualizarRealista();
   updateLabels();
   renderer.render(scene, camera);
   if(ready && intro < 1){
@@ -1626,6 +1663,8 @@ resize();
 aplicarVistaInicial();
 applyCamera(true);
 setMode("plan");
+
+__REALISTA_JS__
 
 /* ── carga ── */
 const bar = $("#loadbar");
@@ -1729,11 +1768,13 @@ function cargarMobiliario(){
 const tareas = [
   cargarTextura(TEX_SRC).then(t=>{ if(t){ TEXTURA.plano = t; buildFloor(t); } }),
   ...Object.entries(TEXTURAS_SRC).map(([n,src])=>cargarTextura(src).then(t=>{ if(t) TEXTURA[n] = t; })),
-  cargarMobiliario()
+  cargarMobiliario(),
+  cargarRealista()
 ];
 bar.style.width = "35%";
 Promise.all(tareas).then(()=>{
   aplicarTexturas();
+  setRealista(realListo);
   bar.style.width = "90%";
   renderer.compile(scene, camera);
   bar.style.width = "100%";
@@ -1758,6 +1799,7 @@ requestAnimationFrame(tick);
 html = (HTML
         .replace("__THREE__", THREE.read_text(encoding="utf-8"))
         .replace("__GLTFLOADER__", GLTF.read_text(encoding="utf-8"))
+        .replace("__REALISTA_JS__", REAL_JS)
         .replace("__TEXTURAS_JS__", json.dumps(TEXTURAS_JS, ensure_ascii=False, separators=(",", ":")))
         .replace("__MOB_B64__", MOB_B64)
         .replace("__MOB_SRC__", MOB_SRC)
@@ -1767,4 +1809,4 @@ html = (HTML
         .replace("__FECHA__", date.today().strftime("%d/%m/%Y"))
         .replace("__PTM__", f"{PLAN['pt_por_m']:.2f}".replace(".", ",")))
 OUT.write_text(html, encoding="utf-8")
-print(f"escrito {OUT.relative_to(ROOT)} ({OUT.stat().st_size/1024:.0f} KB)")
+print(f"escrito {OUT} ({OUT.stat().st_size/1024:.0f} KB)")

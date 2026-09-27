@@ -63,6 +63,55 @@ def principled(name, base=(0.8, 0.8, 0.8), rough=0.8, metal=0.0, trans=0.0,
     return mat
 
 
+def vidrio_arquitectonico(name, tinte=(0.93, 0.97, 0.95), ior=1.52):
+    """Vidrio de ventana sin refracción (truco estándar de arquitectura):
+    transparente + reflejo especular con Fresnel. La refracción real de una
+    caja de vidrio fina dejaba un círculo luminoso visto desde fuera."""
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    fr = nt.nodes.new("ShaderNodeFresnel")
+    fr.inputs["IOR"].default_value = ior
+    tr = nt.nodes.new("ShaderNodeBsdfTransparent")
+    tr.inputs["Color"].default_value = (*tinte, 1.0)
+    try:
+        gl = nt.nodes.new("ShaderNodeBsdfGlossy")
+    except RuntimeError:
+        gl = nt.nodes.new("ShaderNodeBsdfAnisotropic")
+    gl.inputs["Roughness"].default_value = 0.01
+    mx = nt.nodes.new("ShaderNodeMixShader")
+    nt.links.new(fr.outputs[0], mx.inputs[0])
+    nt.links.new(tr.outputs[0], mx.inputs[1])
+    nt.links.new(gl.outputs[0], mx.inputs[2])
+    nt.links.new(mx.outputs[0], out.inputs["Surface"])
+    return mat
+
+
+def visillo(name):
+    """Visillo: tela translúcida con parte transparente real, para que el sol
+    la atraviese (con transmisión tipo vidrio y cáusticas apagadas proyectaba
+    sombra opaca)."""
+    mat = principled(name, base=(0.96, 0.95, 0.92), rough=0.6)
+    nt = mat.node_tree
+    out = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL")
+    bsdf = nt.nodes["Principled BSDF"]
+    tl = nt.nodes.new("ShaderNodeBsdfTranslucent")
+    tl.inputs["Color"].default_value = (0.95, 0.94, 0.90, 1.0)
+    tr = nt.nodes.new("ShaderNodeBsdfTransparent")
+    m1 = nt.nodes.new("ShaderNodeMixShader")
+    m1.inputs[0].default_value = 0.5
+    nt.links.new(bsdf.outputs[0], m1.inputs[1])
+    nt.links.new(tl.outputs[0], m1.inputs[2])
+    m2 = nt.nodes.new("ShaderNodeMixShader")
+    m2.inputs[0].default_value = 0.55
+    nt.links.new(m1.outputs[0], m2.inputs[1])
+    nt.links.new(tr.outputs[0], m2.inputs[2])
+    nt.links.new(m2.outputs[0], out.inputs["Surface"])
+    return mat
+
+
 def noise_bump(mat, scale=40.0, strength=0.06):
     nt = mat.node_tree
     bsdf = nt.nodes.get("Principled BSDF")
@@ -75,6 +124,140 @@ def noise_bump(mat, scale=40.0, strength=0.06):
     nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
 
 
+def _pintar_lamina(nombre, w, h, arriba, medio, abajo, sol_xy, sol_r, sol_c,
+                   semilla):
+    """Pinta una lámina abstracta cálida píxel a píxel (degradado vertical en
+    tres tramos + disco de sol con borde suave + veta horizontal + grano
+    determinista). 100 % procedural, sin imágenes externas. La imagen queda
+    empaquetada en el .blend y viaja a los dos GLB como textura real
+    (exportar_glb.py y hornear_visor.py conservan los nodos TEX_IMAGE)."""
+    img = bpy.data.images.new(nombre, w, h, alpha=False)
+    img.colorspace_settings.name = "sRGB"
+    sx, sy = sol_xy
+    aspecto = w / h
+    pix = [0.0] * (w * h * 4)
+    for j in range(h):
+        v = j / (h - 1)
+        if v < 0.45:
+            t = v / 0.45
+            base = [abajo[k] + (medio[k] - abajo[k]) * t for k in range(3)]
+        else:
+            t = (v - 0.45) / 0.55
+            base = [medio[k] + (arriba[k] - medio[k]) * t for k in range(3)]
+        for i in range(w):
+            u = i / (w - 1)
+            d = math.hypot((u - sx) * aspecto, v - sy)
+            mm = max(0.0, 1.0 - d / sol_r)
+            sol = mm * mm * (3.0 - 2.0 * mm)
+            veta = 0.030 * math.sin(2 * math.pi * (v * 9.0 + 0.12 * math.sin(
+                2 * math.pi * u * 3.0)))
+            g = math.sin(i * 12.9898 + j * 78.233 + semilla * 37.7) * 43758.55
+            grano = (g - math.floor(g) - 0.5) * 0.07
+            k = (j * w + i) * 4
+            for c in range(3):
+                val = base[c] * (1.0 - sol) + sol_c[c] * sol + veta + grano
+                pix[k + c] = max(0.0, min(1.0, val))
+            pix[k + 3] = 1.0
+    img.pixels.foreach_set(pix)
+    img.pack()
+    return img
+
+
+def lamina_cuadro(name, w, h, arriba, medio, abajo, sol_xy, sol_r, sol_c,
+                  semilla):
+    """Material de cuadro con su lámina procedural como imagen real."""
+    img = _pintar_lamina(name + "_img", w, h, arriba, medio, abajo, sol_xy,
+                         sol_r, sol_c, semilla)
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    tex.interpolation = "Linear"
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    set_in(bsdf, "Roughness", 0.9)
+    return mat
+
+
+def _pintar_colcha(nombre, lado=192, c1=(0.68, 0.44, 0.28),
+                   c2=(0.87, 0.75, 0.60), bandas=7, semilla=5.0):
+    """Tejido a rayas tileable para las colchas: bandas + trama + grano."""
+    img = bpy.data.images.new(nombre, lado, lado, alpha=False)
+    img.colorspace_settings.name = "sRGB"
+    pix = [0.0] * (lado * lado * 4)
+    for j in range(lado):
+        v = j / lado
+        f = 0.5 + 0.5 * math.cos(2 * math.pi * bandas * v)
+        for i in range(lado):
+            u = i / lado
+            trama = 0.5 + 0.5 * math.sin(2 * math.pi * u * 64.0) * math.sin(
+                2 * math.pi * v * 64.0)
+            g = math.sin(i * 12.9898 + j * 78.233 + semilla * 91.7) * 43758.55
+            grano = (g - math.floor(g) - 0.5) * 0.05
+            k = (j * lado + i) * 4
+            for c in range(3):
+                val = (c1[c] + (c2[c] - c1[c]) * f) * (0.94 + 0.06 * trama)
+                pix[k + c] = max(0.0, min(1.0, val + grano))
+            pix[k + 3] = 1.0
+    img.pixels.foreach_set(pix)
+    img.pack()
+    return img
+
+
+def colcha_rayas(name):
+    """Colcha a rayas cálidas con relieve de tejido sutil."""
+    img = _pintar_colcha(name + "_img")
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    noise_bump(mat, scale=220, strength=0.08)
+    set_in(bsdf, "Roughness", 0.95)
+    return mat
+
+
+def pantalla_calida(name):
+    """Pantalla de la lámpara de pie: ámbar cálido translúcido (~3000 K).
+
+    Base media (no blanco puro) + emisión suave + mezcla translúcida para
+    que la luz del punto interior la atraviese sin quemarla en Cycles. En
+    los GLB la mezcla se simplifica (ver exportar_glb.py y hornear_visor.py)
+    pero se conservan base cálida + emisión suave."""
+    mat = principled(name, base=(0.82, 0.63, 0.42), rough=0.9,
+                     emission=(1.0, 0.66, 0.34), emit_str=0.65)
+    nt = mat.node_tree
+    out = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL")
+    bsdf = nt.nodes["Principled BSDF"]
+    tl = nt.nodes.new("ShaderNodeBsdfTranslucent")
+    tl.inputs["Color"].default_value = (0.85, 0.62, 0.38, 1.0)
+    mx = nt.nodes.new("ShaderNodeMixShader")
+    mx.inputs[0].default_value = 0.45
+    nt.links.new(bsdf.outputs[0], mx.inputs[1])
+    nt.links.new(tl.outputs[0], mx.inputs[2])
+    nt.links.new(mx.outputs[0], out.inputs["Surface"])
+    return mat
+
+
+def uv_retrato(ob, x0, x1, h0, h1):
+    """UV 0..1 en las caras frontales de un cuadro para encuadrar su lámina
+    (las UV de caja en metros recortarían la imagen). Los cantos se dejan con
+    las UV de `uv_proyectar()` (que salta los `cuadro_*`)."""
+    me = ob.data
+    if not me.uv_layers:
+        me.uv_layers.new(name="UVMap")
+    uvl = me.uv_layers.active.data
+    for poly in me.polygons:
+        if abs(poly.normal.y) < 0.9:
+            continue
+        for li in range(poly.loop_start, poly.loop_start + poly.loop_total):
+            co = me.vertices[me.loops[li].vertex_index].co
+            uvl[li].uv = ((co.x - x0) / (x1 - x0), (co.z - h0) / (h1 - h0))
+
+
 PBR_DIR = ROOT / "data" / "pbr"
 HDRI_DIR = PBR_DIR / "hdri"
 ASSETS_DIR = ROOT / "data" / "assets"
@@ -84,6 +267,51 @@ HDRI_SOL = {"venice_sunset_4k.hdr": (35.9, 3.5)}
 # Azimut del sol en la escena (Blender: +X = este, -Y = sur). Con el HDRI de
 # Venecia (-40°) el ventanal V01 ve la laguna con el sol poniente al sureste.
 SOL_AZ = -40.0
+
+
+# Entorno urbano real (OSM, ver scripts/extraer_entorno.py): si existe, sustituye
+# al HDRI por cielo físico + sol real y levanta la ciudad alrededor del piso.
+ENTORNO_JSON = ROOT / "data" / "entorno.json"
+ENTORNO = (json.loads(ENTORNO_JSON.read_text(encoding="utf-8"))
+           if ENTORNO_JSON.is_file() else None)
+PLANTA = 2.95          # altura entre forjados del edificio
+BAJO = 4.0             # planta baja comercial
+ALTURA_PISO = BAJO + 6 * PLANTA   # suelo del 7º sobre la calle (~21,7 m, estimado)
+# Sol: fecha/hora de los renders (hora UTC) y latitud/longitud de la ciudad (no
+# del edificio). 15-oct 11:30 hora local: sol a ~139°/33°, casi de frente a la
+# fachada principal (130°), por encima del edificio de enfrente.
+SOL_UTC = (2026, 10, 15, 9, 30)
+SOL_FUERZA = 14.0      # lámpara SUN (W/m²) y cielo Nishita: ajustados con renders
+CIELO_FUERZA = 0.30    # de prueba para que el interior quede como con el HDRI
+CIUDAD_LAT_LON = (39.47, -0.38)
+
+
+def posicion_sol(utc, lat, lon):
+    """Azimut (desde el norte, horario) y elevación del sol en grados (NOAA)."""
+    import datetime as dt
+    t = dt.datetime(*utc)
+    n = t.timetuple().tm_yday
+    h = t.hour + t.minute / 60
+    g = 2 * math.pi / 365 * (n - 1 + (h - 12) / 24)
+    eq = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g)
+                   - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
+    de = (0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g)
+          - 0.006758 * math.cos(2 * g) + 0.000907 * math.sin(2 * g)
+          - 0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g))
+    ha = math.radians((h * 60 + eq + 4 * lon) / 4 - 180)
+    la = math.radians(lat)
+    cz = math.sin(la) * math.sin(de) + math.cos(la) * math.cos(de) * math.cos(ha)
+    ze = math.acos(max(-1.0, min(1.0, cz)))
+    c = (math.sin(la) * math.cos(ze) - math.sin(de)) / (math.cos(la) * math.sin(ze))
+    az = math.degrees(math.acos(max(-1.0, min(1.0, c))))
+    az = (az + 180) % 360 if ha > 0 else (540 - az) % 360
+    return az, 90 - math.degrees(ze)
+
+
+def rumbo_a_blender(rumbo):
+    """Ángulo en el plano XY de Blender (desde +X, antihorario) de un rumbo
+    geográfico. +X es la normal de la fachada de V01 (`rumbo_fachada`)."""
+    return (ENTORNO["rumbo_fachada"] if ENTORNO else 90.0) - rumbo
 
 
 def hdri_path():
@@ -266,8 +494,7 @@ def build_materials():
     m["aluminio"] = principled("aluminio", base=(0.12, 0.115, 0.11), rough=0.32,
                                metal=1.0, spec=0.6)
     set_in(m["aluminio"].node_tree.nodes["Principled BSDF"], "Anisotropic", 0.45)
-    m["cristal"] = principled("cristal", base=(0.90, 0.96, 0.93), rough=0.008,
-                              trans=1.0, ior=1.52)
+    m["cristal"] = vidrio_arquitectonico("cristal")
     m["espejo"] = principled("espejo", base=(0.95, 0.95, 0.95), rough=0.02, metal=1.0)
     m["concreto"] = pbr_material("concreto", "brushed_concrete", tex_m=1.6,
                                  nor=0.3, rough_mul=0.9, sat=0.4, value=1.0)
@@ -281,15 +508,14 @@ def build_materials():
                                      nor=1.0, rough_mul=1.0, value=1.16,
                                      sat=0.5) or \
         principled("tejido_claro", base=(0.87, 0.84, 0.78), rough=0.95)
-    m["lino"] = principled("lino", base=(0.86, 0.83, 0.76), rough=0.95)
+    m["lino"] = principled("lino", base=(0.79, 0.74, 0.64), rough=0.95)
     noise_bump(m["lino"], scale=300, strength=0.15)
     m["alfombra"] = pbr_material("alfombra", "hessian_230", tex_m=0.54, nor=0.9,
                                  value=1.08, sat=0.55) or m["tejido_claro"]
     m["cuero"] = pbr_material("cuero", "brown_leather", tex_m=0.7, nor=0.9,
                               rough_mul=0.9) or \
         principled("cuero", base=(0.25, 0.11, 0.05), rough=0.5)
-    m["cortina"] = principled("cortina", base=(0.96, 0.95, 0.92), rough=0.6,
-                              trans=0.72)
+    m["cortina"] = visillo("cortina")
     m["negro_mate"] = principled("negro_mate", base=(0.02, 0.02, 0.02), rough=0.6)
     m["metal_negro"] = principled("metal_negro", base=(0.035, 0.035, 0.037),
                                   rough=0.42, metal=1.0)
@@ -301,25 +527,30 @@ def build_materials():
     m["planta"] = principled("planta", base=(0.055, 0.13, 0.045), rough=0.55)
     m["tierra"] = principled("tierra", base=(0.045, 0.032, 0.022), rough=0.95)
     m["maceta"] = principled("maceta", base=(0.85, 0.84, 0.80), rough=0.7)
-    arte = principled("lienzo", base=(0.88, 0.85, 0.79), rough=0.9)
-    ant = arte.node_tree
-    bsdf_a = ant.nodes.get("Principled BSDF")
-    texo = ant.nodes.new("ShaderNodeTexNoise")
-    texo.inputs["Scale"].default_value = 1.5
-    texo.inputs["Detail"].default_value = 4.0
-    rampa = ant.nodes.new("ShaderNodeValToRGB")
-    rampa.color_ramp.elements[0].color = (0.64, 0.58, 0.48, 1)
-    rampa.color_ramp.elements[1].color = (0.94, 0.92, 0.88, 1)
-    e_art = rampa.color_ramp.elements.new(0.45)
-    e_art.color = (0.83, 0.78, 0.68, 1)
-    ant.links.new(texo.outputs["Fac"], rampa.inputs["Fac"])
-    ant.links.new(rampa.outputs["Color"], bsdf_a.inputs["Base Color"])
-    m["lienzo"] = arte
+    # Láminas de los 3 cuadros del salón: una imagen procedural por cuadro
+    # (paisaje abstracto cálido distinto: atardecer, campo y mar). Son nodos
+    # TEX_IMAGE reales para que viajen a los dos GLB (exportar_glb.py las
+    # conserva; hornear_visor.py no limpia los TEX_IMAGE). Antes los tres
+    # compartían un único "lienzo" beige sin imagen y salían en blanco.
+    paletas = [
+        # arriba, medio, abajo, pos_sol, radio_sol, color_sol, semilla
+        ((0.78, 0.42, 0.22), (0.89, 0.62, 0.36), (0.94, 0.83, 0.64),
+         (0.62, 0.62), 0.16, (0.99, 0.92, 0.76), 11.0),   # atardecer
+        ((0.62, 0.62, 0.44), (0.78, 0.70, 0.50), (0.45, 0.42, 0.30),
+         (0.38, 0.66), 0.12, (0.97, 0.90, 0.72), 23.0),   # campo
+        ((0.36, 0.50, 0.56), (0.72, 0.62, 0.50), (0.85, 0.74, 0.58),
+         (0.50, 0.58), 0.14, (0.99, 0.93, 0.78), 37.0),   # mar
+    ]
+    for i, (ar, me, ab, sol_xy, sol_r, sol_c, sem) in enumerate(paletas):
+        m[f"lienzo_{i}"] = lamina_cuadro(f"lienzo_{i}", 192, 288, ar, me, ab,
+                                         sol_xy, sol_r, sol_c, sem)
     m["led"] = principled("led", base=(1.0, 0.93, 0.82), rough=0.5,
                           emission=(1.0, 0.86, 0.66), emit_str=2.5)
-    m["lampara_pantalla"] = principled("lampara_pantalla", base=(0.95, 0.93, 0.88),
-                                       rough=0.85, emission=(1.0, 0.90, 0.74),
-                                       emit_str=1.4)
+    # Pantalla de la lámpara de pie (antes: base casi blanca + emisión 1,4
+    # que se quemaba en ambos modos). Ahora ámbar translúcido ~3000 K.
+    m["lampara_pantalla"] = pantalla_calida("lampara_pantalla")
+    # Colchas de los 4 dormitorios (antes: tejido_claro casi blanco).
+    m["colcha"] = colcha_rayas("colcha")
     m["ext_suelo"] = principled("ext_suelo", base=(0.45, 0.44, 0.42), rough=0.9)
     m["ext_edificio"] = principled("ext_edificio", base=(0.30, 0.28, 0.26), rough=0.95)
     return m
@@ -611,9 +842,11 @@ def uv_proyectar(escala=1.0):
 
     Asigna UVs = coordenadas de los dos ejes no dominantes de la normal.
     Con `escala=1` las UV quedan en metros y los materiales PBR repiten la
-    textura en su tamaño real (`tex_m`)."""
+    textura en su tamaño real (`tex_m`). Respeta las UV propias de los modelos
+    CC0 (`asset_`), del entorno (`ext_`) y de los cuadros (`cuadro_*`, que
+    llevan su lámina encuadrada 0..1 desde `uv_retrato`)."""
     for ob in bpy.data.objects:
-        if ob.type != "MESH":
+        if ob.type != "MESH" or ob.name.startswith(("asset_", "ext_", "cuadro_")):
             continue
         me = ob.data
         if not me.uv_layers:
@@ -653,6 +886,51 @@ def build_shell(m):
     return walls
 
 
+def _tris_muros():
+    tris = []
+    for w in PLAN["muros"]:
+        if w["tipo"] == "vidrio":
+            continue
+        pts = w["pts"]
+        for i in range(1, len(pts) - 1):
+            tris.append((pts[0], pts[i], pts[i + 1]))
+    return tris
+
+
+def _en_tri(px, pz, tri):
+    (ax, az), (bx, bz), (cx, cz) = tri
+    d1 = (px - bx) * (az - bz) - (ax - bx) * (pz - bz)
+    d2 = (px - cx) * (bz - cz) - (bx - cx) * (pz - cz)
+    d3 = (px - ax) * (cz - az) - (cx - ax) * (pz - az)
+    return not ((d1 < 0 or d2 < 0 or d3 < 0) and (d1 > 0 or d2 > 0 or d3 > 0))
+
+
+def _tramos_junto_a_muro(x0, z0, ux, uz, a0, a1, tris, paso=0.04):
+    """Subtramos de [a0, a1] del borde de estancia que tienen muro al lado
+    (sondeo a 3, 8 y 14 cm a ambos lados). Los bordes abiertos entre estancias
+    (salón-recibidor, pasillo…) no llevan rodapié."""
+    nx, nz = -uz, ux
+    xs = [x0 + ux * a0, x0 + ux * a1]
+    zs = [z0 + uz * a0, z0 + uz * a1]
+    cerca = [t for t in tris
+             if min(p[0] for p in t) < max(xs) + 0.2 and max(p[0] for p in t) > min(xs) - 0.2
+             and min(p[1] for p in t) < max(zs) + 0.2 and max(p[1] for p in t) > min(zs) - 0.2]
+    out, ini, t = [], None, a0
+    while t <= a1 + 1e-6:
+        px, pz = x0 + ux * t, z0 + uz * t
+        hay = any(_en_tri(px + s * nx * d, pz + s * nz * d, tri)
+                  for d in (0.03, 0.08, 0.14) for s in (1, -1) for tri in cerca)
+        if hay and ini is None:
+            ini = t
+        elif not hay and ini is not None:
+            out.append((ini, t - paso / 2))
+            ini = None
+        t += paso
+    if ini is not None:
+        out.append((ini, a1))
+    return [(max(a0, u0), min(a1, u1)) for u0, u1 in out if u1 - u0 > 0.12]
+
+
 def build_rodapies(m):
     """Rodapié blanco de 9 cm siguiendo el contorno de cada estancia, cortado en
     los huecos de puertas y en el separador PA02."""
@@ -663,6 +941,8 @@ def build_rodapies(m):
         aperturas.append(((ax + bx) / 2, (az + bz) / 2,
                           math.hypot(bx - ax, bz - az)))
     alto, grosor, margen = 0.09, 0.013, 0.025
+    tris = _tris_muros()
+    libres = 0
     k = 0
     for e in PLAN["estancias"]:
         pts = e["pts"]
@@ -692,7 +972,10 @@ def build_rodapies(m):
                 ini = max(ini, b)
             if ini < L:
                 tramos.append((ini, L))
-            for t0, t1 in tramos:
+            junto = [s_ for a0, a1 in tramos
+                     for s_ in _tramos_junto_a_muro(x0, z0, ux, uz, a0, a1, tris)]
+            libres += sum(b - a for a, b in tramos) - sum(b - a for a, b in junto)
+            for t0, t1 in junto:
                 if t1 - t0 < 0.06:
                     continue
                 q0 = (x0 + ux * t0, z0 + uz * t0)
@@ -701,7 +984,21 @@ def build_rodapies(m):
                         (q0[0] + nx * grosor, q0[1] + nz * grosor)]
                 poly_prism(quad, 0.0, alto, f"rodapie_{k:03d}", m["blanco_laca"])
                 k += 1
-    print(f"RODAPIES {k} tramos")
+    print(f"RODAPIES {k} tramos ({libres:.1f} m de bordes sin muro descartados)")
+
+
+def suavizar_tapizados():
+    """Almohadas, cojines y tapizados con subdivisión sobre el bisel: formas
+    mullidas en vez de cajas."""
+    pref = ("dp_almohada", "d1_almohada", "d2_almohada", "d3_almohada", "cojin_",
+            "sofa_asiento", "sofa_respaldo", "sofa_brazo", "silla_", "d3_silla")
+    n = 0
+    for ob in bpy.data.objects:
+        if ob.type == "MESH" and ob.name.startswith(pref) and "pie" not in ob.name:
+            md = ob.modifiers.new("sub", "SUBSURF")
+            md.levels = md.render_levels = 2
+            n += 1
+    print(f"TAPIZADOS suavizados: {n}")
 
 
 def build_bandas(m, walls):
@@ -937,6 +1234,7 @@ def cargar_asset(nombre, alto, x, z, ang=0.0, h=0.0):
 def build_mobiliario(m):
     oak = m["roble"]
     fab, fab2, lino = m["tejido"], m["tejido_claro"], m["lino"]
+    colcha = m["colcha"]
     negro, piedra, tra = m["piedra_negra"], m["travertino"], m["travertino"]
     metal = m["metal_negro"]
 
@@ -1004,12 +1302,14 @@ def build_mobiliario(m):
     for k, z0 in enumerate((0.16, 0.86)):
         box(6.985, z0, 6.998, z0 + 0.66, 0.18, 0.72, f"aparador_f{k}", oak,
             bevel=0.004)
-    # cuadros sobre el sofá y cortinas del ventanal
+    # cuadros sobre el sofá y cortinas del ventanal (cada cuadro con su
+    # lámina: lienzo_0/1/2; uv_retrato encuadra la imagen 0..1 en el frontal)
     for i, x in enumerate((5.00, 5.75, 6.50)):
         box(x - 0.245, 3.415, x + 0.245, 3.44, 1.21, 1.89,
             f"cuadro_{i}_marco", oak, bevel=0.004)
-        box(x - 0.215, 3.40, x + 0.215, 3.42, 1.245, 1.855, f"cuadro_{i}",
-            m["lienzo"], bevel=0.0)
+        ob_cuadro = box(x - 0.215, 3.40, x + 0.215, 3.42, 1.245, 1.855,
+                        f"cuadro_{i}", m[f"lienzo_{i}"], bevel=0.0)
+        uv_retrato(ob_cuadro, x - 0.215, x + 0.215, 1.245, 1.855)
     cortina(8.02, 0.55, 1.15, 0.03, 2.42, ondas=1, amp=0.07,
             name="cortina_i", mat=m["cortina"])
     cortina(8.02, 2.83, 3.43, 0.03, 2.42, ondas=1, amp=0.07,
@@ -1052,7 +1352,7 @@ def build_mobiliario(m):
     box(1.95, -3.10, 2.55, -1.20, 0.02, 2.40, "dp_armario", oak, bevel=0.008)
     box(4.40, -3.05, 6.00, -1.05, 0.12, 0.34, "dp_cama", oak, bevel=0.02)
     box(4.36, -3.08, 6.04, -1.00, 0.34, 0.52, "dp_colchon", lino, bevel=0.03)
-    box(4.44, -2.70, 5.96, -1.10, 0.50, 0.58, "dp_colcha", fab2, bevel=0.03)
+    box(4.44, -2.70, 5.96, -1.10, 0.50, 0.58, "dp_colcha", colcha, bevel=0.03)
     for i, x in enumerate((4.75, 5.65)):
         box(x - 0.32, -3.02, x + 0.32, -2.72, 0.52, 0.64, f"dp_almohada_{i}",
             lino, bevel=0.05)
@@ -1069,7 +1369,7 @@ def build_mobiliario(m):
     # DORMITORIO 1 (arriba izquierda)
     box(-7.00, -2.95, -6.10, -1.00, 0.12, 0.34, "d1_cama", oak, bevel=0.02)
     box(-7.04, -2.99, -6.06, -0.96, 0.34, 0.50, "d1_colchon", lino, bevel=0.03)
-    box(-6.99, -2.65, -6.11, -1.05, 0.48, 0.56, "d1_colcha", fab2, bevel=0.03)
+    box(-6.99, -2.65, -6.11, -1.05, 0.48, 0.56, "d1_colcha", colcha, bevel=0.03)
     box(-6.80, -2.94, -6.20, -2.66, 0.50, 0.62, "d1_almohada", lino, bevel=0.05)
     box(-7.02, -3.02, -6.08, -2.94, 0.0, 1.05, "d1_cabecero", oak, bevel=0.01)
     box(-4.55, -3.00, -4.05, -1.10, 0.02, 2.40, "d1_armario", oak, bevel=0.008)
@@ -1078,7 +1378,7 @@ def build_mobiliario(m):
     # DORMITORIO 2 (abajo izquierda)
     box(-6.95, 0.70, -4.95, 2.20, 0.12, 0.34, "d2_cama", oak, bevel=0.02)
     box(-6.99, 0.66, -4.91, 2.24, 0.34, 0.52, "d2_colchon", lino, bevel=0.03)
-    box(-6.60, 0.72, -4.98, 2.18, 0.50, 0.58, "d2_colcha", fab2, bevel=0.03)
+    box(-6.60, 0.72, -4.98, 2.18, 0.50, 0.58, "d2_colcha", colcha, bevel=0.03)
     for i, z in enumerate((1.05, 1.85)):
         box(-6.92, z - 0.30, -6.62, z + 0.30, 0.52, 0.64, f"d2_almohada_{i}",
             lino, bevel=0.05)
@@ -1090,13 +1390,18 @@ def build_mobiliario(m):
     # DORMITORIO 3 / ESTUDIO
     box(-3.45, 0.30, -2.55, 2.20, 0.12, 0.34, "d3_cama", oak, bevel=0.02)
     box(-3.49, 0.26, -2.51, 2.24, 0.34, 0.50, "d3_colchon", lino, bevel=0.03)
-    box(-3.44, 0.60, -2.56, 2.19, 0.48, 0.56, "d3_colcha", fab2, bevel=0.03)
+    box(-3.44, 0.60, -2.56, 2.19, 0.48, 0.56, "d3_colcha", colcha, bevel=0.03)
     box(-3.25, 0.34, -2.75, 0.60, 0.50, 0.62, "d3_almohada", lino, bevel=0.05)
     box(-3.47, 0.22, -2.53, 0.30, 0.0, 1.05, "d3_cabecero", oak, bevel=0.01)
     box(-2.12, 0.60, -1.68, 1.90, 0.72, 0.76, "d3_escritorio", oak, bevel=0.008)
     for dz in (0.64, 1.84):
         box(-2.06, dz - 0.03, -1.74, dz + 0.03, 0.0, 0.72, "d3_pie", negro, bevel=0.0)
-    box(-2.30, 1.05, -1.95, 1.45, 0.42, 0.88, "d3_silla", fab2, bevel=0.02)
+    # silla de escritorio (antes una caja lisa): asiento, respaldo y patas
+    box(-2.52, 1.04, -2.10, 1.46, 0.44, 0.475, "d3_silla", fab2, bevel=0.035)
+    box(-2.55, 1.05, -2.49, 1.45, 0.475, 0.86, "d3_silla_res", fab2, bevel=0.035)
+    for lx, lz in ((-2.48, 1.08), (-2.14, 1.08), (-2.48, 1.42), (-2.14, 1.42)):
+        box(lx - 0.015, lz - 0.015, lx + 0.015, lz + 0.015, 0.0, 0.44,
+            "d3_silla_pie", oak, bevel=0.0)
     box(-3.45, 2.35, -2.95, 2.85, 0.02, 2.30, "d3_armario", oak, bevel=0.008)
 
     # BAÑO 1 (ducha)
@@ -1148,10 +1453,576 @@ def build_mobiliario(m):
     if not cargar_asset("potted_plant_02", 0.95, 9.20, 3.10, ang=130):
         cylinder(9.20, 3.10, 0.20, 0.0, 0.55, "tz_maceta", m["maceta"])
         sphere(9.20, 3.10, 0.85, 0.30, "tz_planta", m["planta"], sy=0.8)
-    # petos de terraza (el norte faltaba en el modelo: hueco al vacío)
-    box(9.42, -0.50, 9.55, 3.50, 0.0, 1.05, "peto_e", m["muro"], bevel=0.0)
-    box(8.23, 3.42, 9.55, 3.55, 0.0, 1.05, "peto_s", m["muro"], bevel=0.0)
-    box(8.23, -0.62, 9.55, -0.50, 0.0, 1.05, "peto_n", m["muro"], bevel=0.0)
+    # petos de terraza (el norte faltaba en el modelo: hueco al vacío); con el
+    # entorno real los sustituye el balcón de build_balcones()
+    if not ENTORNO:
+        box(9.42, -0.50, 9.55, 3.50, 0.0, 1.05, "peto_e", m["muro"], bevel=0.0)
+        box(8.23, 3.42, 9.55, 3.55, 0.0, 1.05, "peto_s", m["muro"], bevel=0.0)
+        box(8.23, -0.62, 9.55, -0.50, 0.0, 1.05, "peto_n", m["muro"], bevel=0.0)
+
+
+# ── entorno urbano (OSM) ─────────────────────────────────────────────────────
+# Todo lo del entorno lleva prefijo `ext_`: exportar_glb.py lo excluye del visor.
+
+PALETA_FACHADAS = [          # revocos y ladrillo del barrio (lineal)
+    (0.60, 0.38, 0.27),      # salmón (el propio edificio, semilla 0)
+    (0.63, 0.53, 0.41),      # beige
+    (0.70, 0.68, 0.63),      # blanco roto
+    (0.64, 0.46, 0.40),      # rosa pálido
+    (0.60, 0.47, 0.27),      # ocre
+    (0.38, 0.17, 0.11),      # ladrillo
+    (0.50, 0.52, 0.54),      # gris
+]
+
+
+def _sock(sockets, ident):
+    return next(s for s in sockets if s.identifier == ident)
+
+
+def _math(nt, op, a, b=None, clamp=False):
+    n = nt.nodes.new("ShaderNodeMath")
+    n.operation = op
+    n.use_clamp = clamp
+    for i, x in enumerate((a, b)):
+        if x is None:
+            continue
+        if isinstance(x, (int, float)):
+            n.inputs[i].default_value = x
+        else:
+            nt.links.new(x, n.inputs[i])
+    return n.outputs[0]
+
+
+def _mix(nt, fac, a, b):
+    """Mezcla de color (a -> b según fac); a/b pueden ser tuplas o salidas."""
+    n = nt.nodes.new("ShaderNodeMix")
+    n.data_type = "RGBA"
+    f = _sock(n.inputs, "Factor_Float")
+    if isinstance(fac, (int, float)):
+        f.default_value = fac
+    else:
+        nt.links.new(fac, f)
+    for ident, x in (("A_Color", a), ("B_Color", b)):
+        s = _sock(n.inputs, ident)
+        if isinstance(x, tuple):
+            s.default_value = (*x[:3], 1.0)
+        else:
+            nt.links.new(x, s)
+    return _sock(n.outputs, "Result_Color")
+
+
+def _rampa(nt, fac, colores):
+    r = nt.nodes.new("ShaderNodeValToRGB")
+    r.color_ramp.interpolation = "CONSTANT"
+    els = r.color_ramp.elements
+    while len(els) < len(colores):
+        els.new(0.5)
+    for i in range(len(colores)):        # posiciones primero: al moverlas se reordenan
+        els[i].position = i / len(colores)
+    for i, c in enumerate(colores):
+        els[i].color = (*c, 1.0)
+    nt.links.new(fac, r.inputs["Fac"])
+    return r.outputs["Color"]
+
+
+def _uv_xy(nt):
+    uv = nt.nodes.new("ShaderNodeUVMap")
+    uv.uv_map = "UVMap"
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(uv.outputs["UV"], sep.inputs[0])
+    return sep.outputs["X"], sep.outputs["Y"]
+
+
+def mat_fachadas():
+    """Revoco con retícula de ventanas: Brick Texture sobre UV métricas (u a lo
+    largo de la fachada, v = altura sobre la calle). Revoco por edificio
+    (atributo de cara `semilla`), persianas bajadas a distinta altura, línea de
+    forjado, bajo comercial oscuro y cubierta en el material 1."""
+    mat = bpy.data.materials.new("ext_fachada")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    u, v = _uv_xy(nt)
+    vp = _math(nt, "SUBTRACT", v, BAJO - PLANTA)   # filas alineadas con las plantas
+    comb = nt.nodes.new("ShaderNodeCombineXYZ")
+    nt.links.new(u, comb.inputs["X"])
+    nt.links.new(vp, comb.inputs["Y"])
+    br = nt.nodes.new("ShaderNodeTexBrick")
+    br.offset = 0.0
+    br.squash = 1.0
+    for k, val in (("Scale", 1.0), ("Mortar Size", 0.8), ("Mortar Smooth", 0.0),
+                   ("Bias", 0.0), ("Brick Width", 3.1), ("Row Height", PLANTA)):
+        br.inputs[k].default_value = val
+    br.inputs["Color1"].default_value = (0.0, 0.0, 0.0, 1.0)
+    br.inputs["Color2"].default_value = (1.0, 1.0, 1.0, 1.0)
+    nt.links.new(comb.outputs[0], br.inputs["Vector"])
+    muro = br.outputs["Fac"]                              # 1 = revoco, 0 = hueco
+    sep = nt.nodes.new("ShaderNodeSeparateColor")
+    nt.links.new(br.outputs["Color"], sep.inputs[0])
+    rnd = sep.outputs[0]                                  # aleatorio por ventana
+
+    at = nt.nodes.new("ShaderNodeAttribute")
+    at.attribute_type = "GEOMETRY"
+    at.attribute_name = "semilla"
+    revoco = _rampa(nt, at.outputs["Fac"], PALETA_FACHADAS)
+    vr = _math(nt, "FRACT", _math(nt, "DIVIDE", vp, PLANTA))
+    forjado = _math(nt, "LESS_THAN", vr, 0.05)
+    revoco = _mix(nt, _math(nt, "MULTIPLY", forjado, 0.35), revoco, (0.0, 0.0, 0.0))
+
+    umbral = _math(nt, "SUBTRACT", 0.73, _math(nt, "MULTIPLY", rnd, 0.42))
+    persiana = _math(nt, "GREATER_THAN", vr, umbral)
+    tono = _math(nt, "GREATER_THAN", _math(nt, "FRACT", _math(nt, "MULTIPLY", rnd, 5.3)), 0.55)
+    col_pers = _mix(nt, tono, (0.52, 0.46, 0.36), (0.68, 0.67, 0.64))
+    hueco = _mix(nt, persiana, (0.016, 0.02, 0.026), col_pers)
+    color = _mix(nt, muro, hueco, revoco)
+    bajo = _math(nt, "LESS_THAN", v, BAJO - 0.35)
+    color = _mix(nt, bajo, color, (0.035, 0.035, 0.04))
+    nt.links.new(color, bsdf.inputs["Base Color"])
+    rough = _math(nt, "ADD", 0.14, _math(nt, "MULTIPLY", muro, 0.76))
+    rough = _math(nt, "ADD", _math(nt, "MULTIPLY", rough,
+                                   _math(nt, "SUBTRACT", 1.0, bajo)),
+                  _math(nt, "MULTIPLY", bajo, 0.3))
+    nt.links.new(rough, bsdf.inputs["Roughness"])
+
+    cub = bpy.data.materials.new("ext_cubierta")
+    cub.use_nodes = True
+    nc = cub.node_tree
+    bc = nc.nodes["Principled BSDF"]
+    at2 = nc.nodes.new("ShaderNodeAttribute")
+    at2.attribute_type = "GEOMETRY"
+    at2.attribute_name = "semilla"
+    base = _rampa(nc, at2.outputs["Fac"], [(0.42, 0.19, 0.14), (0.50, 0.30, 0.25),
+                                           (0.55, 0.54, 0.50), (0.46, 0.24, 0.18)])
+    nz = nc.nodes.new("ShaderNodeTexNoise")
+    nz.inputs["Scale"].default_value = 0.6
+    base = _mix(nc, _math(nc, "MULTIPLY", nz.outputs["Fac"], 0.35), base, (0.30, 0.28, 0.26))
+    nc.links.new(base, bc.inputs["Base Color"])
+    set_in(bc, "Roughness", 0.9)
+    return mat, cub
+
+
+def mat_asfalto():
+    """Asfalto con marcas viales en UV métricas (u a lo largo, v a lo ancho):
+    líneas de borde continuas y separadores de carril discontinuos cada 3,1 m."""
+    mat = bpy.data.materials.new("ext_asfalto")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    u, v = _uv_xy(nt)
+    at = nt.nodes.new("ShaderNodeAttribute")
+    at.attribute_type = "GEOMETRY"
+    at.attribute_name = "ancho"
+    w = at.outputs["Fac"]
+    borde1 = _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", v, 0.35),
+                   _math(nt, "LESS_THAN", v, 0.47))
+    vd = _math(nt, "SUBTRACT", w, v)
+    borde2 = _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", vd, 0.35),
+                   _math(nt, "LESS_THAN", vd, 0.47))
+    carril = _math(nt, "LESS_THAN", _math(nt, "ABSOLUTE", _math(
+        nt, "SUBTRACT", v, _math(nt, "MULTIPLY", _math(nt, "ROUND", _math(
+            nt, "DIVIDE", v, 3.1)), 3.1))), 0.06)
+    dentro_ = _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", v, 1.0),
+                    _math(nt, "GREATER_THAN", vd, 1.0))
+    trazo = _math(nt, "LESS_THAN", _math(nt, "FRACT", _math(nt, "DIVIDE", u, 9.0)), 0.35)
+    carril = _math(nt, "MULTIPLY", _math(nt, "MULTIPLY", carril, dentro_), trazo)
+    marca = _math(nt, "MAXIMUM", _math(nt, "MAXIMUM", borde1, borde2), carril)
+    nz = nt.nodes.new("ShaderNodeTexNoise")
+    nz.inputs["Scale"].default_value = 0.8
+    base = _mix(nt, _math(nt, "MULTIPLY", nz.outputs["Fac"], 0.5),
+                (0.032, 0.032, 0.034), (0.07, 0.068, 0.066))
+    color = _mix(nt, marca, base, (0.55, 0.55, 0.52))
+    nt.links.new(color, bsdf.inputs["Base Color"])
+    set_in(bsdf, "Roughness", 0.85)
+    return mat
+
+
+def mat_suelo_urbano():
+    """Acera de baldosa 40×40 en coordenadas de objeto (mundo)."""
+    mat = bpy.data.materials.new("ext_acera")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    br = nt.nodes.new("ShaderNodeTexBrick")
+    br.offset = 0.0
+    for k, val in (("Scale", 1.0), ("Mortar Size", 0.006), ("Brick Width", 0.4),
+                   ("Row Height", 0.4), ("Bias", 0.0)):
+        br.inputs[k].default_value = val
+    br.inputs["Color1"].default_value = (0.29, 0.28, 0.26, 1.0)
+    br.inputs["Color2"].default_value = (0.36, 0.34, 0.31, 1.0)
+    br.inputs["Mortar"].default_value = (0.17, 0.16, 0.15, 1.0)
+    nt.links.new(tc.outputs["Object"], br.inputs["Vector"])
+    nt.links.new(br.outputs["Color"], bsdf.inputs["Base Color"])
+    set_in(bsdf, "Roughness", 0.8)
+    return mat
+
+
+def mat_plano(nombre, c1, c2, escala, rough=0.9):
+    mat = bpy.data.materials.new(nombre)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    nz = nt.nodes.new("ShaderNodeTexNoise")
+    nz.inputs["Scale"].default_value = escala
+    nt.links.new(_mix(nt, nz.outputs["Fac"], c1, c2), bsdf.inputs["Base Color"])
+    set_in(bsdf, "Roughness", rough)
+    return mat
+
+
+def _limpiar(pts):
+    out = []
+    for p in pts:
+        if not out or math.dist(out[-1], p) > 0.05:
+            out.append(tuple(p))
+    if len(out) > 2 and math.dist(out[0], out[-1]) <= 0.05:
+        out.pop()
+    return out
+
+
+def _dentro(pt, poly):
+    x, y = pt
+    c = False
+    for i in range(len(poly)):
+        (x1, y1), (x2, y2) = poly[i], poly[i - 1]
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            c = not c
+    return c
+
+
+def _dist_seg(p, a, b):
+    ax, ay = a
+    bx, by = b
+    dx, dy = bx - ax, by - ay
+    t = max(0.0, min(1.0, ((p[0] - ax) * dx + (p[1] - ay) * dy) / (dx * dx + dy * dy or 1)))
+    return math.hypot(ax + t * dx - p[0], ay + t * dy - p[1])
+
+
+class _Malla:
+    """Acumula caras con UV por esquina, material y atributos de cara."""
+
+    def __init__(self):
+        self.v, self.f, self.uv, self.mi, self.attr = [], [], [], [], {}
+
+    def cara(self, verts, uvs, mi=0, **attrs):
+        b = len(self.v)
+        self.v += verts
+        self.f.append(list(range(b, b + len(verts))))
+        self.uv.append(uvs)
+        self.mi.append(mi)
+        for k, val in attrs.items():
+            self.attr.setdefault(k, []).append(val)
+
+    def prisma(self, pts, z0, z1, semilla, tapa_inferior=False):
+        """Muros (UV: u a lo largo del perímetro, v = altura sobre la calle) y
+        cubierta; `pts` en sentido antihorario."""
+        n, acc = len(pts), 0.0
+        v0, v1 = z0 + ALTURA_PISO, z1 + ALTURA_PISO
+        for i in range(n):
+            (xa, ya), (xb, yb) = pts[i], pts[(i + 1) % n]
+            L = math.hypot(xb - xa, yb - ya)
+            self.cara([(xa, ya, z0), (xb, yb, z0), (xb, yb, z1), (xa, ya, z1)],
+                      [(acc, v0), (acc + L, v0), (acc + L, v1), (acc, v1)], 0,
+                      semilla=semilla)
+            acc += L
+        self.cara([(x, y, z1) for x, y in pts], list(pts), 1, semilla=semilla)
+        if tapa_inferior:
+            self.cara([(x, y, z0) for x, y in pts[::-1]], list(pts[::-1]), 1,
+                      semilla=semilla)
+
+    def objeto(self, nombre, mats):
+        me = bpy.data.meshes.new(nombre)
+        me.from_pydata(self.v, [], self.f)
+        uvl = me.uv_layers.new(name="UVMap")
+        for poly, uvc in zip(me.polygons, self.uv):
+            for k, li in enumerate(range(poly.loop_start, poly.loop_start + poly.loop_total)):
+                uvl.data[li].uv = uvc[k]
+        me.polygons.foreach_set("material_index", self.mi)
+        for k, vals in self.attr.items():
+            at = me.attributes.new(k, "FLOAT", "FACE")
+            at.data.foreach_set("value", vals)
+        me.validate(clean_customdata=False)
+        ob = bpy.data.objects.new(nombre, me)
+        bpy.context.collection.objects.link(ob)
+        for mt in mats:
+            me.materials.append(mt)
+        return ob
+
+
+def _soldar(ob):
+    """Une los vértices duplicados por las UV por cara: el booleano EXACT
+    necesita volúmenes cerrados (las UV van por esquina y se conservan)."""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.005)
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
+def _vaciar_volumen_propio(ob, mats):
+    """Resta al volumen del edificio propio el piso (huella + terraza, de la cota
+    del suelo al remate de los muros) y los patios de luces a los que dan
+    V03–V08, que OSM no recoge (se suponen de ~3,5 m)."""
+    _soldar(ob)
+    ter = next(e for e in PLAN["estancias"] if e["id"] == "terraza")
+    tx = [p[0] for p in ter["pts"]]
+    tz = [p[1] for p in ter["pts"]]
+    cortes = [([(x, -z) for x, z in PLAN["huella"]], -0.02, ALTURA),
+              ([(min(tx) - 0.05, -(min(tz) - 0.2)), (max(tx) + 0.3, -(min(tz) - 0.2)),
+                (max(tx) + 0.3, -(max(tz) + 0.2)), (min(tx) - 0.05, -(max(tz) + 0.2))],
+               -0.02, ALTURA)]
+    for x0, z0, x1, z1 in ((-7.0, 3.20, 0.25, 6.8),     # patio SO: V03–V07
+                           (-8.6, -6.8, -5.0, -3.40)):  # patio NE: V08
+        cortes.append(([(x0, -z0), (x1, -z0), (x1, -z1), (x0, -z1)],
+                       -ALTURA_PISO + BAJO, PLANTA + 3.0))
+    for k, (pts, z0, z1) in enumerate(cortes):
+        pts = _limpiar(pts)
+        area = sum(pts[i][0] * pts[(i + 1) % len(pts)][1] -
+                   pts[(i + 1) % len(pts)][0] * pts[i][1] for i in range(len(pts)))
+        if area < 0:
+            pts = pts[::-1]
+        mc = _Malla()
+        mc.prisma(pts, z0, z1, 0.0, tapa_inferior=True)
+        cutter = mc.objeto(f"ext_corte_{k}", mats)
+        _soldar(cutter)
+        md = ob.modifiers.new(f"corte_{k}", "BOOLEAN")
+        md.operation = "DIFFERENCE"
+        md.object = cutter
+        md.solver = "EXACT"
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.modifier_apply(modifier=md.name)
+        bpy.data.objects.remove(cutter, do_unlink=True)
+
+
+def build_balcones(m):
+    """Balcón del 7º como en las fotos del edificio: canto de forjado macizo de
+    revoco y barandilla negra de pletinas horizontales, voladizo de la cubierta
+    encima y el mismo balcón apilado en las seis plantas inferiores."""
+    rev, neg = m["revoco"], m["metal_negro"]
+    xi, xf, zi, zf = 8.23, 9.55, -0.62, 3.55
+    for k in range(7):
+        h = -k * PLANTA
+        box(xi, zi, xf, zf, h - 0.30, h + (0.0 if k == 0 else 0.004),
+            f"ext_balcon_losa_{k}", rev, bevel=0.0)
+        box(xf - 0.13, zi, xf, zf, h, h + 0.30, f"ext_balcon_canto_{k}_f", rev, bevel=0.0)
+        box(xi, zf - 0.13, xf, zf, h, h + 0.30, f"ext_balcon_canto_{k}_s", rev, bevel=0.0)
+        box(xi, zi, xf, zi + 0.12, h, h + 0.30, f"ext_balcon_canto_{k}_n", rev, bevel=0.0)
+        xm = xf - 0.065                       # eje de la barandilla frontal
+        zs_, zn_ = zf - 0.065, zi + 0.06      # ejes de las laterales
+        n = max(2, math.ceil((zs_ - zn_) / 1.1))
+        postes = [(xm, zn_ + (zs_ - zn_) * i / n) for i in range(n + 1)]
+        postes += [(x, zc) for x in (xi + 0.2, (xi + xm) / 2) for zc in (zn_, zs_)]
+        for j, (px, pz) in enumerate(postes):
+            box(px - 0.018, pz - 0.018, px + 0.018, pz + 0.018, h + 0.30, h + 1.02,
+                f"ext_barandilla_{k}_p{j}", neg, bevel=0.0)
+        for j, (a, b, e) in enumerate(((0.02, 0.04, 1.02), (0.007, 0.03, 0.45),
+                                       (0.007, 0.03, 0.60), (0.007, 0.03, 0.75),
+                                       (0.007, 0.03, 0.90))):
+            box(xm - a, zn_, xm + a, zs_, h + e, h + e + b,
+                f"ext_barandilla_{k}_f{j}", neg, bevel=0.0)
+            box(xi, zs_ - a, xm + a, zs_ + a, h + e, h + e + b,
+                f"ext_barandilla_{k}_s{j}", neg, bevel=0.0)
+            box(xi, zn_ - a, xm + a, zn_ + a, h + e, h + e + b,
+                f"ext_barandilla_{k}_n{j}", neg, bevel=0.0)
+    box(xi, zi - 0.10, xf + 0.15, zf + 0.10, ALTURA + 0.05, PLANTA,
+        "ext_voladizo", rev, bevel=0.0)
+
+
+def pintar_fachada_exterior(mat):
+    """Las caras de muro que dan al exterior del piso (terraza, patios) llevan el
+    revoco de fachada en vez de la pintura interior."""
+    huella = PLAN["huella"]
+    n = 0
+    for ob in bpy.data.objects:
+        if ob.type != "MESH" or not ob.name.startswith(("muro_", "dintel_", "antepecho_")):
+            continue
+        me = ob.data
+        idx = None
+        for poly in me.polygons:
+            nr = poly.normal
+            if abs(nr.z) > 0.2:
+                continue
+            c = poly.center
+            if _dentro((c.x + nr.x * 0.3, -(c.y + nr.y * 0.3)), huella):
+                continue
+            if idx is None:
+                me.materials.append(mat)
+                idx = len(me.materials) - 1
+            poly.material_index = idx
+            n += 1
+    print(f"FACHADA caras exteriores con revoco: {n}")
+
+
+def _arboles_alineacion(vias, edificios, existentes, radio=170.0):
+    """Arbolado de alineación que falta en OSM (las fotos lo muestran en la
+    calle principal): cada 8,5 m a 1,6 m del bordillo en calzadas anchas, sin
+    invadir edificios, otras calzadas ni árboles existentes."""
+    cajas = []
+    for b in edificios:
+        xs = [p[0] for p in b["pts"]]
+        ys = [p[1] for p in b["pts"]]
+        cajas.append((min(xs) - 3, max(xs) + 3, min(ys) - 3, max(ys) + 3, b["pts"]))
+    calz = [(v["pts"], v["ancho"]) for v in vias if v["tipo"] == "calzada"]
+    nuevos = []
+    for pts, ancho in calz:
+        if ancho < 7.0:
+            continue
+        off = ancho / 2 + 1.6
+        for i in range(len(pts) - 1):
+            (x0, y0), (x1, y1) = pts[i], pts[i + 1]
+            L = math.hypot(x1 - x0, y1 - y0)
+            if L < 9:
+                continue
+            ux, uy = (x1 - x0) / L, (y1 - y0) / L
+            t = 4.5
+            while t < L - 4.5:
+                for s in (-1, 1):
+                    p = (x0 + ux * t - s * uy * off, y0 + uy * t + s * ux * off)
+                    if math.hypot(*p) > radio:
+                        continue
+                    if any(math.dist(p, q) < 6.0 for q in existentes) or \
+                            any(math.dist(p, q) < 6.0 for q in nuevos):
+                        continue
+                    choca = False
+                    for x_0, x_1, y_0, y_1, poly in cajas:
+                        if x_0 < p[0] < x_1 and y_0 < p[1] < y_1 and (
+                                _dentro(p, poly) or min(_dist_seg(p, poly[j], poly[j - 1])
+                                                        for j in range(len(poly))) < 2.5):
+                            choca = True
+                            break
+                    if choca:
+                        continue
+                    if any(_dist_seg(p, q[j], q[j + 1]) < w / 2 + 0.8
+                           for q, w in calz for j in range(len(q) - 1)):
+                        continue
+                    nuevos.append(p)
+                t += 8.5
+    return nuevos
+
+
+def build_arboles(m, puntos):
+    """Jacarandas CC0 (Poly Haven `jacaranda_tree`, glTF 1k en data/assets/, no
+    versionado por tamaño) instanciadas en cada árbol; si falta el modelo, copa
+    procedural."""
+    import random
+    src = ASSETS_DIR / "jacaranda_tree" / "jacaranda_tree_1k.gltf"
+    col, alto, ancho, z0 = None, 1.0, 1.0, 0.0
+    if src.is_file() and (src.parent / "jacaranda_tree.bin").is_file():
+        antes = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=str(src))
+        nuevos = [o for o in bpy.data.objects if o not in antes]
+        col = bpy.data.collections.new("ext_arbol")
+        for o in nuevos:
+            for c in list(o.users_collection):
+                c.objects.unlink(o)
+            col.objects.link(o)
+            o.name = "ext_arbol_" + o.name
+        ws = [o.matrix_world @ Vector(c) for o in nuevos if o.type == "MESH"
+              for c in o.bound_box]
+        z0 = min(w.z for w in ws)
+        alto = max(w.z for w in ws) - z0
+        ancho = max(max(w.x for w in ws) - min(w.x for w in ws),
+                    max(w.y for w in ws) - min(w.y for w in ws))
+    rnd = random.Random(7)
+    suelo = -ALTURA_PISO
+    for k, (x, y) in enumerate(puntos):
+        h = rnd.uniform(7.5, 10.5)
+        if col:
+            e = bpy.data.objects.new(f"ext_arbol_i{k:04d}", None)
+            e.instance_type = "COLLECTION"
+            e.instance_collection = col
+            s = h / alto
+            sxy = min(s, rnd.uniform(6.5, 9.0) / ancho)
+            e.scale = (sxy, sxy, s)
+            e.rotation_euler = (0.0, 0.0, rnd.uniform(0, 2 * math.pi))
+            e.location = (x, y, suelo - z0 * s)
+            bpy.context.collection.objects.link(e)
+        else:
+            cylinder(x, -y, 0.14, suelo, suelo + h * 0.5, f"ext_tronco_{k}", m["cuero"], n=8)
+            sphere(x, -y, suelo + h * 0.68, h * 0.33, f"ext_copa_{k}", m["planta"], sy=0.8)
+    print(f"ARBOLES {len(puntos)} ({'jacaranda CC0' if col else 'procedurales'})")
+
+
+def build_entorno(m):
+    """Ciudad real alrededor del piso desde data/entorno.json (OSM): volúmenes
+    con su número de plantas, el propio edificio vaciado donde está el piso,
+    calzadas con marcas, carril bici, zonas verdes, acera y arbolado."""
+    fach, cub = mat_fachadas()
+    m["revoco"] = principled("revoco_fachada", base=PALETA_FACHADAS[0], rough=0.88)
+    noise_bump(m["revoco"], scale=60, strength=0.12)
+    suelo = -ALTURA_PISO
+    import random
+    rnd = random.Random(3)
+
+    ciudad = _Malla()
+    propios = []
+    for b in ENTORNO["edificios"]:
+        pts = _limpiar(b["pts"])
+        if len(pts) < 3:
+            continue
+        if b["propio"]:
+            mp = _Malla()
+            mp.prisma(pts, suelo, PLANTA + 1.0, 0.0, tapa_inferior=True)
+            propios.append(mp)
+            continue
+        p = b["plantas"] or 3
+        h = BAJO + (p - 1) * PLANTA + 1.0 if p >= 3 else p * 3.4
+        semilla = 0.15 + 0.85 * rnd.random()
+        ciudad.prisma(pts, suelo, suelo + h, semilla)
+    ciudad.objeto("ext_edificios", [fach, cub])
+    for k, mp in enumerate(propios):
+        ob = mp.objeto(f"ext_propio_{k}", [fach, cub])
+        _vaciar_volumen_propio(ob, [fach, cub])
+
+    # calles
+    asf = mat_asfalto()
+    bici = mat_plano("ext_bici", (0.20, 0.045, 0.035), (0.26, 0.06, 0.045), 2.0, 0.8)
+    for tipo, mat, dz in (("calzada", asf, 0.03), ("bici", bici, 0.035)):
+        mv = _Malla()
+        for i, v in enumerate(ENTORNO["vias"]):
+            if v["tipo"] != tipo:
+                continue
+            pts, w = _limpiar(v["pts"]), v["ancho"]
+            z = suelo + dz + (i % 50) * 0.0002
+            acc = 0.0
+            for j in range(len(pts) - 1):
+                (x0, y0), (x1, y1) = pts[j], pts[j + 1]
+                L = math.hypot(x1 - x0, y1 - y0)
+                nx, ny = -(y1 - y0) / L * w / 2, (x1 - x0) / L * w / 2
+                mv.cara([(x0 + nx, y0 + ny, z), (x0 - nx, y0 - ny, z),
+                         (x1 - nx, y1 - ny, z), (x1 + nx, y1 + ny, z)],
+                        [(acc, w), (acc, 0.0), (acc + L, 0.0), (acc + L, w)], 0, ancho=w)
+                acc += L
+            for x, y in pts[1:-1]:
+                r = w / 2
+                mv.cara([(x + r * math.cos(a * math.pi / 4), y + r * math.sin(a * math.pi / 4),
+                          z - 0.001) for a in range(8)], [(-50.0, 1.5)] * 8, 0, ancho=w)
+        if mv.f:
+            mv.objeto(f"ext_{tipo}", [mat])
+
+    # zonas verdes y acera
+    cesped = mat_plano("ext_cesped", (0.045, 0.09, 0.022), (0.085, 0.13, 0.035), 3.0, 0.95)
+    tierra = mat_plano("ext_tierra", (0.30, 0.24, 0.16), (0.36, 0.30, 0.21), 1.5, 0.95)
+    mg = _Malla()
+    for g in ENTORNO["verdes"]:
+        pts = _limpiar(g["pts"])
+        if len(pts) < 3:
+            continue
+        z = suelo + (0.012 if g["tipo"] == "parque" else 0.02)
+        mg.cara([(x, y, z) for x, y in pts], list(pts), 0 if g["tipo"] == "cesped" else 1)
+    if mg.f:
+        mg.objeto("ext_verdes", [cesped, tierra])
+    ma = _Malla()
+    r = 1500.0
+    ma.cara([(-r, -r, suelo), (r, -r, suelo), (r, r, suelo), (-r, r, suelo)],
+            [(-r, -r), (r, -r), (r, r), (-r, r)])
+    ma.objeto("ext_suelo", [mat_suelo_urbano()])
+
+    arboles = [tuple(p) for p in ENTORNO["arboles"]]
+    arboles += _arboles_alineacion(ENTORNO["vias"], ENTORNO["edificios"], arboles)
+    build_arboles(m, arboles)
+    build_balcones(m)
+    pintar_fachada_exterior(m["revoco"])
 
 
 def build_exterior(m):
@@ -1170,7 +2041,14 @@ def build_exterior(m):
 
 def build_luces(m):
     scene = bpy.context.scene
-    hdri = hdri_path()
+    # con el entorno real el HDRI (tomado a pie de calle en otra ciudad) sobra:
+    # cielo físico Nishita con el sol en su posición real
+    hdri = None if ENTORNO else hdri_path()
+    sol_az, sol_el = posicion_sol(SOL_UTC, *CIUDAD_LAT_LON)
+    sol_ang = rumbo_a_blender(sol_az)          # en el plano XY de Blender
+    if ENTORNO:
+        print(f"SOL azimut {sol_az:.1f}° elevación {sol_el:.1f}° "
+              f"(fachada {ENTORNO['rumbo_fachada']}°)")
 
     # cielo: HDRI real de Poly Haven (CC0) si existe; si no, Nishita de respaldo
     world = bpy.data.worlds.new("World")
@@ -1193,17 +2071,25 @@ def build_luces(m):
     else:
         sky = nt.nodes.new("ShaderNodeTexSky")
         sky.sky_type = "NISHITA"
-        sky.sun_elevation = math.radians(45)
-        sky.sun_rotation = math.radians(200)
-        sky.sun_intensity = 0.0
-        sky.altitude = 30
+        if ENTORNO:
+            # sun_rotation 0 = sol hacia +Y y crece en sentido horario (medido)
+            sky.sun_elevation = math.radians(sol_el)
+            sky.sun_rotation = math.radians(90.0 - sol_ang)
+            sky.sun_disc = False          # el disco lo pone la lámpara SUN
+            sky.altitude = ALTURA_PISO + 20
+            sky.dust_density = 1.6        # calima ligera de ciudad costera
+        else:
+            sky.sun_elevation = math.radians(45)
+            sky.sun_rotation = math.radians(200)
+            sky.sun_intensity = 0.0
+            sky.altitude = 30
         nt.links.new(sky.outputs["Color"], bg.inputs["Color"])
-        bg.inputs["Strength"].default_value = 0.28
+        bg.inputs["Strength"].default_value = CIELO_FUERZA if ENTORNO else 0.28
 
     # sol direccional alineado con el HDRI (sombras nítidas; el disco del HDRI
     # solo aporta luz ambiental y brillo en los reflejos)
     sd = bpy.data.lights.new("sol", "SUN")
-    sd.energy = 8.0 if hdri else 14.0
+    sd.energy = SOL_FUERZA if ENTORNO else (8.0 if hdri else 14.0)
     sd.angle = math.radians(3.5)
     sd.color = (1.0, 0.90, 0.78)
     so = bpy.data.objects.new("sol", sd)
@@ -1214,6 +2100,11 @@ def build_luces(m):
                     math.cos(math.radians(el)) * math.sin(math.radians(SOL_AZ)),
                     math.sin(math.radians(el))))
         d = -p
+    elif ENTORNO:
+        ce = math.cos(math.radians(sol_el))
+        d = -Vector((ce * math.cos(math.radians(sol_ang)),
+                     ce * math.sin(math.radians(sol_ang)),
+                     math.sin(math.radians(sol_el))))
     else:
         d = Vector((-0.80, 0.33, -0.60)).normalized()
     so.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
@@ -1256,7 +2147,7 @@ def build_luces(m):
         fl.shape = "RECTANGLE"
         fl.size = ancho * 0.9
         fl.size_y = (head - ante) * 0.9
-        fl.energy = 9.0 * area
+        fl.energy = (4.5 if ENTORNO else 9.0) * area
         fl.color = (1.0, 0.95, 0.88)
         fo = bpy.data.objects.new(f"dia_{v['id']}", fl)
         bpy.context.collection.objects.link(fo)
@@ -1311,7 +2202,7 @@ def build_cameras():
         cd = bpy.data.cameras.new(name)
         cd.type = "PANO"
         cd.panorama_type = "EQUIRECTANGULAR"
-        cd.clip_end = 300
+        cd.clip_end = 3000
         co = bpy.data.objects.new(name, cd)
         bpy.context.collection.objects.link(co)
         co.location = (x, -z, 1.55)
@@ -1322,6 +2213,7 @@ def build_cameras():
     for st in STILLS:
         cd = bpy.data.cameras.new(st["id"])
         cd.lens = st["lens"]
+        cd.clip_end = 3000
         cd.dof.use_dof = True
         cd.dof.aperture_fstop = 5.6
         co = bpy.data.objects.new(st["id"], cd)
@@ -1363,7 +2255,7 @@ def setup_render():
     scene.render.image_settings.quality = 90
     scene.render.film_transparent = False
     scene.view_settings.view_transform = "AgX"
-    scene.view_settings.exposure = 1.4
+    scene.view_settings.exposure = 1.2 if ENTORNO else 1.4
     scene.view_settings.look = "AgX - Base Contrast"
     scene.render.use_persistent_data = True
     scene.render.threads_mode = "AUTO"
@@ -1391,13 +2283,13 @@ def build_compositor():
     ell = nt.nodes.new("CompositorNodeEllipseMask")
     ell.x = 0.5
     ell.y = 0.5
-    ell.mask_width = 1.0
-    ell.mask_height = 1.0
+    ell.mask_width = 1.25          # relativo al ancho: elipse con el aspecto
+    ell.mask_height = 0.95         # del encuadre 16:9, algo mayor que él
     blur = nt.nodes.new("CompositorNodeBlur")
     blur.filter_type = "FAST_GAUSS"
     blur.use_relative = True
-    blur.factor_x = 0.22
-    blur.factor_y = 0.22
+    blur.factor_x = 30.0           # en % del tamaño (0,22 % dejaba borde duro)
+    blur.factor_y = 30.0
     nt.links.new(ell.outputs["Mask"], blur.inputs["Image"])
 
     mix = nt.nodes.new("CompositorNodeMixRGB")
@@ -1422,7 +2314,11 @@ def main():
     build_ventanas(m)
     build_puertas(m)
     build_mobiliario(m)
-    build_exterior(m)
+    suavizar_tapizados()
+    if ENTORNO:
+        build_entorno(m)
+    else:
+        build_exterior(m)
     uv_proyectar()
     vidrios_sin_sombra()
     build_luces(m)

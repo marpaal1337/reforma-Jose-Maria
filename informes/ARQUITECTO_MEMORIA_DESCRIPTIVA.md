@@ -2,7 +2,7 @@
 
 **Proyecto**: Reforma integral de vivienda
 **Cliente**: vivienda Valencia
-**Arquitecta**: Sofia Palacios (+34 680 160 331 · info@sofiapalacios.es)
+**Arquitecta**: colegiada (contacto eliminado por privacidad)
 **Emplazamiento**: Valencia (dirección eliminada por privacidad)
 **Planos**: PEA.01 (estado inicial) y PEA.02 (distribución), Junio25, E 1:50 (A3)
 **Fecha del informe**: Julio 2026
@@ -33,10 +33,10 @@ Las alturas libres varían entre **2,29 m** (baños) y **2,54 m** (salón). Las 
 
 ### 1.2 Patologías observadas (deducidas del alcance de demolición)
 
-Del capítulo 01 de demolición de Cyss v2.0 se deduce que la vivienda presentaba:
+Del capítulo 01 de demolición del presupuesto de la constructora v2.0 se deduce que la vivienda presentaba:
 
 - **Distribución obsoleta**: cocina y baño originales con tabiquería de ladrillo de época que se demuele íntegramente.
-- **Particiones interiores de fábrica de ladrillo** con revestimiento de yeso tradicional: se demuelen 36 m² de tabiquería (según Cyss v2.0, frente a 14,65 m² en v1).
+- **Particiones interiores de fábrica de ladrillo** con revestimiento de yeso tradicional: se demuelen 36 m² de tabiquería (según el presupuesto de la constructora v2.0, frente a 14,65 m² en v1).
 - **Falsos techos continuos originales** en mal estado o con instalaciones obsoletas: se demuelen en toda la vivienda.
 - **Pavimento cerámico original** levantado en su totalidad (88,3 m² de nuevo pavimento porcelánico).
 - **Rodapié de terrazo** original levantado.
@@ -63,18 +63,18 @@ La reforma responde a los siguientes criterios:
 
 ### 2.2 Nueva distribución
 
-Según los datos del presupuesto de Cyss v2.0, la nueva distribución comprende:
+Según los datos del presupuesto de la constructora v2.0, la nueva distribución comprende:
 
 | Estancia | Superficie estimada (m²) | Observaciones |
 |---|---|---|
 | Salón-comedor | ~30–35 | Fusión del antiguo salón de 24,8 m² con estancia contigua |
-| Cocina | ~10–12 | Nueva ubicación, con mobiliario Valenzuela |
+| Cocina | ~10–12 | Nueva ubicación, con mobiliario de Carpintería |
 | Dormitorio principal | ~14–16 | Con armario empotrado (6 cajones, barra, altillos) |
 | Dormitorio 2 | ~12–14 | Con armario (baldas, zapatero, barra) |
 | Dormitorio 3 | ~10–12 | Con estantería y armario |
 | Dormitorio 4 / despacho | ~8–9 | Con estantería de melamina |
-| Baño 1 (completo) | ~5–6 | Plato ducha resina + mueble baño Valenzuela + cisterna empotrada |
-| Baño 2 (completo) | ~4–5 | Bañera resina + mueble baño Valenzuela |
+| Baño 1 (completo) | ~5–6 | Plato ducha resina + mueble de baño de Carpintería + cisterna empotrada |
+| Baño 2 (completo) | ~4–5 | Bañera resina + mueble de baño de Carpintería |
 | Aseo / distribuidor | ~3–4 | Lavabo y espacio de circulación |
 | Casoneto (trastero) | ~2–3 | Almacenaje con puerta corredera de pladur |
 
@@ -134,7 +134,7 @@ Según los datos del presupuesto de Cyss v2.0, la nueva distribución comprende:
 
 ### 4.3 Pavimentos
 
-| Zona | Tipo | Formato | Código Cyss |
+| Zona | Tipo | Formato | Código partida |
 |---|---|---|---|
 | Zonas secas (salón, dormitorios, pasillo) | Porcelánico imitación madera | 25×— (rectangular largo) | RAG012 |
 | Zonas nobles (cocina, recibidor) | Porcelánico imitación mármol | — | RAG012c |
@@ -153,12 +153,12 @@ Según los datos del presupuesto de Cyss v2.0, la nueva distribución comprende:
 
 ## 5. INSTALACIONES
 
-### 5.1 Instalación eléctrica (capítulo 04 — Cyss / Paracon)
+### 5.1 Instalación eléctrica (capítulo 04 — Constructora / Electricista)
 
 - **Cuadro eléctrico**: cuadro general elevado vertical con protecciones magnetotérmicas y diferenciales.
 - **Cuadro de telecomunicaciones**: independiente para datos, TV y telefonía.
 - **Puntos de enchufe**: 46 uds. de 16A (uso general) + puntos de 25A (electrodomésticos de alta potencia: cocina, horno, lavadora, etc.).
-- **Puntos de luz**: 90 uds. entre techo y pared (10A) según la oferta de Paracon/Poveda.
+- **Puntos de luz**: 90 uds. entre techo y pared (10A) según las ofertas del Electricista.
 - **Interruptores y conmutadores**: 37 uds. para control de iluminación.
 - **Puntos TV**: en salón y dormitorio principal.
 - **Puntos de datos**: red ethernet (al menos en salón y despacho).
@@ -187,7 +187,7 @@ Según los datos del presupuesto de Cyss v2.0, la nueva distribución comprende:
 - **Tiras LED 3000K 24W**: luz cálida para salón, dormitorios y zonas de descanso.
 - **Tiras LED 4000K 24W**: luz neutra para cocina y zonas de trabajo.
 - **Perfiles de aluminio**: para empotrar las tiras LED en falsos techos de pladur, creando iluminación lineal continua.
-- **Luminarias downlight**: 27 uds. downlight COB empotrado 8W (según oferta de Poveda).
+- **Luminarias downlight**: 27 uds. downlight COB empotrado 8W (según oferta del Electricista).
 
 ---
 
@@ -211,14 +211,14 @@ Según los datos del presupuesto de Cyss v2.0, la nueva distribución comprende:
 | Baño 2 | Hasta techo | Porcelánico 60×120 | 60×120 cm |
 | Cocina | Zona entre encimera y armarios | Porcelánico 60×120 | 60×120 cm |
 
-### 6.3 Carpintería exterior (Ventanas Nacher)
+### 6.3 Carpintería exterior (ventanas)
 
 - **Tipo**: ventanas de aluminio con rotura de puente térmico.
 - **Número**: 8 unidades (V01 a V08 en planos PEI.05/PEI.06).
 - **Incluye**: premarco, falcado, vierteaguas, acristalamiento.
-- **Presupuesto**: 10.151,48 € IVA incl. (proyecto SOFIA, presupuesto 1040/1).
+- **Presupuesto**: 10.151,48 € IVA incl. (referencia anonimizada por privacidad).
 
-### 6.4 Carpintería interior (Valenzuela)
+### 6.4 Carpintería interior (mobiliario y puertas)
 
 **Armarios empotrados:**
 - Dormitorio principal: armario con 6 cajones, barra para perchas y altillos (2.115,57 €).
@@ -234,7 +234,7 @@ Según los datos del presupuesto de Cyss v2.0, la nueva distribución comprende:
 - Zapatero: 1,79 ml de melamina (741,06 €).
 - Mueble TV: 3 ml de melamina (1.242,00 €).
 
-**Cocina (Valenzuela):**
+**Cocina (Carpintería):**
 - Cocina completa sin herrajes: 4.737,30 €.
 - Carro basura: 166,60 €.
 - Luz LED: 73,80 €.
@@ -253,7 +253,7 @@ Según los datos del presupuesto de Cyss v2.0, la nueva distribución comprende:
 - Cisterna empotrada (en baño 1).
 - **Marca, modelo y acabado de grifería e inodoros: pendiente de definir.**
 
-### 6.6 Encimeras (no incluidas en Cyss)
+### 6.6 Encimeras (no incluidas en el presupuesto de la constructora)
 
 - **Cocina**: DEKTON Marmorio (según plano PEI.09, pendiente de presupuesto).
 - **Lavadero**: SILESTONE Charcoal Soapstone (según plano PEI.09, pendiente de presupuesto).
@@ -285,4 +285,4 @@ _Sección eliminada el 2026-09-26 junto con los presupuestos del repositorio. Es
 
 ---
 
-*Documento generado a partir de los planos PEA.01 y PEA.02, el presupuesto de Cyss v2.0, las ofertas de subcontratistas y los informes de análisis previos.*
+*Documento generado a partir de los planos PEA.01 y PEA.02, el presupuesto de la constructora v2.0, las ofertas de subcontratistas y los informes de análisis previos.*

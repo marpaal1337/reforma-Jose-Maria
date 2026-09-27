@@ -81,17 +81,19 @@ python3 scripts/generar_visor3d.py && \
 python3 scripts/generar_tour3d.py
 ```
 
-Blender steps need a local Blender 4.2 LTS (not vendored; install it yourself, do not rely on `/tmp`):
+Blender steps need a local Blender 4.2 LTS (not vendored; install it yourself, do not rely on `/tmp`). En este equipo (WSL) Blender vive en `~/opt/blender/blender` y le faltan `libSM.so.6`/`libICE.so.6` del sistema: `scripts/blender.sh` las resuelve desde `~/opt/blender-libs` (extraídas sin sudo) y lanza Blender. Usa el envoltorio:
 
 ```bash
-blender -b --factory-startup -noaudio -P scripts/generar_blender.py        # escena
-blender -b renders/escena.blend -noaudio -P scripts/exportar_glb.py        # data/mobiliario.glb
-blender -b renders/escena.blend -noaudio -P scripts/render_blender.py -- \
+./scripts/blender.sh -b --factory-startup -noaudio -P scripts/generar_blender.py   # escena
+./scripts/blender.sh -b renders/escena.blend -noaudio -P scripts/exportar_glb.py   # data/mobiliario.glb
+./scripts/blender.sh -b renders/escena.blend -noaudio -P scripts/render_blender.py -- \
     --cam p03_salon_ventanal --out renders/panos/p03_salon_ventanal.jpg \
     --samples 320 --res 4096x2048
 python3 scripts/generar_visor3d.py
 python3 scripts/generar_tour3d.py
 ```
+
+En WSL, **no lances el horneado a la vez que capturas/render** (el equipo ha sufrido caídas por carga concurrente). Un proceso a la vez y con `nice` si hay que seguir trabajando.
 
 #### Calidad del render (actualizado 2026-09-26)
 
@@ -120,6 +122,15 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución (es
 - `data/imagenes/geometria_debug.png` es el overlay de control tras cambiar el plano.
 - Botón **Galería**: muestra `data/reales/` + plano de aires. Si se añaden imágenes, actualizar `RENDERS`/`GALERIA` en `scripts/generar_visor3d.py`.
 - **Distribución vigente: PE.A.02**. El plano de aires es solo croquis de conductos del instalador, no una versión alternativa. Detalle en `informes/RENDERS_Y_PLANO_AIRES.md`.
+
+### Visor realista (horneado Cycles + entorno OSM)
+
+- `scripts/extraer_entorno.py`: OpenStreetMap → `data/entorno.json`. Las coordenadas se pasan por CLI y **no se versionan** (`--lat --lon --rumbo [--radio]`, p. ej. un punto de Street View frente a la fachada). El JSON solo guarda geometría relativa en metros de la escena (volúmenes con nº de plantas, calzadas, carriles bici, verdes y árboles), sin lat/lon ni nombres de calles. Datos © OpenStreetMap contributors (ODbL 1.0).
+- `scripts/hornear_visor.py`: hornea la luz de Cycles de `renders/escena.blend` → `data/visor/`. Se lanza con Blender (`./scripts/blender.sh -b renders/escena.blend -noaudio -P scripts/hornear_visor.py -- [--muestras N] [--res N] [--rapido] [--salida <dir>]`; `--salida` permite probar sin tocar `data/visor`). Genera `interior.glb` (UV de material + lightmap), `lm_a/b.jpg`, `suelo_cerca/lejos.jpg`, `cielo.jpg`, `reflejo.jpg`, `arbol_*.webp` y `visor.json`. Coste: rápido (`--rapido`, 32 muestras/1024) ~10 min; completo 128 muestras con `--res 2048` ~60–90 min; `--res 4096` (por defecto) multiplica ×4 el tiempo (~4 h). El horneado se corta a medias si WSL se reinicia: deja escrito `visor.json` solo al final y no mezcles un horneado parcial con el anterior.
+- `scripts/visor_realista.js`: modo **Realista** del visor (interior con lightmaps + PBR del render y ciudad OSM alrededor a la altura del 7º piso). Lo inyecta `scripts/generar_visor3d.py` (`--visor <dir>` para horneados alternativos). El visor **arranca en Realista si hay horneado** (`setRealista(realListo)` tras la carga; si no, avisa y sigue en maqueta). La exposición se calibra contra los stills Cycles con la constante `AJUSTE_EXPOSICION` (barrido medido con `capturas.mjs` y `ref_cycles.py`: EV 0,90 final frente al 2,30 de usar `exposicion` tal cual; sin compensar salía +0,3/+0,6 EV).
+- `scripts/capturas.mjs` + `scripts/capturas.sh`: 6 capturas automáticas del visor con Playwright/Chromium (vistas: `orbita`, `salon`, `terraza`, `cocina`, `dormitorio`, `fachada`). Flags: `--visor/--salida/--ancho/--alto`. `capturas.sh` cachea `playwright-core` en `~/.cache/opencode-reforma` (no depende de `/tmp`).
+- `scripts/ref_cycles.py`: referencia Cycles de la misma cámara que las capturas (`--cam/--todas`, más `--samples/--res/--out/--out-dir`). Usa `scripts/blender.sh`.
+- `data/visor/` es un **artefacto local regenerable** (ya en `.gitignore`): se regenera con `hornear_visor.py` y no se versiona.
 
 ### Tour 360 (`tour3d.html`)
 

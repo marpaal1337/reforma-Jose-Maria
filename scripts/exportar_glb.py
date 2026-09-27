@@ -55,8 +55,14 @@ COLORES = {
     "metal_negro": (0.035, 0.035, 0.037, 0.42),
     "cuero": (0.25, 0.11, 0.05, 0.5),
     "cortina": (0.96, 0.95, 0.92, 0.6),
-    "lampara_pantalla": (0.95, 0.93, 0.88, 0.85),
+    "lampara_pantalla": (0.82, 0.63, 0.42, 0.9),
     "lienzo": (0.88, 0.85, 0.79, 0.9),
+    # aproximaciones planas de las láminas procedurales (por si el .blend es
+    # anterior a su generación; con imagen se conservan, ver _imagen_base)
+    "lienzo_0": (0.72, 0.45, 0.30, 0.9),
+    "lienzo_1": (0.55, 0.58, 0.42, 0.9),
+    "lienzo_2": (0.42, 0.52, 0.58, 0.9),
+    "colcha": (0.72, 0.50, 0.34, 0.95),
     "tierra": (0.045, 0.032, 0.022, 0.95),
 }
 METALES = {"cobre", "aluminio", "espejo", "metal_negro"}
@@ -88,9 +94,45 @@ def nodos_simples(mat: bpy.types.Material) -> None:
     return bsdf
 
 
+def _imagen_base(mat: bpy.types.Material):
+    """Imagen ya enlazada al Base Color del Principled (láminas lienzo_* y
+    colcha procedurales de generar_blender.py): se conserva tal cual, que sí
+    viaja en el GLB. Antes `aplicar_acabado` la borraba y dejaba un color
+    plano casi blanco."""
+    try:
+        nodos = mat.node_tree.nodes
+    except AttributeError:
+        return None
+    for n in nodos:
+        if n.type != "TEX_IMAGE" or not n.image:
+            continue
+        try:
+            enlaces = n.outputs["Color"].links
+        except KeyError:
+            continue
+        for l in enlaces:
+            if l.to_node.type == "BSDF_PRINCIPLED" \
+                    and l.to_socket.name == "Base Color":
+                return n.image
+    return None
+
+
 def aplicar_acabado(mat: bpy.types.Material) -> None:
-    bsdf = nodos_simples(mat)
     nombre = mat.name
+    if nombre.startswith(("lienzo_", "colcha")):
+        img = _imagen_base(mat)
+        if img is not None:
+            # lámina/colcha procedural empaquetada: Principled simple con su
+            # imagen para que viaje en el GLB en vez de un plano blanco
+            bsdf = nodos_simples(mat)
+            tex = mat.node_tree.nodes.new("ShaderNodeTexImage")
+            tex.image = img
+            mat.node_tree.links.new(tex.outputs["Color"],
+                                    bsdf.inputs["Base Color"])
+            bsdf.inputs["Roughness"].default_value = 0.9
+            bsdf.inputs["Metallic"].default_value = 0.0
+            return
+    bsdf = nodos_simples(mat)
     if nombre in ACABADOS:
         fichero, rough, metal, alpha = ACABADOS[nombre]
         img = bpy.data.images.get(fichero)
@@ -106,6 +148,13 @@ def aplicar_acabado(mat: bpy.types.Material) -> None:
         bsdf.inputs["Emission Color"].default_value = (1.0, 0.86, 0.66, 1.0)
         bsdf.inputs["Emission Strength"].default_value = 2.0
         bsdf.inputs["Roughness"].default_value = 0.5
+    elif nombre == "lampara_pantalla":
+        # ámbar cálido con emisión suave (~3000 K): se conserva la emisión
+        # (antes caía al plano casi blanco de COLORES y se quemaba)
+        bsdf.inputs["Base Color"].default_value = (0.82, 0.63, 0.42, 1.0)
+        bsdf.inputs["Emission Color"].default_value = (1.0, 0.66, 0.34, 1.0)
+        bsdf.inputs["Emission Strength"].default_value = 0.65
+        bsdf.inputs["Roughness"].default_value = 0.9
     else:
         rgb, rough = (0.6, 0.6, 0.6), 0.6
         if nombre in COLORES:

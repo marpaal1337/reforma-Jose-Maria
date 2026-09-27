@@ -36,7 +36,7 @@ Estas dimensiones sugieren una vivienda de geometría sensiblemente rectangular,
 
 ### 1.3 Distribución propuesta (plano PEA.02)
 
-El plano de distribución PEA.02 es eminentemente gráfico (formato CAD vectorial). No se ha podido extraer texto de estancias de forma fiable. No obstante, de los presupuestos de Cyss v2.0 y ofertas de subcontratistas se deduce la siguiente configuración:
+El plano de distribución PEA.02 es eminentemente gráfico (formato CAD vectorial). No se ha podido extraer texto de estancias de forma fiable. No obstante, de los presupuestos de la constructora v2.0 y ofertas de subcontratistas se deduce la siguiente configuración:
 
 | Estancia | Superficie estimada (m²) |
 |---|---|
@@ -66,7 +66,7 @@ El plano de distribución PEA.02 es eminentemente gráfico (formato CAD vectoria
 | **Baños** | 2 baños + 1 aseo (distribución segregada) | 2 baños completos rediseñados |
 | **Altura de techos** | Variable (2,29–2,54 m) | Unificada a ~2,50 m (falso techo) |
 | **Almacenaje** | Armario empotrado único | Armarios en todos los dormitorios + zapatero + casoneto |
-| **Carpintería exterior** | Ventanas originales (rotura puente térmico insuficiente) | Nuevas ventanas Nacher V01–V08 |
+| **Carpintería exterior** | Ventanas originales (rotura puente térmico insuficiente) | Nuevas ventanas V01–V08 |
 | **Climatización** | Splits individuales (2 uds.) | Centralizada por conductos |
 | **Pilar visto** | Enlucido o empotrado en tabique | Visto como elemento arquitectónico |
 | **Pavimento** | Cerámico + rodapié terrazo | Porcelánico continuo imitación madera + imitación mármol |
@@ -107,7 +107,7 @@ Se identifican los siguientes circuitos de circulación:
 ### 3.2 Ventilación
 
 **Ventilación natural:**
-- Las nuevas ventanas Nacher (8 uds. V01–V08) proporcionan ventilación cruzada.
+- Las nuevas ventanas (8 uds. V01–V08) proporcionan ventilación cruzada.
 - La ampliación de un hueco en fachada mejora la ventilación de la cocina o del salón.
 - Con la nueva distribución semiabierta, la ventilación cruzada es más efectiva al haber menos tabiques que obstaculicen el flujo de aire.
 
@@ -152,7 +152,7 @@ Se identifican los siguientes circuitos de circulación:
 | **Ruidos** | Cocina audible en salón | Aislamiento acústico |
 | **Valoración** | Moderna, luminosa | Tradicional, más almacenaje |
 
-**Recomendación**: mantener la solución semiabierta por ser más acorde con las tendencias actuales y con el tamaño de la vivienda. Si se desea mayor aislamiento acústico, considerar una puerta corredera de cristal translúcido entre cocina y salón (similar a la puerta vidriera de Valenzuela).
+**Recomendación**: mantener la solución semiabierta por ser más acorde con las tendencias actuales y con el tamaño de la vivienda. Si se desea mayor aislamiento acústico, considerar una puerta corredera de cristal translúcido entre cocina y salón (similar a la puerta vidriera de Carpintería).
 
 ### 4.2 Alternativa de baños: unificación
 
@@ -233,8 +233,8 @@ La máquina Mitsubishi MGPEZ-71 tiene una potencia nominal de ~7,1 kW y está di
 
 7. **Pendiente crítico**: confirmar que la cocina semiabierta no genera problemas de humos, ruidos ni olores en el salón. La campana debe tener salida al exterior, no en recirculación.
 
-8. **Acción prioritaria**: cerrar el presupuesto de encimeras (DEKTON + SILESTONE), ya que ningún contratista lo ha incluido y condiciona tanto la fontanería como la fabricación de la cocina Valenzuela (8 semanas).
+8. **Acción prioritaria**: cerrar el presupuesto de encimeras (DEKTON + SILESTONE), ya que ningún contratista lo ha incluido y condiciona tanto la fontanería como la fabricación de la cocina de Carpintería (8 semanas).
 
 ---
 
-*Documento basado en los planos PEA.01 y PEA.02, en el presupuesto Cyss v2.0, y en las ofertas de Valenzuela, Nacher, Paracon y David Barat.*
+*Documento basado en los planos PEA.01 y PEA.02, en el presupuesto de la constructora v2.0, y en las ofertas de Carpintería, Electricista y Fontanería.*

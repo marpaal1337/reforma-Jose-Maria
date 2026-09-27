@@ -148,7 +148,7 @@ kbd{font:600 10px var(--sans);background:rgba(0,0,0,.07);border-radius:4px;paddi
 
 <header>
   <div class="title">
-    <div class="eyebrow micro">SOFIA PALACIOS · PE.A.02 · Tour 360</div>
+    <div class="eyebrow micro">Arquitectura colegiada · PE.A.02 · Tour 360</div>
     <h1>Reforma vivienda Valencia</h1>
     <p>Panoramas renderizados con Blender · geometría del plano a escala 1:50 · __FECHA__</p>
   </div>
@@ -226,12 +226,26 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 scene = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(75, 1, 0.1, 500);
+/* La esfera se invierte en X para verla desde dentro: con BackSide sin invertir,
+   el equirectangular de Blender (u creciente = girar a la derecha) se ve en espejo. */
+const esfera = new THREE.SphereGeometry(R, 64, 40);
+esfera.scale(-1, 1, 1);
 sphere = new THREE.Mesh(
-  new THREE.SphereGeometry(R, 64, 40),
-  new THREE.MeshBasicMaterial({side: THREE.BackSide, toneMapped: false})
+  esfera,
+  new THREE.MeshBasicMaterial({toneMapped: false})
 );
 mat = sphere.material;
 scene.add(sphere);
+
+/* Campo de visión vertical que da ~90° en horizontal: con 75° fijos una pantalla
+   16:9 veía ~107° y los bordes se estiraban (efecto ojo de pez). En vertical
+   (móvil) se limita a 75°. */
+function fovBase(){
+  const asp = innerWidth / Math.max(innerHeight, 1);
+  return Math.min(75, 2 * Math.atan(1 / asp) * 180 / Math.PI);
+}
+fovT = fovBase();
+camera.fov = fovT;
 
 /* ── marcadores a otras estancias ── */
 function vecinos(i){
@@ -313,10 +327,13 @@ function ir(i, deGolpe){
       tex = t;
       mat.map = t;
       mat.needsUpdate = true;
+      /* yaw del modelo: ángulo desde +x hacia +z. El centro del panorama (u=0,5)
+         queda en -x de la esfera invertida; girarla π-a lo lleva a ese ángulo. */
       const a = PANOS[i].yaw * Math.PI / 180;
-      sphere.rotation.y = -a;
+      sphere.rotation.y = Math.PI - a;
       yawT = yaw = -(a + Math.PI / 2);
       pitchT = pitch = 0;
+      fovT = fovBase();
       actual = i;
       pintarMarcas();
       pintarTira();
@@ -391,7 +408,7 @@ cvs.addEventListener("pointermove", e => {
 addEventListener("pointerup", () => { drag = null; cvs.classList.remove("drag"); });
 cvs.addEventListener("wheel", e => {
   e.preventDefault();
-  fovT = Math.min(Math.max(fovT + Math.sign(e.deltaY) * 4, 32), 100);
+  fovT = Math.min(Math.max(fovT + Math.sign(e.deltaY) * 4, 30), 90);
 }, {passive: false});
 let pin = null, toques = new Map();
 cvs.addEventListener("touchstart", e => {
@@ -406,7 +423,7 @@ cvs.addEventListener("touchmove", e => {
     for (const t of e.changedTouches) toques.set(t.identifier, {x: t.clientX, y: t.clientY});
     const [a, b] = [...toques.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y);
-    fovT = Math.min(Math.max(pin.fov * pin.d / d, 32), 100);
+    fovT = Math.min(Math.max(pin.fov * pin.d / d, 30), 90);
   }
 }, {passive: true});
 cvs.addEventListener("touchend", e => {

@@ -28,8 +28,8 @@ El PDF de distribución tiene menos texto (es esencialmente gráfico). Lo que se
 
 ## Implicaciones para los presupuestos
 
-- **88,3 m² de pavimento porcelánico** en Cyss v2.0 (cap. 02) = vivienda completa, coherente con la superficie del estado inicial.
-- **92,2 m² de techos** en Cyss v2.0 (cap. 02, pintura) = ligeramente inferior a la suma de m² de estancias, pero consistente con que algunos techos son de pladur (cap. 03).
+- **88,3 m² de pavimento porcelánico** en el presupuesto de la constructora v2.0 (cap. 02) = vivienda completa, coherente con la superficie del estado inicial.
+- **92,2 m² de techos** en el presupuesto de la constructora v2.0 (cap. 02, pintura) = ligeramente inferior a la suma de m² de estancias, pero consistente con que algunos techos son de pladur (cap. 03).
 - **Pladur**: 93,4 m² de falso techo en cap. 03 — implica que la práctica totalidad de la vivienda va con falso techo nuevo.
 - **El climaconvector** cubre 90 m² aprox. según la ficha del equipo Mitsubishi MGPEZ-71. Casa de unos 90 m² habitables, coherente con el plano.
 
@@ -49,4 +49,4 @@ Hay además 4 planos temáticos en otras carpetas que son **planos de proyecto**
 | Fontanería | desconocido_Fontanería.pdf | PEI.04 | Fontanería y saneamiento |
 | Pladur | desconocido_Pladur.pdf | PEI.01 | Pladur (tabiques, trasdosados) |
 
-Estos planos son la **fuente de mediciones** de Cyss. Sin ellos no se puede auditar si las cantidades (m² de demolición, ml de partición, etc.) están bien tomadas.
+Estos planos son la **fuente de mediciones** de la constructora. Sin ellos no se puede auditar si las cantidades (m² de demolición, ml de partición, etc.) están bien tomadas.

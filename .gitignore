@@ -6,3 +6,5 @@ renders/*.blend
 renders/*.blend1
 .playwright-mcp/
 capturas/
+data/assets/jacaranda_tree/
+data/visor/
