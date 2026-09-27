@@ -103,7 +103,7 @@ Se ha añadido un **tour virtual navegable** (`tour3d.html`) con 12 panoramas eq
 | Baño 1 · Baño 2 | `p10` · `p11` |
 | Terraza | `p12_terraza` |
 
-Además, 4 stills 1920×1080 en `renders/stills/`.
+Además, 4 stills 2560×1440 en `renders/stills/` (con DOF f/5,6 y viñeta sutil).
 
 **Materiales** según memoria de calidades (porcelánico imitación madera, imitación mármol en recibidor, alicatado 60×120 en baños, piedra en frente de TV, península de piedra negra, roble en carpintería, grifería cobre) y **ventanas V01–V08 medidas del PEI.05/06** (incluidas las bandas de fachada norte y la vidriera sur del salón).
 
@@ -111,9 +111,17 @@ Además, 4 stills 1920×1080 en `renders/stills/`.
 
 **Limitaciones**: sin GPU, 20 núcleos CPU, ~20 min por panorama a 320 muestras; los acabados pétreos/roble a medida siguen pendientes de presupuesto (ver §4).
 
-## 8. PoC de calidad A del salón (2026-09-19)
+## 8. PoC de calidad A del salón (2026-09-19, superado el 2026-09-27)
 
-Antes de re-renderizar la casa entera se ha hecho una **prueba de concepto** sobre el still `s4_salon_ventanal`:
+Antes de re-renderizar la casa entera se hizo una **prueba de concepto** sobre el still `s4_salon_ventanal` (resultado en `renders/stills/s4_salon_ventanal_poc.jpg`). El 2026-09-27 se extendió la calidad A a toda la vivienda y se re-renderizaron los 12 panos y los 4 stills:
+
+| Aspecto | Antes (nivel B) | Calidad A (2026-09-27) |
+|---|---|---|
+| Materiales | Procedurales (wave/voronoi) | **PBR CC0** de `data/pbr/` (Poly Haven) con UVs en metros + mármol y mosaico reales en baños |
+| Mobiliario | Prismas y esferas-planta | Plantas en maceta y jarrones CC0 (`data/assets/`, con fallback procedural) |
+| Luz | Sol + portales AREA falsos + relleno | HDRI real `venice_sunset_4k.hdr` + sol alineado, light portals reales por hueco, downlights spot 70°, AgX Base Contrast |
+| Detalle | Sin rodapiés, muros sin bevel | **Rodapiés** por estancia, bevel 4 mm, vidrio IOR 1,52 |
+| Visor web | Entorno degradado 64 px | Entorno HDRI reducido vía PMREM |
 
 | Aspecto | Antes (nivel B) | PoC (calidad A) |
 |---|---|---|

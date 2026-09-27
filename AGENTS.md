@@ -37,8 +37,8 @@ This repo is a **3D design viewer for a home renovation in Valencia** (Spanish-l
 │   └── RENDERS_Y_PLANO_AIRES.md
 ├── skills/arquitecto/       only remaining skill (design role)
 ├── planos.html              2D plan viewer (Leaflet, self-contained, ~413 KB)
-├── render3d.html            interactive 3D model (Three.js inlined, ~3.3 MB)
-└── tour3d.html              360° virtual tour (panoramas inlined, ~7.5 MB)
+├── render3d.html            interactive 3D model (Three.js inlined, ~4.5 MB)
+└── tour3d.html              360° virtual tour (panoramas inlined, ~13 MB)
 ```
 
 `renders/escena.blend` is gitignored and regenerated locally; it is not tracked.
@@ -127,7 +127,7 @@ Tour virtual con **12 panoramas equirectangulares** desde la geometría del PE.A
 
 - Esfera equirectangular (Three.js inline), arrastrar para mirar, rueda para zoom, teclado.
 - **Hotspots** a estancias vecinas, tira de navegación inferior y **miniplano** (clic para saltar).
-- Autocontenido (~7,5 MB). Solo fallan las fuentes de Google sin internet.
+- Autocontenido (~13 MB con panos 4096×2048). Solo fallan las fuentes de Google sin internet.
 
 ## Skills (skills/)
 
