@@ -20,7 +20,8 @@ vectorial del plano (planos3d.json, puertas.json, ventanas.json) y comprueba:
      1,85 m) y 0,6 m junto a la cama.
 
 Escribe data/imagenes/mobiliario_debug.png (planta con las piezas y los
-incumplimientos en rojo) y termina con error si algo falla.
+incumplimientos en rojo), exporta las huellas de colisión a data/colisiones.json
+(las usa el paseo del visor 3D) y termina con error si algo falla.
 
 Uso: python3 scripts/revisar_mobiliario.py
 """
@@ -29,6 +30,7 @@ from __future__ import annotations
 import json
 import math
 import struct
+from datetime import date
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -40,6 +42,7 @@ PUERTAS = json.loads((DATA / "puertas.json").read_text(encoding="utf-8"))
 VENTANAS = json.loads((DATA / "ventanas.json").read_text(encoding="utf-8"))
 GLB = DATA / "mobiliario.glb"
 DEBUG = DATA / "imagenes" / "mobiliario_debug.png"
+COLISIONES = DATA / "colisiones.json"
 
 TOL_FUERA = 0.12        # margen para considerar una pieza dentro de la vivienda
 TOL_MURO = 0.02         # penetración admitida en un muro (m)
@@ -300,6 +303,19 @@ PASO_MINIMO = {"d1_armario": 0.9, "d2_armario": 0.9, "d3_armario": 0.5,
 
 ALTURA_TAPA = 0.35      # por encima del antepecho se considera que tapa
 
+# ── colisiones del visor (data/colisiones.json) ─────────────────────────────
+# huellas convexas en planta que usa el paseo del visor 3D (círculo-polígono).
+# El grupo replica el conmutador de mobiliario de generar_visor3d.py.
+COLISION_H0 = 0.75      # con la base por debajo de esta cota la pieza estorba
+COLISION_H1 = 0.35      # y debe llegar al menos a esta altura
+COLISION_BLANDAS = ("cojin_", "almohada", "colcha", "colchon", "manta",
+                    "funda_", "alfombra")   # suaves: no bloquean el paso
+SALON = ("tv_", "tv", "pilar_visto", "sofa_", "cojin_", "alfombra",
+         "mesa_centro", "butaca", "aparador", "cuadro_", "coc_", "isla",
+         "isla_tapa", "placa", "campana", "lampara_", "planta_", "cortina_")
+RESTO = ("d1_", "d2_", "d3_", "dp_", "rec_", "tz_", "mesa", "silla_",
+         "taburete_")
+
 
 def coincide(nombre, patron):
     return nombre.startswith(patron) if patron.endswith("_") else nombre == patron
@@ -307,6 +323,40 @@ def coincide(nombre, patron):
 
 def es_estructura(nombre):
     return any(coincide(nombre, p) for p in ESTRUCTURA)
+
+
+def en_lista(nombre, lista):
+    return any(coincide(nombre, p) for p in lista)
+
+
+def _grupo_colision(nombre):
+    if nombre.startswith("b1_") or nombre.startswith("b2_"):
+        return "resto"
+    if en_lista(nombre, SALON):
+        return "base"
+    if en_lista(nombre, RESTO):
+        return "resto"
+    return "base"
+
+
+def colisiones(piezas):
+    """Huella de colisión (convexa, en planta) de cada pieza que estorba al
+    caminar, con su centro y radio envolvente para el rechazo rápido."""
+    out = []
+    for nombre, p in sorted(piezas.items()):
+        if not (not es_estructura(nombre) or nombre == "pilar_visto"):
+            continue
+        if len(p.hull) < 3 or p.h0 > COLISION_H0 or p.h1 < COLISION_H1:
+            continue
+        if any(coincide(nombre, s) for s in COLISION_BLANDAS):
+            continue
+        pts = [[round(x, 3), round(z, 3)] for x, z in p.hull]
+        cx = sum(q[0] for q in pts) / len(pts)
+        cz = sum(q[1] for q in pts) / len(pts)
+        r = max(math.hypot(q[0] - cx, q[1] - cz) for q in pts)
+        out.append({"n": nombre, "g": _grupo_colision(nombre), "p": pts,
+                    "c": [round(cx, 3), round(cz, 3)], "r": round(r, 3)})
+    return out
 
 
 def en_pared(nombre):
@@ -608,9 +658,15 @@ def dibujar(piezas, mob, fallos, puertas):
 
 def main():
     piezas, mob, fallos = revisar()
+    cols = colisiones(piezas)
+    COLISIONES.write_text(json.dumps(
+        {"generado": date.today().isoformat(), "radio": 0.26, "piezas": cols},
+        ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     ruta = dibujar(piezas, mob, fallos, barreras_puertas())
     print(f"piezas: {len(piezas)} ({len(mob)} de mobiliario) · "
-          f"incumplimientos: {len(fallos)} · control: {ruta.relative_to(ROOT)}")
+          f"incumplimientos: {len(fallos)} · colisiones: {len(cols)} · "
+          f"control: {ruta.relative_to(ROOT)}")
+    print(f"  huellas de colisión -> {COLISIONES.relative_to(ROOT)}")
     for tipo, nombre, detalle in fallos:
         print(f"  [{tipo:12s}] {nombre:22s} {detalle}")
     if fallos:

@@ -319,6 +319,7 @@ function construirArboles(lado, planta){
 
 let cieloMesh = null, nieblaReal = null, matPropio = null;
 const mostrarEnOrbita = [];
+const _posCam = new THREE.Vector3();   // la cámara puede colgar del dolly (RV)
 
 /* tapa de sección sobre el edificio propio en la vista de maqueta (órbita),
    donde su volumen se recorta a la cota del suelo del piso */
@@ -450,7 +451,7 @@ function setRealista(on){
 
 function actualizarRealista(){
   if(!realista) return;
-  if(cieloMesh) cieloMesh.position.copy(camera.position);
+  if(cieloMesh) cieloMesh.position.copy(camera.getWorldPosition(_posCam));
   const orb = camMode === "orbita";
   ocultarEnOrbita.forEach(o => o.visible = !orb);
   mostrarEnOrbita.forEach(o => o.visible = orb);

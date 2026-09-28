@@ -2,7 +2,8 @@
 """
 Genera render3d.html: visor 3D autocontenido (Three.js incluido, sin build)
 a partir de data/planos3d.json, data/imagenes/planta_textura.jpg,
-data/mobiliario.glb y data/texturas/*.jpg.
+data/mobiliario.glb, data/texturas/*.jpg y data/colisiones.json (huellas de
+colisión del mobiliario, generadas por revisar_mobiliario.py).
 
 Requiere: libs/three.min.js y libs/GLTFLoader.js (ver AGENTS.md)
 
@@ -56,6 +57,12 @@ TEXTURAS_JS = {
 MOB_B64 = b64(GLB) if (GLB.exists() and EMBED) else ""
 MOB_SRC = "" if EMBED else "data/mobiliario.glb"
 ENV_B64 = ("data:image/jpeg;base64," + b64(ENV_JPG)) if (ENV_JPG.exists() and EMBED) else ""
+
+# colisiones del mobiliario (huellas de revisar_mobiliario.py; si falta, el
+# paseo queda con los muros, como antes)
+COL_FILE = DATA / "colisiones.json"
+COL = json.loads(COL_FILE.read_text(encoding="utf-8"))["piezas"] if COL_FILE.exists() else []
+XR_JS = (ROOT / "scripts" / "visor_xr.js").read_text(encoding="utf-8")
 
 # modo Realista: recursos horneados por scripts/hornear_visor.py (data/visor/)
 VISOR = _opcion("--visor", DATA / "visor")  # datos horneados alternativos
@@ -470,6 +477,7 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
         <button id="c-vuelo" aria-pressed="false">Vuelo</button>
       </div>
       <button class="btn" id="b-real" aria-pressed="false" title="Luz de Cycles horneada y la ciudad real alrededor">Realista</button>
+      <button class="btn" id="b-vr" hidden aria-pressed="false" title="Paseo inmersivo (gafas compatibles con WebXR)">RV</button>
       <button class="btn" id="b-labels" aria-pressed="true">Etiquetas</button>
       <button class="btn" id="b-galeria">Galería</button>
       <a class="btn" href="tour3d.html">Tour 360</a>
@@ -598,6 +606,8 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Descargar PNG</button>
         <button type="button" data-act="ayuda">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.8 2.8 0 1 1 4 2.5c-.9.5-1.3 1-1.3 2"/><path d="M12 17h.01"/></svg>Ayuda</button>
+        <button type="button" data-act="vr" id="a-vr" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18v8a2 2 0 0 1-2 2h-3.2a2 2 0 0 1-1.7-.9l-1-1.6a1.2 1.2 0 0 0-2.1 0l-1 1.6a2 2 0 0 1-1.7.9H5a2 2 0 0 1-2-2V8Z"/></svg>RV</button>
       </div>
     </div>
   </div>
@@ -761,7 +771,10 @@ renderer.shadowMap.needsUpdate = true;
 /* bucle bajo demanda: sólo se dibuja cuando algo cambia (cámara, intro,
    teclas, sol, selección…). En reposo la GPU queda a cero. */
 let rafId = 0;
-function pedirFrame(){ if(!rafId) rafId = requestAnimationFrame(tick); }
+function pedirFrame(){
+  if(renderer.xr.isPresenting) return;   // en RV manda renderer.setAnimationLoop()
+  if(!rafId) rafId = requestAnimationFrame(tick);
+}
 
 scene = new THREE.Scene();
 const FAR_CIUDAD = 5000;   // modo Realista: la ciudad OSM (el cielo a 0,9·far)
@@ -1078,6 +1091,37 @@ PLAN.muros.forEach(w=>{
     SEGS.push([a[0],a[1],b[0],b[1]]);
   }
 });
+/* colisiones con el mobiliario: huellas convexas en planta generadas por
+   scripts/revisar_mobiliario.py (data/colisiones.json). "base" = piezas que
+   siempre se ven; "resto" = las que oculta el conmutador salón·cocina. */
+const COLISIONES = __COLISIONES__;
+const RADIO_MOB = 0.26;   // algo menor que el de los muros: pasos más cómodos
+let colisionActivas = [];
+function actualizarColisiones(){
+  colisionActivas = COLISIONES.filter(c => c.g === "base" || mobTodo);
+}
+function empujarPoligono(p, pts){
+  let mejor = 1e9, mx = 0, mz = 0, dentro = false;
+  for(let i=0, j=pts.length-1; i<pts.length; j=i++){
+    const ax=pts[j][0], az=pts[j][1], bx=pts[i][0], bz=pts[i][1];
+    const ex=bx-ax, ez=bz-az;
+    const L2=ex*ex+ez*ez || 1e-9;
+    let t=((p.x-ax)*ex+(p.z-az)*ez)/L2;
+    t=t<0?0:(t>1?1:t);
+    const qx=ax+ex*t, qz=az+ez*t;
+    const d=Math.hypot(p.x-qx, p.z-qz);
+    if(d<mejor){ mejor=d; mx=qx; mz=qz; }
+    if(((az>p.z)!==(bz>p.z)) && (p.x < (bx-ax)*(p.z-az)/(bz-az)+ax)) dentro = !dentro;
+  }
+  if(!dentro && mejor >= RADIO_MOB) return false;
+  let ex=p.x-mx, ez=p.z-mz;
+  if(dentro){ ex=-ex; ez=-ez; }
+  let d=Math.hypot(ex, ez);
+  if(d<1e-5){ ex=p.x-pts[0][0]; ez=p.z-pts[0][1]; d=Math.hypot(ex, ez)||1; }
+  p.x = mx + ex/d*RADIO_MOB;
+  p.z = mz + ez/d*RADIO_MOB;
+  return true;
+}
 const free = {pos:new THREE.Vector3(), yaw:0, pitch:0, vel:new THREE.Vector3()};
 const keys = new Set();
 let techoGLB = null;   // el forjado del GLB se oculta en órbita (vista de maqueta)
@@ -1104,6 +1148,12 @@ function colisionar(p){
         if(d<1e-5){ ex=dz; ez=-dx; d=Math.hypot(ex,ez)||1; }
         p.x=qx+ex/d*RADIO; p.z=qz+ez/d*RADIO; tocado=true;
       }
+    }
+    for(let i=0;i<colisionActivas.length;i++){
+      const c=colisionActivas[i];
+      const dx=p.x-c.c[0], dz=p.z-c.c[1], rr=c.r+RADIO_MOB;
+      if(dx*dx+dz*dz > rr*rr) continue;
+      if(empujarPoligono(p, c.p)) tocado=true;
     }
     if(!tocado) break;
   }
@@ -1220,6 +1270,7 @@ function moverLibre(dt){
 
 /* ratón: pointer lock en modo libre */
 $("#c").addEventListener("click", e=>{
+  if(renderer.xr.isPresenting) return;
   if(camMode!=="orbita" && e.pointerType==="mouse" && !document.pointerLockElement)
     $("#c").requestPointerLock();
 });
@@ -1264,6 +1315,7 @@ stick.addEventListener("pointermove", e=>{
 const cvs = $("#c");
 let drag = null, downAt = null, lookLast = null;
 cvs.addEventListener("pointerdown", e=>{
+  if(renderer.xr.isPresenting) return;
   if(camMode==="orbita"){
     cvs.setPointerCapture(e.pointerId);
     drag = {x:e.clientX, y:e.clientY, pan:(e.button===2||e.shiftKey)};
@@ -1569,6 +1621,7 @@ actions.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click", ()
   else if(act==="galeria") abrirGaleria();
   else if(act==="png") exportPNG();
   else if(act==="ayuda") abrirCoach();
+  else if(act==="vr" && typeof entrarXR === "function") entrarXR();
 }));
 
 /* guía de primer uso */
@@ -1733,10 +1786,11 @@ function updateLabels(){
 
 /* ── bucle bajo demanda ── */
 let intro = 0, ready = false, maquetaLista = false, prevT = 0, ultimoAnimando = false;
-window.__visor = {scene, camera, renderer, gMob, free, setCamMode, pedirFrame,
+window.__visor = {scene, camera, renderer, gMob, free, setCamMode, pedirFrame, colisionar,
   get modo(){ return camMode; }, get listo(){ return ready; },
   get realista(){ return realista; }, get maquetaLista(){ return maquetaLista; },
-  get intro(){ return intro; }, get animando(){ return ultimoAnimando; }};
+  get intro(){ return intro; }, get animando(){ return ultimoAnimando; },
+  get colisiones(){ return colisionActivas.length; }};
 
 /* indicador opcional ?perf (fps reales en una máquina con GPU) */
 const PERF = /(?:^|[?&])perf(?:=1)?(?:&|$)/.test(location.search);
@@ -1754,6 +1808,7 @@ function actualizarPerf(t){
 }
 function tick(t){
   rafId = 0;
+  if(renderer.xr.isPresenting) return;   // en RV manda visor_xr.js
   const dt = prevT ? Math.min(0.05, (t-prevT)/1000) : 0.016;
   prevT = t;
   let animando = false;
@@ -1804,6 +1859,7 @@ function tick(t){
   if(animando) pedirFrame();
 }
 function resize(){
+  if(renderer.xr.isPresenting) return;   // la RV usa su propio framebuffer
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight, false);
@@ -1822,6 +1878,8 @@ applyCamera(true);
 setMode("plan");
 
 __REALISTA_JS__
+
+__XR_JS__
 
 /* ── carga ── */
 const bar = $("#loadbar");
@@ -1903,7 +1961,9 @@ function mobConservar(nombre){
       || esMobHabitacion(nombre);
 }
 let mobTodo = true;
+actualizarColisiones();
 function aplicarMobiliario(){
+  actualizarColisiones();
   gMob.traverse(o=>{
     if(!o.isMesh || o.userData.mobBase === undefined) return;
     if(o.name === "suelo" || o.name === "techo") return;   // los gobiernan el visor / la cámara
@@ -2029,6 +2089,8 @@ html = (HTML
         .replace("__THREE__", THREE.read_text(encoding="utf-8"))
         .replace("__GLTFLOADER__", GLTF.read_text(encoding="utf-8"))
         .replace("__REALISTA_JS__", REAL_JS)
+        .replace("__XR_JS__", XR_JS)
+        .replace("__COLISIONES__", json.dumps(COL, ensure_ascii=False, separators=(",", ":")))
         .replace("__REAL_JSON__", REAL_JSON)
         .replace("__TEXTURAS_JS__", json.dumps(TEXTURAS_JS, ensure_ascii=False, separators=(",", ":")))
         .replace("__MOB_B64__", MOB_B64)

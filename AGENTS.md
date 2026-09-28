@@ -14,6 +14,7 @@ This repo is a **3D design viewer for a home renovation in Valencia** (Spanish-l
 │   ├── ventanas.json        V01–V08 measured from PEI.05/06 + north + facade mapping
 │   ├── camaras.json         pano/still camera definitions for the Blender tour
 │   ├── mobiliario.glb       furniture + joinery exported from escena.blend (glTF)
+│   ├── colisiones.json      huellas de colisión del mobiliario (revisar_mobiliario.py)
 │   ├── texturas/            tileable finishes (roble, tarima, mármol, azulejo, tejidos…)
 │   ├── pbr/                 CC0 PBR maps (Poly Haven + ambientCG) for the Cycles render
 │   │   └── hdri/            venice_sunset_4k.hdr (Poly Haven CC0, sol medido en HDRI_SOL)
@@ -69,6 +70,7 @@ scripts/
 ├── render_blender.py        renders one camera from escena.blend (Cycles CPU)
 ├── generar_tour3d.py        renders/panos + camaras.json → tour3d.html
 └── revisar_mobiliario.py    control de colocación del mobiliario del GLB (falla si algo choca)
+                            y huellas de colisión → data/colisiones.json
 ```
 
 ### How to regenerate (no budgets)
@@ -86,6 +88,7 @@ Control de la colocación del mobiliario (no necesita Blender):
 
 ```bash
 python3 scripts/revisar_mobiliario.py   # falla si una pieza choca; deja data/imagenes/mobiliario_debug.png
+                                        # y regenera data/colisiones.json (paseo del visor)
 ```
 
 Blender steps need a local Blender 4.2 LTS (not vendored; install it yourself, do not rely on `/tmp`). En este equipo (WSL) Blender vive en `~/opt/blender/blender` y le faltan `libSM.so.6`/`libICE.so.6` del sistema: `scripts/blender.sh` las resuelve desde `~/opt/blender-libs` (extraídas sin sudo) y lanza Blender. Usa el envoltorio:
@@ -111,7 +114,7 @@ En WSL, **no lances el horneado a la vez que capturas/render** (el equipo ha suf
 - **Atrezzo CC0** (`data/assets/`, Poly Haven): plantas en maceta y jarrones con fallback procedural; se excluyen del GLB del visor (`asset_*`).
 - Stills a **2560×1440 con DOF f/5,6**.
 
-`generar_geometria3d.py` only needs the plan (`Planos/distribución.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_visor3d.py` needs `libs/three.min.js` y `libs/GLTFLoader.js` (ya vendored), `data/imagenes/planta_textura.jpg`, `data/texturas/` y `data/mobiliario.glb` (si falta el GLB, el visor arranca sin mobiliario).
+`generar_geometria3d.py` only needs the plan (`Planos/distribución.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_visor3d.py` needs `libs/three.min.js` y `libs/GLTFLoader.js` (ya vendored), `data/imagenes/planta_textura.jpg`, `data/texturas/` y `data/mobiliario.glb` (si falta el GLB, el visor arranca sin mobiliario; si falta `data/colisiones.json`, el paseo queda solo con los muros).
 
 Tiempos medidos: ~20 min por panorama 4096×2048 a 320 muestras (Cycles CPU, 20 hilos, 2 en paralelo). `renders/escena.blend` no se versiona (se regenera).
 
@@ -122,6 +125,7 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución (es
 - Muros extruidos a 2,60 m clasificados por espesor (`estructural` ≥ 0,14 m, `tabique` ≥ 0,045 m, `vidrio` = carpinterías), suelos por estancia y alicatados de baños. Los muros van **fusionados en 3 mallas** (una por tipo) y los contornos en un solo `LineSegments`; la intro y el slider de altura los escalan con `scale.y`.
 - **Puertas D0–D9 + separador PA02 desde `data/puertas.json`**. `generar_geometria3d.py` punzona los huecos en los muros; `generar_blender.py:build_puertas()` pone marcos, hojas y dinteles. D1 y D9 cruzan el pasillo (marcadas `en_paso`): no punzonan muro y se montan sin dintel.
 - **Mobiliario real** de `data/mobiliario.glb` + acabados de `data/texturas/`; el conmutador del panel muestra **toda la casa** (por defecto) o solo el espacio abierto salón·cocina (sin el conjunto de comedor). El atrezzo CC0 del render (`asset_*`) no viaja al GLB para no disparar el tamaño.
+- **Colisiones con mobiliario**: `revisar_mobiliario.py` exporta `data/colisiones.json` (huellas convexas en planta, con grupo de visibilidad) y `generar_visor3d.py` las embebe; `colisionar()` hace círculo-polígono además de los segmentos de muros y respeta el conmutador (el mobiliario oculto no bloquea). El modo Vuelo sigue sin colisionar.
 - Entorno de reflejos PBR desde el propio HDRI reducido (`data/pbr/hdri/venice_sunset_env.jpg`, inline) con degradado de respaldo.
 - **Tres modos de cámara**: `Órbita`, `Caminar` (pointer lock, WASD, altura de ojo 1,62 m) y `Vuelo`. En táctil, joystick + arrastre para mirar.
 - Dos modos de suelo: **Plano** y **Zonas**. Slider de altura de muros, slider solar, etiquetas, ficha por estancia con **superficie (sin costes)**, exportación a PNG y vistas `Planta` / `Vista general`.
@@ -131,9 +135,21 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución (es
 - **Datos grandes en etiquetas de datos inertes** (`<script type="application/json|octet-stream">`) y decodificación nativa con `fetch(data:)` (respaldo `atob`). Arranca en Realista (si hay horneado) y carga la maqueta en segundo plano; ambos modos se precompilan para evitar el tirón al alternar.
 - **Indicador `?perf`** (fps, ms, draw calls, triángulos, programas): abrir `render3d.html?perf`.
 - Se abre desde `file://`; Three.js + GLTFLoader van inline. Solo Google Fonts es externo.
+- **Paseo en RV (WebXR)**: `scripts/visor_xr.js` (inyectado por `generar_visor3d.py`) añade el botón **RV** (barra en escritorio y hoja «Más» en móvil), visible solo si `navigator.xr` soporta `immersive-vr`. La cámara se monta en un *dolly*; stick izquierdo anda (con las colisiones del mobiliario), stick derecho gira a saltos de 30° y grip/B sale. Dentro de la sesión se fuerza la maqueta (los lightmaps + la ciudad no sostienen 72/90 Hz en estéreo) y el render continuo con `renderer.setAnimationLoop()`; fuera sigue el dibujo bajo demanda. WebXR exige contexto seguro: desde `file://` se avisa; para probar, servir en localhost (abajo).
 - `data/imagenes/geometria_debug.png` es el overlay de control tras cambiar el plano.
 - Botón **Galería**: muestra `data/reales/` + plano de aires. Si se añaden imágenes, actualizar `RENDERS`/`GALERIA` en `scripts/generar_visor3d.py`.
 - **Distribución vigente: PE.A.02**. El plano de aires es solo croquis de conductos del instalador, no una versión alternativa. Detalle en `informes/RENDERS_Y_PLANO_AIRES.md`.
+
+### Probar la RV (WebXR)
+
+WebXR exige contexto seguro: `file://` no da sesión inmersiva (el visor lo avisa).
+En escritorio vale `http://localhost`; para el Quest por USB, reenvía el puerto y
+abre `http://localhost:8000/render3d.html` en el navegador del visor:
+
+```bash
+python3 -m http.server 8000
+adb reverse tcp:8000 tcp:8000   # en el Quest, localhost apunta al PC
+```
 
 ### Visor realista (horneado Cycles + entorno OSM)
 
