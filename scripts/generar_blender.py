@@ -1101,7 +1101,7 @@ def build_puertas(m):
         rot_box(cx, cz, largo, grueso, ang_deg, 0.02, h,
                 f"phoja_{pid}", mat, bevel=0.004)
 
-    for pid in ("D1", "D2", "D3"):
+    for pid in ("D2", "D3"):
         p = por_id[pid]
         x0, x1 = p["centro"][0] - p["ancho"] / 2, p["centro"][0] + p["ancho"] / 2
         zc, h = p["centro"][1], p["alto"]
@@ -1110,14 +1110,16 @@ def build_puertas(m):
         hx = x1 - 0.035 if p["bisagra"] == "E" else x0 + 0.035
         hoja_abatible(pid, (hx, zc), 90, p["ancho"] - 0.07, h, laca)
 
-    for pid in ("D4", "D5"):
+    # D4/D5 van en muro; D1/D9 cruzan el pasillo (en_paso, sin dintel)
+    for pid in ("D4", "D5", "D1", "D9"):
         p = por_id[pid]
         xc = p["centro"][0]
         z0, z1 = p["centro"][1] - p["ancho"] / 2, p["centro"][1] + p["ancho"] / 2
         h = p["alto"]
         marco_v(pid, z0, z1, xc, h, laca)
-        dintel_v(pid, z0, z1, xc, h)
-        hz = z1 - 0.035  # bisagra S en ambas
+        if not p.get("en_paso"):
+            dintel_v(pid, z0, z1, xc, h)
+        hz = z1 - 0.035  # bisagra S en todas
         ang = 0 if p["apertura"] == "E" else 180
         hoja_abatible(pid, (xc, hz), ang, p["ancho"] - 0.07, h, laca)
 
@@ -1238,7 +1240,7 @@ def build_mobiliario(m):
     negro, piedra, tra = m["piedra_negra"], m["travertino"], m["travertino"]
     metal = m["metal_negro"]
 
-    # SALÓN — frente de TV, sofá, butaca mariposa, mesa, lámpara y cortinas
+    # SALÓN — frente de TV, sofá, butaca mariposa, mesa y cortinas.
     # pilar visto (hormigón) y panel de travertino flanqueado por listones
     box(3.30, -0.47, 3.78, -0.05, 0.0, 2.50, "pilar_visto", m["concreto"],
         bevel=0.012)
@@ -1251,12 +1253,23 @@ def build_mobiliario(m):
             box(x0, -0.455, x0 + an, -0.415, 0.02, 2.45,
                 f"tv_liston_{zona}_{k}", oak, bevel=0.0)
     box(4.05, -0.40, 6.95, -0.35, 2.46, 2.50, "tv_cove", m["led"], bevel=0.0)
-    box(4.95, -0.395, 6.05, -0.345, 0.95, 1.75, "tv", m["pantalla"], bevel=0.008)
+    box(4.95, -0.395, 6.05, -0.345, 0.95, 1.75, "tv", m["pantalla"],
+        bevel=0.008)
     box(4.25, -0.45, 6.75, -0.05, 0.22, 0.45, "tv_mueble", oak, bevel=0.012)
     for k in range(4):
         x0 = 4.28 + k * 0.622
         box(x0, -0.062, x0 + 0.612, -0.048, 0.235, 0.435,
             f"tv_mueble_f{k}", oak, bevel=0.004)
+    # aparador de roble en el frente de TV, junto al pilar (PE.A.02);
+    # antes estaba suelto delante del ventanal V01, estorbando la terraza
+    box(6.98, -0.40, 7.80, 0.02, 0.12, 0.78, "aparador", oak, bevel=0.02)
+    for k, (x, zz) in enumerate(((7.04, -0.35), (7.74, -0.35),
+                                 (7.04, -0.01), (7.74, -0.01))):
+        box(x - 0.018, zz - 0.018, x + 0.018, zz + 0.018, 0.0, 0.12,
+            f"aparador_pata_{k}", metal, bevel=0.0)
+    for k, x0 in enumerate((7.02, 7.42)):
+        box(x0, 0.018, x0 + 0.36, 0.032, 0.18, 0.72, f"aparador_f{k}", oak,
+            bevel=0.004)
     # sofá bajo de tres plazas: estructura de roble, patas metálicas y
     # colchones de tejido con cantos redondeados
     for k, x in enumerate((4.62, 5.55, 6.48)):
@@ -1283,31 +1296,23 @@ def build_mobiliario(m):
             tra, bevel=0.008)
     box(4.98, 1.55, 6.02, 2.25, 0.375, 0.39, "mesa_centro_tapa",
         m["cristal"], bevel=0.0)
-    # butaca mariposa (cuero y varilla)
-    butaca_mariposa(6.55, 1.05, 215, m)
-    # lámpara de pie
-    cylinder(6.55, 2.65, 0.15, 0.0, 0.025, "lampara_pie_base", metal, n=24)
-    cylinder(6.55, 2.65, 0.012, 0.025, 1.38, "lampara_pie", metal, n=10)
-    cylinder(6.55, 2.65, 0.175, 1.38, 1.66, "lampara_pant",
+    # butaca mariposa (cuero y varilla), delante del ventanal
+    butaca_mariposa(6.70, 1.95, 215, m)
+    # lámpara de pie, entre el sofá y la mesa de centro (antes atravesaba
+    # el brazo del sofá)
+    cylinder(4.15, 3.20, 0.15, 0.0, 0.025, "lampara_pie_base", metal, n=24)
+    cylinder(4.15, 3.20, 0.012, 0.025, 1.38, "lampara_pie", metal, n=10)
+    cylinder(4.15, 3.20, 0.175, 1.38, 1.66, "lampara_pant",
              m["lampara_pantalla"], n=28)
-    if not cargar_asset("potted_plant_01", 1.35, 7.85, -0.35, ang=200):
-        planta_monstera(7.85, -0.35, "planta", m, alto=1.35, n_hojas=7)
+    if not cargar_asset("potted_plant_01", 1.35, 3.55, 0.35, ang=200):
+        planta_monstera(3.55, 0.35, "planta", m, alto=1.35, n_hojas=7)
     cargar_asset("ceramic_vase_01", 0.34, 5.62, 1.72, ang=40, h=0.39)
     cargar_asset("ceramic_vase_01", 0.28, 7.26, 0.55, ang=200, h=0.78)
-    # aparador de roble con frentes y patas metálicas
-    box(7.00, 0.10, 7.50, 1.55, 0.12, 0.78, "aparador", oak, bevel=0.02)
-    for k, zz in enumerate((0.16, 1.44)):
-        box(7.00, zz - 0.02, 7.04, zz + 0.02, 0.0, 0.12,
-            f"aparador_pata_{k}", metal, bevel=0.0)
-    for k, z0 in enumerate((0.16, 0.86)):
-        box(6.985, z0, 6.998, z0 + 0.66, 0.18, 0.72, f"aparador_f{k}", oak,
-            bevel=0.004)
-    # cuadros sobre el sofá y cortinas del ventanal (cada cuadro con su
-    # lámina: lienzo_0/1/2; uv_retrato encuadra la imagen 0..1 en el frontal)
+    # cuadros sobre el sofá (pegados al muro sur) y cortinas del ventanal
     for i, x in enumerate((5.00, 5.75, 6.50)):
-        box(x - 0.245, 3.415, x + 0.245, 3.44, 1.21, 1.89,
+        box(x - 0.245, 3.575, x + 0.245, 3.60, 1.21, 1.89,
             f"cuadro_{i}_marco", oak, bevel=0.004)
-        ob_cuadro = box(x - 0.215, 3.40, x + 0.215, 3.42, 1.245, 1.855,
+        ob_cuadro = box(x - 0.215, 3.55, x + 0.215, 3.575, 1.245, 1.855,
                         f"cuadro_{i}", m[f"lienzo_{i}"], bevel=0.0)
         uv_retrato(ob_cuadro, x - 0.215, x + 0.215, 1.245, 1.855)
     cortina(8.02, 0.55, 1.15, 0.03, 2.42, ondas=1, amp=0.07,
@@ -1316,40 +1321,48 @@ def build_mobiliario(m):
             name="cortina_d", mat=m["cortina"])
     box(7.96, 0.50, 8.05, 3.48, 2.42, 2.46, "cortina_rail", metal, bevel=0.0)
 
-    # COCINA
+    # COCINA — mueble alto en la pared oeste + península con placa y
+    # 3 taburetes (PE.A.02: 0,82 x 2,25 m; antes isla cuadrada de 1,2)
     box(-1.53, -0.40, -1.00, 2.35, 0.02, 0.90, "coc_mueble", oak, bevel=0.006)
-    box(-1.56, -0.43, -0.96, 2.38, 0.90, 0.94, "coc_encimera", negro, bevel=0.004)
+    box(-1.56, -0.43, -0.96, 2.38, 0.90, 0.94, "coc_encimera", negro,
+        bevel=0.004)
     box(-1.53, -0.40, -1.00, 0.15, 0.94, 2.25, "coc_columna", oak, bevel=0.006)
     box(-1.20, -0.36, -1.03, 0.11, 1.05, 1.60, "coc_horno1", negro, bevel=0.0)
     box(-1.20, -0.36, -1.03, 0.11, 1.65, 2.15, "coc_horno2", negro, bevel=0.0)
     box(-1.53, 0.30, -1.25, 2.35, 1.50, 2.25, "coc_altos", oak, bevel=0.006)
     box(-1.53, 0.30, -1.27, 2.35, 1.46, 1.50, "coc_led", m["led"], bevel=0.0)
     box(-1.42, 1.05, -1.12, 1.50, 0.935, 0.945, "coc_freg", negro, bevel=0.0)
-    box(-0.15, 0.35, 1.05, 1.55, 0.02, 0.88, "isla", oak, bevel=0.01)
-    box(-0.19, 0.31, 1.09, 1.59, 0.88, 0.94, "isla_tapa", negro, bevel=0.004)
-    box(0.10, 0.60, 0.72, 1.30, 0.941, 0.947, "placa", m["pantalla"], bevel=0.0)
-    for i, z in enumerate((0.55, 1.0, 1.45)):
-        cylinder(1.35, z, 0.16, 0.60, 0.66, f"taburete_{i}", negro)
-        cylinder(1.35, z, 0.14, 0.02, 0.60, f"taburete_pie_{i}", negro)
-    box(0.10, 0.50, 0.80, 1.35, 2.44, 2.49, "campana", m["pantalla"], bevel=0.0)
-    # comedor
-    box(2.30, 1.40, 3.60, 2.80, 0.72, 0.76, "mesa", oak, bevel=0.008)
-    for dx, dz in ((0.04, 0.04), (1.26, 0.04), (0.04, 1.36), (1.26, 1.36)):
-        box(2.30 + dx, 1.40 + dz, 2.34 + dx, 1.44 + dz, 0.0, 0.72, f"mesa_pie",
-            negro, bevel=0.0)
-    for i, z in enumerate((1.70, 2.20, 2.70)):
-        for x, side in ((2.02, -1), (3.88, 1)):
+    box(0.00, -0.53, 0.82, 1.72, 0.02, 0.88, "isla", oak, bevel=0.01)
+    box(-0.02, -0.57, 0.84, 1.76, 0.88, 0.94, "isla_tapa", negro, bevel=0.004)
+    box(0.12, -0.20, 0.70, 0.40, 0.941, 0.947, "placa", m["pantalla"],
+        bevel=0.0)
+    for i, z in enumerate((0.05, 0.60, 1.15)):
+        cylinder(1.05, z, 0.16, 0.60, 0.66, f"taburete_{i}", negro)
+        cylinder(1.05, z, 0.14, 0.02, 0.60, f"taburete_pie_{i}", negro)
+    box(0.10, -0.25, 0.72, 0.45, 2.44, 2.49, "campana", m["pantalla"],
+        bevel=0.0)
+
+    # COMEDOR — mesa 0,9 x 1,8 en dirección norte-sur con 6 sillas (PE.A.02)
+    box(2.65, 1.20, 3.55, 3.00, 0.72, 0.76, "mesa", oak, bevel=0.008)
+    for dx, dz in ((0.04, 0.04), (0.86, 0.04), (0.04, 1.76), (0.86, 1.76)):
+        box(2.65 + dx, 1.20 + dz, 2.69 + dx, 1.24 + dz, 0.0, 0.72,
+            "mesa_pie", negro, bevel=0.0)
+    for i, z in enumerate((1.50, 2.10, 2.70)):
+        for x, side in ((2.35, -1), (3.85, 1)):
             xb = x + side * 0.185
             box(x - 0.21, z - 0.21, x + 0.21, z + 0.21, 0.44, 0.475,
                 f"silla_{i}_{side}", fab2, bevel=0.035)
             box(xb - 0.03, z - 0.20, xb + 0.03, z + 0.20, 0.475, 0.85,
                 f"silla_res_{i}_{side}", fab2, bevel=0.035)
-            for lx, lz in ((-0.16, -0.16), (0.16, -0.16), (-0.16, 0.16), (0.16, 0.16)):
-                box(x + lx - 0.015, z + lz - 0.015, x + lx + 0.015, z + lz + 0.015,
-                    0.0, 0.44, f"silla_pie_{i}_{side}", oak, bevel=0.0)
+            for lx, lz in ((-0.16, -0.16), (0.16, -0.16),
+                           (-0.16, 0.16), (0.16, 0.16)):
+                box(x + lx - 0.015, z + lz - 0.015,
+                    x + lx + 0.015, z + lz + 0.015, 0.0, 0.44,
+                    f"silla_pie_{i}_{side}", oak, bevel=0.0)
 
-    # DORMITORIO PRINCIPAL
-    box(1.95, -3.10, 2.55, -1.20, 0.02, 2.40, "dp_armario", oak, bevel=0.008)
+    # DORMITORIO PRINCIPAL — armario en la pared norte (PE.A.02), no en el
+    # barrido de D4
+    box(2.70, -3.23, 3.44, -2.63, 0.02, 2.40, "dp_armario", oak, bevel=0.008)
     box(4.40, -3.05, 6.00, -1.05, 0.12, 0.34, "dp_cama", oak, bevel=0.02)
     box(4.36, -3.08, 6.04, -1.00, 0.34, 0.52, "dp_colchon", lino, bevel=0.03)
     box(4.44, -2.70, 5.96, -1.10, 0.50, 0.58, "dp_colcha", colcha, bevel=0.03)
@@ -1366,100 +1379,155 @@ def build_mobiliario(m):
         sphere(x, -2.86, 1.28, 0.09, f"dp_pant_{i}", m["led"], seg=12, ring=6)
     box(6.60, -1.05, 7.90, -0.62, 0.0, 0.45, "dp_banco", fab, bevel=0.02)
 
-    # DORMITORIO 1 (arriba izquierda)
-    box(-7.00, -2.95, -6.10, -1.00, 0.12, 0.34, "d1_cama", oak, bevel=0.02)
-    box(-7.04, -2.99, -6.06, -0.96, 0.34, 0.50, "d1_colchon", lino, bevel=0.03)
-    box(-6.99, -2.65, -6.11, -1.05, 0.48, 0.56, "d1_colcha", colcha, bevel=0.03)
-    box(-6.80, -2.94, -6.20, -2.66, 0.50, 0.62, "d1_almohada", lino, bevel=0.05)
-    box(-7.02, -3.02, -6.08, -2.94, 0.0, 1.05, "d1_cabecero", oak, bevel=0.01)
-    box(-4.55, -3.00, -4.05, -1.10, 0.02, 2.40, "d1_armario", oak, bevel=0.008)
-    box(-6.60, -2.10, -6.00, -1.50, 0.0, 0.74, "d1_mesita", oak, bevel=0.01)
+    # DORMITORIO 1 (arriba izquierda) — escritorio bajo la V08, cama con
+    # cabecero al sur y armario en el vestidor sin tocar el muro del baño
+    box(-7.15, -2.50, -6.25, -0.58, 0.12, 0.34, "d1_cama", oak, bevel=0.02)
+    box(-7.19, -2.54, -6.21, -0.56, 0.34, 0.50, "d1_colchon", lino, bevel=0.03)
+    box(-7.14, -2.45, -6.26, -1.35, 0.48, 0.56, "d1_colcha", colcha, bevel=0.03)
+    box(-6.95, -0.93, -6.45, -0.66, 0.50, 0.62, "d1_almohada", lino, bevel=0.05)
+    box(-7.17, -0.66, -6.23, -0.58, 0.0, 1.05, "d1_cabecero", oak, bevel=0.01)
+    box(-6.17, -0.98, -5.87, -0.68, 0.0, 0.46, "d1_mesita", oak, bevel=0.01)
+    box(-7.05, -3.14, -6.15, -2.74, 0.72, 0.76, "d1_escritorio", oak,
+        bevel=0.008)
+    for k, x in enumerate((-6.99, -6.21)):
+        box(x - 0.03, -3.08, x + 0.03, -3.02, 0.0, 0.72, f"d1_pie_{k}", negro,
+            bevel=0.0)
+        box(x - 0.03, -2.86, x + 0.03, -2.80, 0.0, 0.72, f"d1_pie_{k}b",
+            negro, bevel=0.0)
+    box(-6.90, -2.98, -6.50, -2.62, 0.44, 0.475, "d1_silla", fab2,
+        bevel=0.035)
+    box(-6.90, -2.62, -6.50, -2.56, 0.475, 0.86, "d1_silla_res", fab2,
+        bevel=0.035)
+    box(-4.63, -3.05, -4.13, -1.58, 0.02, 2.40, "d1_armario", oak,
+        bevel=0.008)
 
-    # DORMITORIO 2 (abajo izquierda)
-    box(-6.95, 0.70, -4.95, 2.20, 0.12, 0.34, "d2_cama", oak, bevel=0.02)
-    box(-6.99, 0.66, -4.91, 2.24, 0.34, 0.52, "d2_colchon", lino, bevel=0.03)
-    box(-6.60, 0.72, -4.98, 2.18, 0.50, 0.58, "d2_colcha", colcha, bevel=0.03)
-    for i, z in enumerate((1.05, 1.85)):
-        box(-6.92, z - 0.30, -6.62, z + 0.30, 0.52, 0.64, f"d2_almohada_{i}",
+    # DORMITORIO 2 (abajo izquierda) — cama doble con cabecero al norte y
+    # armario en la pared norte oeste (PE.A.02)
+    box(-5.90, 0.36, -4.52, 2.36, 0.12, 0.34, "d2_cama", oak, bevel=0.02)
+    box(-5.94, 0.32, -4.48, 2.40, 0.34, 0.52, "d2_colchon", lino, bevel=0.03)
+    box(-5.86, 0.95, -4.56, 2.37, 0.50, 0.58, "d2_colcha", colcha, bevel=0.03)
+    for i, x0 in enumerate((-5.83, -5.13)):
+        box(x0, 0.44, x0 + 0.56, 0.70, 0.52, 0.64, f"d2_almohada_{i}",
             lino, bevel=0.05)
-    box(-6.99, 0.62, -4.91, 0.70, 0.0, 1.10, "d2_cabecero", oak, bevel=0.01)
-    box(-5.60, -0.05, -3.70, 0.45, 0.02, 2.40, "d2_armario", oak, bevel=0.008)
-    box(-6.95, 0.20, -6.65, 0.55, 0.0, 0.46, "d2_mesita_i", tra, bevel=0.01)
-    box(-6.95, 2.35, -6.65, 2.70, 0.0, 0.46, "d2_mesita_d", tra, bevel=0.01)
+    box(-5.94, 0.28, -4.48, 0.36, 0.0, 1.10, "d2_cabecero", oak, bevel=0.01)
+    box(-6.90, -0.41, -5.95, 0.09, 0.02, 2.40, "d2_armario", oak, bevel=0.008)
+    box(-6.28, 0.30, -5.98, 0.60, 0.0, 0.46, "d2_mesita_i", tra, bevel=0.01)
+    box(-4.42, 0.42, -4.12, 0.72, 0.0, 0.46, "d2_mesita_d", tra, bevel=0.01)
 
-    # DORMITORIO 3 / ESTUDIO
-    box(-3.45, 0.30, -2.55, 2.20, 0.12, 0.34, "d3_cama", oak, bevel=0.02)
-    box(-3.49, 0.26, -2.51, 2.24, 0.34, 0.50, "d3_colchon", lino, bevel=0.03)
-    box(-3.44, 0.60, -2.56, 2.19, 0.48, 0.56, "d3_colcha", colcha, bevel=0.03)
-    box(-3.25, 0.34, -2.75, 0.60, 0.50, 0.62, "d3_almohada", lino, bevel=0.05)
-    box(-3.47, 0.22, -2.53, 0.30, 0.0, 1.05, "d3_cabecero", oak, bevel=0.01)
-    box(-2.12, 0.60, -1.68, 1.90, 0.72, 0.76, "d3_escritorio", oak, bevel=0.008)
-    for dz in (0.64, 1.84):
-        box(-2.06, dz - 0.03, -1.74, dz + 0.03, 0.0, 0.72, "d3_pie", negro, bevel=0.0)
-    # silla de escritorio (antes una caja lisa): asiento, respaldo y patas
-    box(-2.52, 1.04, -2.10, 1.46, 0.44, 0.475, "d3_silla", fab2, bevel=0.035)
-    box(-2.55, 1.05, -2.49, 1.45, 0.475, 0.86, "d3_silla_res", fab2, bevel=0.035)
-    for lx, lz in ((-2.48, 1.08), (-2.14, 1.08), (-2.48, 1.42), (-2.14, 1.42)):
+    # DORMITORIO 3 / ESTUDIO — sofá-cama al oeste, armario en la pared este
+    # (PE.A.02) y escritorio bajo la pared norte
+    for k, zz in enumerate((0.57, 2.15)):
+        for j, xx in enumerate((-3.38, -2.62)):
+            box(xx - 0.016, zz - 0.016, xx + 0.016, zz + 0.016, 0.0, 0.12,
+                f"d3_sofa_pata_{k}_{j}", metal, bevel=0.0)
+    box(-3.45, 0.45, -2.58, 2.27, 0.12, 0.30, "d3_sofa_cama", oak, bevel=0.012)
+    for k, (z0, z1) in enumerate(((0.61, 1.37), (1.37, 2.13))):
+        box(-3.36, z0, -2.59, z1, 0.30, 0.47, f"d3_sofa_asiento_{k}",
+            fab, bevel=0.06)
+    box(-3.45, 0.55, -3.24, 2.21, 0.30, 0.84, "d3_sofa_respaldo", fab,
+        bevel=0.06)
+    for k, (z0, z1) in enumerate(((0.53, 0.69), (2.09, 2.25))):
+        box(-3.45, z0, -2.58, z1, 0.12, 0.60, f"d3_sofa_brazo_{k}", fab,
+            bevel=0.05)
+    for k, z in enumerate((0.95, 1.85)):
+        caja_inclinada(-3.22, z - 0.16, -3.04, z + 0.16, 0.36, 0.74,
+                       -0.10, 0.0, f"d3_sofa_cojin_{k}", lino, bevel=0.05)
+    box(-2.06, 0.52, -1.63, 2.12, 0.02, 2.30, "d3_armario", oak, bevel=0.008)
+    box(-2.65, -0.41, -1.75, 0.00, 0.72, 0.76, "d3_escritorio", oak,
+        bevel=0.008)
+    for k, dz in enumerate((-0.35, -0.06)):
+        box(-2.60, dz - 0.03, -2.54, dz + 0.03, 0.0, 0.72, f"d3_pie_{k}",
+            negro, bevel=0.0)
+        box(-1.86, dz - 0.03, -1.80, dz + 0.03, 0.0, 0.72, f"d3_pie_{k}b",
+            negro, bevel=0.0)
+    box(-2.42, 0.06, -2.02, 0.46, 0.44, 0.475, "d3_silla", fab2, bevel=0.035)
+    box(-2.42, 0.40, -2.02, 0.46, 0.475, 0.86, "d3_silla_res", fab2,
+        bevel=0.035)
+    for lx, lz in ((-2.38, 0.10), (-2.06, 0.10), (-2.38, 0.42),
+                   (-2.06, 0.42)):
         box(lx - 0.015, lz - 0.015, lx + 0.015, lz + 0.015, 0.0, 0.44,
             "d3_silla_pie", oak, bevel=0.0)
-    box(-3.45, 2.35, -2.95, 2.85, 0.02, 2.30, "d3_armario", oak, bevel=0.008)
 
-    # BAÑO 1 (ducha)
+    # BAÑO 1 — bañera y lavabo (PE.A.02), sin mueble delante de la D6
     for k, (x0, z0, x1, z1) in enumerate(((-3.95, -3.16, -1.35, -3.10),
                                           (-3.95, -3.16, -3.89, -1.50),
                                           (-1.41, -3.16, -1.35, -1.50),
                                           (-3.95, -1.56, -1.35, -1.50))):
         box(x0, z0, x1, z1, 0.0, 2.30, f"b1_azulejo_{k}", m["azulejo"], bevel=0.0)
-    box(-3.85, -3.10, -2.85, -2.20, 0.0, 0.06, "b1_plato", m["techo"], bevel=0.0)
-    box(-2.90, -3.10, -2.86, -2.20, 0.05, 2.0, "b1_mampara", m["cristal"], bevel=0.0)
-    box(-3.90, -2.12, -2.80, -2.08, 0.05, 2.0, "b1_mampara2", m["cristal"], bevel=0.0)
-    cylinder(-3.35, -3.08, 0.02, 0.9, 2.1, "b1_columna", m["cobre"], n=10)
-    box(-3.43, -3.10, -3.27, -3.06, 1.9, 2.05, "b1_ducha", m["cobre"], bevel=0.0)
-    box(-2.10, -3.12, -1.62, -2.62, 0.0, 0.44, "b1_wc", m["techo"], bevel=0.02)
-    box(-2.06, -3.14, -1.66, -3.00, 0.44, 0.95, "b1_cisterna", m["techo"], bevel=0.0)
-    box(-3.00, -1.98, -1.60, -1.56, 0.35, 0.85, "b1_mueble", oak, bevel=0.006)
-    box(-3.04, -2.02, -1.56, -1.52, 0.85, 0.90, "b1_encimera", tra, bevel=0.004)
-    box(-2.30, -1.90, -2.10, -1.70, 0.90, 1.05, "b1_lavabo", m["techo"], bevel=0.02)
-    cylinder(-2.20, -1.72, 0.015, 0.90, 1.20, "b1_grifo", m["cobre"], n=10)
-    box(-3.00, -1.545, -1.60, -1.52, 1.05, 1.95, "b1_espejo", m["espejo"], bevel=0.0)
-    box(-3.00, -1.99, -1.60, -1.95, 0.30, 0.35, "b1_led", m["led"], bevel=0.0)
+    box(-3.92, -3.12, -3.22, -1.62, 0.0, 0.55, "b1_banera", m["techo"],
+        bevel=0.02)
+    box(-3.85, -3.05, -3.29, -1.69, 0.40, 0.52, "b1_banera_int", m["azulejo"],
+        bevel=0.0)
+    cylinder(-3.30, -3.06, 0.02, 0.9, 1.1, "b1_columna", m["cobre"], n=10)
+    box(-2.78, -3.12, -2.38, -2.66, 0.0, 0.44, "b1_wc", m["techo"], bevel=0.02)
+    box(-2.74, -3.14, -2.42, -3.02, 0.44, 0.95, "b1_cisterna", m["techo"],
+        bevel=0.0)
+    box(-1.85, -2.95, -1.40, -2.35, 0.35, 0.85, "b1_mueble", oak, bevel=0.006)
+    box(-1.89, -2.99, -1.37, -2.31, 0.85, 0.90, "b1_encimera", tra, bevel=0.004)
+    box(-1.62, -2.80, -1.44, -2.50, 0.90, 1.05, "b1_lavabo", m["techo"],
+        bevel=0.02)
+    cylinder(-1.50, -2.65, 0.015, 0.90, 1.20, "b1_grifo", m["cobre"], n=10)
+    box(-1.39, -2.95, -1.36, -2.35, 1.05, 1.95, "b1_espejo", m["espejo"],
+        bevel=0.0)
+    box(-1.84, -2.99, -1.40, -2.95, 0.30, 0.35, "b1_led", m["led"], bevel=0.0)
 
-    # BAÑO 2 (bañera)
+    # BAÑO 2 — ducha (PE.A.02), mueble del lavabo fuera del barrido de D5
     for k, (x0, z0, x1, z1) in enumerate(((-0.91, -3.16, 1.76, -3.10),
                                           (-0.91, -3.16, -0.85, -1.50),
                                           (1.70, -3.16, 1.76, -1.50),
                                           (-0.91, -1.56, 1.76, -1.50))):
         box(x0, z0, x1, z1, 0.0, 2.30, f"b2_azulejo_{k}", m["azulejo"], bevel=0.0)
-    box(0.25, -3.12, 1.70, -2.32, 0.0, 0.55, "b2_banera", m["techo"], bevel=0.02)
-    box(0.32, -3.05, 1.63, -2.39, 0.40, 0.52, "b2_banera_int", m["azulejo"], bevel=0.0)
-    box(-0.80, -3.10, -0.35, -2.60, 0.0, 0.44, "b2_wc", m["techo"], bevel=0.02)
-    box(-0.76, -3.13, -0.39, -3.00, 0.44, 0.95, "b2_cisterna", m["techo"], bevel=0.0)
-    box(0.30, -1.99, 1.66, -1.57, 0.35, 0.85, "b2_mueble", oak, bevel=0.006)
-    box(0.26, -2.03, 1.70, -1.53, 0.85, 0.90, "b2_encimera", tra, bevel=0.004)
-    box(0.80, -1.91, 1.00, -1.71, 0.90, 1.05, "b2_lavabo", m["techo"], bevel=0.02)
-    cylinder(0.90, -1.73, 0.015, 0.90, 1.20, "b2_grifo", m["cobre"], n=10)
-    box(0.30, -1.545, 1.66, -1.52, 1.05, 1.95, "b2_espejo", m["espejo"], bevel=0.0)
+    box(0.30, -3.12, 1.70, -2.42, 0.0, 0.06, "b2_plato", m["techo"], bevel=0.0)
+    box(0.28, -2.46, 1.10, -2.42, 0.05, 2.0, "b2_mampara", m["cristal"],
+        bevel=0.0)
+    cylinder(0.40, -3.06, 0.02, 0.9, 2.1, "b2_columna", m["cobre"], n=10)
+    box(0.33, -3.08, 0.47, -3.04, 1.9, 2.05, "b2_ducha", m["cobre"], bevel=0.0)
+    box(-0.80, -3.12, -0.38, -2.66, 0.0, 0.44, "b2_wc", m["techo"], bevel=0.02)
+    box(-0.76, -3.14, -0.42, -3.02, 0.44, 0.95, "b2_cisterna", m["techo"],
+        bevel=0.0)
+    box(-0.55, -1.98, 0.85, -1.57, 0.35, 0.85, "b2_mueble", oak, bevel=0.006)
+    box(-0.59, -2.02, 0.89, -1.53, 0.85, 0.90, "b2_encimera", tra, bevel=0.004)
+    box(0.05, -1.91, 0.25, -1.71, 0.90, 1.05, "b2_lavabo", m["techo"],
+        bevel=0.02)
+    cylinder(0.15, -1.73, 0.015, 0.90, 1.20, "b2_grifo", m["cobre"], n=10)
+    box(-0.55, -1.545, 0.85, -1.52, 1.05, 1.95, "b2_espejo", m["espejo"],
+        bevel=0.0)
 
-    # RECIBIDOR / CASONETO
-    box(-0.45, 2.55, 0.30, 4.00, 0.02, 2.40, "rec_armario", oak, bevel=0.008)
-    box(0.75, 2.60, 1.30, 3.05, 0.0, 0.45, "rec_banco", oak, bevel=0.01)
-    box(1.05, 3.20, 1.32, 3.60, 0.9, 1.9, "rec_espejo", m["espejo"], bevel=0.0)
+    # RECIBIDOR / CASONETO — estantería dentro del casoneto (sin tapar la
+    # V05/D7), banco y espejo de entrada pegados a muro
+    box(-1.08, 2.68, -0.44, 3.06, 0.02, 2.40, "rec_armario", oak, bevel=0.008)
+    box(0.34, 3.30, 0.68, 3.72, 0.0, 0.45, "rec_banco", oak, bevel=0.01)
+    box(1.72, 3.90, 1.75, 4.28, 0.95, 1.85, "rec_espejo", m["espejo"],
+        bevel=0.0)
 
-    # TERRAZA
-    for i, z in enumerate((0.05, 1.85)):
-        box(8.35, z, 9.05, z + 1.55, 0.10, 0.32, f"tz_hamaca_{i}", fab2, bevel=0.02)
-        box(8.35, z + 1.35, 9.05, z + 1.55, 0.32, 0.62, f"tz_res_{i}", fab2, bevel=0.02)
-    box(8.45, -0.45, 9.25, -0.15, 0.0, 0.40, "tz_mesita", tra, bevel=0.01)
-    if not cargar_asset("potted_plant_02", 0.95, 9.20, 3.10, ang=130):
-        cylinder(9.20, 3.10, 0.20, 0.0, 0.55, "tz_maceta", m["maceta"])
-        sphere(9.20, 3.10, 0.85, 0.30, "tz_planta", m["planta"], sy=0.8)
+    # TERRAZA — mesa bistró con 2 sillas y jardineras (PE.A.02); las hamacas
+    # de 1,55 m no cabían en 1,27 m de fondo
+    cylinder(8.85, 0.05, 0.03, 0.0, 0.72, "tz_mesa_bistro_pie", metal, n=12)
+    cylinder(8.85, 0.05, 0.30, 0.72, 0.75, "tz_mesa_bistro", tra, n=28)
+    for k, x in enumerate((8.48, 9.18)):
+        cylinder(x, 0.05, 0.19, 0.44, 0.47, f"tz_silla_{k}", fab2, n=20)
+        cylinder(x, 0.05, 0.025, 0.0, 0.44, f"tz_silla_pie_{k}", metal, n=10)
+        caja_inclinada(x - 0.17, 0.10, x + 0.17, 0.16, 0.47, 0.82, 0.0, 0.02,
+                       f"tz_silla_res_{k}", fab2, bevel=0.03)
+    for k, (x0, z0, x1, z1) in enumerate(((9.05, 2.45, 9.40, 3.35),
+                                          (9.15, 0.60, 9.42, 1.70))):
+        box(x0, z0, x1, z1, 0.0, 0.52, f"tz_jardinera_{k}", m["maceta"],
+            bevel=0.01)
+        if not cargar_asset("potted_plant_02", 0.85,
+                            (x0 + x1) / 2, (z0 + z1) / 2, ang=130,
+                            h=0.50):
+            box(x0 + 0.04, z0 + 0.04, x1 - 0.04, z1 - 0.04, 0.50, 0.54,
+                f"tz_tierra_{k}", m["maceta"], bevel=0.0)
+            for j in range(3):
+                zz = z0 + 0.18 + j * (z1 - z0 - 0.36) / 2
+                sphere((x0 + x1) / 2, zz, 0.62, 0.16, f"tz_planta_{k}_{j}",
+                       m["planta"], seg=10, ring=5, sy=0.85)
     # petos de terraza (el norte faltaba en el modelo: hueco al vacío); con el
     # entorno real los sustituye el balcón de build_balcones()
     if not ENTORNO:
         box(9.42, -0.50, 9.55, 3.50, 0.0, 1.05, "peto_e", m["muro"], bevel=0.0)
         box(8.23, 3.42, 9.55, 3.55, 0.0, 1.05, "peto_s", m["muro"], bevel=0.0)
         box(8.23, -0.62, 9.55, -0.50, 0.0, 1.05, "peto_n", m["muro"], bevel=0.0)
-
 
 # ── entorno urbano (OSM) ─────────────────────────────────────────────────────
 # Todo lo del entorno lleva prefijo `ext_`: exportar_glb.py lo excluye del visor.

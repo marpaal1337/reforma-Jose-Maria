@@ -10,7 +10,7 @@ This repo is a **3D design viewer for a home renovation in Valencia** (Spanish-l
 ├── Planos/                  (floor plans: distribución, estado inicial + PNGs)
 ├── data/
 │   ├── planos3d.json        3D model data: walls, glass, rooms, footprint, texture rect
-│   ├── puertas.json         D0–D8 + PA02 measured from PE.A.02/PEI.07
+│   ├── puertas.json         D0–D9 + PA02 measured from PE.A.02/PEI.07
 │   ├── ventanas.json        V01–V08 measured from PEI.05/06 + north + facade mapping
 │   ├── camaras.json         pano/still camera definitions for the Blender tour
 │   ├── mobiliario.glb       furniture + joinery exported from escena.blend (glTF)
@@ -67,7 +67,8 @@ scripts/
 ├── exportar_glb.py          escena.blend → data/mobiliario.glb (UVs + texturas)
 ├── generar_visor3d.py       planos3d + three.min.js + GLTFLoader + GLB + texturas → render3d.html
 ├── render_blender.py        renders one camera from escena.blend (Cycles CPU)
-└── generar_tour3d.py        renders/panos + camaras.json → tour3d.html
+├── generar_tour3d.py        renders/panos + camaras.json → tour3d.html
+└── revisar_mobiliario.py    control de colocación del mobiliario del GLB (falla si algo choca)
 ```
 
 ### How to regenerate (no budgets)
@@ -79,6 +80,12 @@ python3 scripts/generar_texturas.py && \
 python3 scripts/extraer_ventanas.py && \
 python3 scripts/generar_visor3d.py && \
 python3 scripts/generar_tour3d.py
+```
+
+Control de la colocación del mobiliario (no necesita Blender):
+
+```bash
+python3 scripts/revisar_mobiliario.py   # falla si una pieza choca; deja data/imagenes/mobiliario_debug.png
 ```
 
 Blender steps need a local Blender 4.2 LTS (not vendored; install it yourself, do not rely on `/tmp`). En este equipo (WSL) Blender vive en `~/opt/blender/blender` y le faltan `libSM.so.6`/`libICE.so.6` del sistema: `scripts/blender.sh` las resuelve desde `~/opt/blender-libs` (extraídas sin sudo) y lanza Blender. Usa el envoltorio:
@@ -112,12 +119,17 @@ Tiempos medidos: ~20 min por panorama 4096×2048 a 320 muestras (Cycles CPU, 20 
 
 Modelo 3D generado de la **geometría vectorial** del plano de distribución (escala calibrada 1:50, 56,69 pt/m).
 
-- Muros extruidos a 2,60 m clasificados por espesor (`estructural` ≥ 0,14 m, `tabique` ≥ 0,045 m, `vidrio` = carpinterías), suelos por estancia y alicatados de baños.
-- **Puertas D0–D8 + separador PA02 desde `data/puertas.json`**. `generar_geometria3d.py` punzona los huecos en los muros; `generar_blender.py:build_puertas()` pone marcos, hojas y dinteles.
-- **Mobiliario real** de `data/mobiliario.glb` + acabados de `data/texturas/`. El atrezzo CC0 del render (`asset_*`) no viaja al GLB para no disparar el tamaño.
+- Muros extruidos a 2,60 m clasificados por espesor (`estructural` ≥ 0,14 m, `tabique` ≥ 0,045 m, `vidrio` = carpinterías), suelos por estancia y alicatados de baños. Los muros van **fusionados en 3 mallas** (una por tipo) y los contornos en un solo `LineSegments`; la intro y el slider de altura los escalan con `scale.y`.
+- **Puertas D0–D9 + separador PA02 desde `data/puertas.json`**. `generar_geometria3d.py` punzona los huecos en los muros; `generar_blender.py:build_puertas()` pone marcos, hojas y dinteles. D1 y D9 cruzan el pasillo (marcadas `en_paso`): no punzonan muro y se montan sin dintel.
+- **Mobiliario real** de `data/mobiliario.glb` + acabados de `data/texturas/`; el conmutador del panel muestra **toda la casa** (por defecto) o solo el espacio abierto salón·cocina (sin el conjunto de comedor). El atrezzo CC0 del render (`asset_*`) no viaja al GLB para no disparar el tamaño.
 - Entorno de reflejos PBR desde el propio HDRI reducido (`data/pbr/hdri/venice_sunset_env.jpg`, inline) con degradado de respaldo.
 - **Tres modos de cámara**: `Órbita`, `Caminar` (pointer lock, WASD, altura de ojo 1,62 m) y `Vuelo`. En táctil, joystick + arrastre para mirar.
 - Dos modos de suelo: **Plano** y **Zonas**. Slider de altura de muros, slider solar, etiquetas, ficha por estancia con **superficie (sin costes)**, exportación a PNG y vistas `Planta` / `Vista general`.
+- **Dibujo bajo demanda** (`pedirFrame()`): sólo se renderiza cuando cambia cámara, intro, teclas, sol o selección; en reposo la GPU queda a cero y las etiquetas sólo se recalculan en esos fotogramas. Resolución adaptativa: `pixelRatio` 1 mientras la cámara se mueve y `min(dpr, 2)` (1,5 táctil) al parar.
+- Sin `logarithmicDepthBuffer` ni `preserveDrawingBuffer`; `near/far` por modo (órbita 0,1/300, caminar-vuelo 0,08/250, Realista 0,08/5.000 con el cielo a 0,9·far). El PNG se sigue exportando dibujando justo antes de `toBlob`.
+- **Sombras**: el sol está fijo al centro de la vivienda, `shadowMap.autoUpdate=false` y sólo se recalcula al mover el sol, cambiar la altura de muros, cambiar el mobiliario visible, cruzar el umbral del techo (2,45 m) o salir de Realista; en Realista se desactivan (la luz ya está horneada).
+- **Datos grandes en etiquetas de datos inertes** (`<script type="application/json|octet-stream">`) y decodificación nativa con `fetch(data:)` (respaldo `atob`). Arranca en Realista (si hay horneado) y carga la maqueta en segundo plano; ambos modos se precompilan para evitar el tirón al alternar.
+- **Indicador `?perf`** (fps, ms, draw calls, triángulos, programas): abrir `render3d.html?perf`.
 - Se abre desde `file://`; Three.js + GLTFLoader van inline. Solo Google Fonts es externo.
 - `data/imagenes/geometria_debug.png` es el overlay de control tras cambiar el plano.
 - Botón **Galería**: muestra `data/reales/` + plano de aires. Si se añaden imágenes, actualizar `RENDERS`/`GALERIA` en `scripts/generar_visor3d.py`.
@@ -128,7 +140,7 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución (es
 - `scripts/extraer_entorno.py`: OpenStreetMap → `data/entorno.json`. Las coordenadas se pasan por CLI y **no se versionan** (`--lat --lon --rumbo [--radio]`, p. ej. un punto de Street View frente a la fachada). El JSON solo guarda geometría relativa en metros de la escena (volúmenes con nº de plantas, calzadas, carriles bici, verdes y árboles), sin lat/lon ni nombres de calles. Datos © OpenStreetMap contributors (ODbL 1.0).
 - `scripts/hornear_visor.py`: hornea la luz de Cycles de `renders/escena.blend` → `data/visor/`. Se lanza con Blender (`./scripts/blender.sh -b renders/escena.blend -noaudio -P scripts/hornear_visor.py -- [--muestras N] [--res N] [--rapido] [--salida <dir>]`; `--salida` permite probar sin tocar `data/visor`). Genera `interior.glb` (UV de material + lightmap), `lm_a/b.jpg`, `suelo_cerca/lejos.jpg`, `cielo.jpg`, `reflejo.jpg`, `arbol_*.webp` y `visor.json`. Coste: rápido (`--rapido`, 32 muestras/1024) ~10 min; completo 128 muestras con `--res 2048` ~60–90 min; `--res 4096` (por defecto) multiplica ×4 el tiempo (~4 h). El horneado se corta a medias si WSL se reinicia: deja escrito `visor.json` solo al final y no mezcles un horneado parcial con el anterior.
 - `scripts/visor_realista.js`: modo **Realista** del visor (interior con lightmaps + PBR del render y ciudad OSM alrededor a la altura del 7º piso). Lo inyecta `scripts/generar_visor3d.py` (`--visor <dir>` para horneados alternativos). El visor **arranca en Realista si hay horneado** (`setRealista(realListo)` tras la carga; si no, avisa y sigue en maqueta). La exposición se calibra contra los stills Cycles con la constante `AJUSTE_EXPOSICION` (barrido medido con `capturas.mjs` y `ref_cycles.py`: EV 0,90 final frente al 2,30 de usar `exposicion` tal cual; sin compensar salía +0,3/+0,6 EV).
-- `scripts/capturas.mjs` + `scripts/capturas.sh`: 6 capturas automáticas del visor con Playwright/Chromium (vistas: `orbita`, `salon`, `terraza`, `cocina`, `dormitorio`, `fachada`). Flags: `--visor/--salida/--ancho/--alto`. `capturas.sh` cachea `playwright-core` en `~/.cache/opencode-reforma` (no depende de `/tmp`).
+- `scripts/capturas.mjs` + `scripts/capturas.sh`: 6 capturas automáticas del visor con Playwright/Chromium (vistas: `orbita`, `salon`, `terraza`, `cocina`, `dormitorio`, `fachada`). Flags: `--visor/--salida/--ancho/--alto`, `--maqueta` (captura la maqueta en vez del modo Realista) y `--medir` (sin capturas: imprime peso del HTML, tiempo hasta estar listo, draw calls/triángulos/programas/memoria, y ms por fotograma en reposo y orbitando). `capturas.sh` cachea `playwright-core` en `~/.cache/opencode-reforma` (no depende de `/tmp`).
 - `scripts/ref_cycles.py`: referencia Cycles de la misma cámara que las capturas (`--cam/--todas`, más `--samples/--res/--out/--out-dir`). Usa `scripts/blender.sh`.
 - `data/visor/` es un **artefacto local regenerable** (ya en `.gitignore`): se regenera con `hornear_visor.py` y no se versiona.
 

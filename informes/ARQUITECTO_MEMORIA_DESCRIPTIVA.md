@@ -73,8 +73,8 @@ Según los datos del presupuesto de la constructora v2.0, la nueva distribución
 | Dormitorio 2 | ~12–14 | Con armario (baldas, zapatero, barra) |
 | Dormitorio 3 | ~10–12 | Con estantería y armario |
 | Dormitorio 4 / despacho | ~8–9 | Con estantería de melamina |
-| Baño 1 (completo) | ~5–6 | Plato ducha resina + mueble de baño de Carpintería + cisterna empotrada |
-| Baño 2 (completo) | ~4–5 | Bañera resina + mueble de baño de Carpintería |
+| Baño 1 (completo) | ~5–6 | Bañera de resina + mueble de baño + cisterna empotrada |
+| Baño 2 (completo) | ~4–5 | Plato de ducha de resina + mueble de baño |
 | Aseo / distribuidor | ~3–4 | Lavabo y espacio de circulación |
 | Casoneto (trastero) | ~2–3 | Almacenaje con puerta corredera de pladur |
 
@@ -83,7 +83,7 @@ Según los datos del presupuesto de la constructora v2.0, la nueva distribución
 ### 2.3 Justificación de los cambios
 
 - **Cocina**: se demuele y reubica para mejorar la ergonomía y la integración con el salón-comedor. Se dota de campana extractora con salida de ø150 mm.
-- **Baños**: los dos baños se reforman por completo. El baño 1 se equipa con plato de ducha de resina (acceso tipo rain-effect) y el baño 2 con bañera de resina. Ambos reciben alicatado porcelánico 60×120 cm, hornacina con balda, cisterna empotrada y rejilla de ventilación/extracción.
+- **Baños**: los dos baños se reforman por completo. El baño 1 se equipa con bañera de resina y el baño 2 con plato de ducha de resina (acceso tipo rain-effect), siguiendo el PE.A.02 (decisión 2026-09-27). Ambos reciben alicatado porcelánico 60×120 cm, hornacina con balda, cisterna empotrada y rejilla de ventilación/extracción.
 - **Carpintería exterior**: las 8 ventanas (marcos V01–V08) se sustituyen por nuevas carpinterías, con falcado de las hojas interiores para ajuste de huecos. Se instalan vierteaguas de piedra en los alféizares.
 - **Casoneto**: se crea un nicho de almacenaje con puerta corredera integrada en tabique de pladur.
 
@@ -169,8 +169,8 @@ Según los datos del presupuesto de la constructora v2.0, la nueva distribución
 
 - **Acometida general**: nueva llave de corte general y acometida de agua desde el cuarto de contadores.
 - **Cocina**: instalación de agua fría y caliente, desagüe para fregadero y lavavajillas.
-- **Baño 1**: agua fría/caliente para plato de ducha, lavabo e inodoro con cisterna empotrada.
-- **Baño 2**: agua fría/caliente para bañera, lavabo e inodoro.
+- **Baño 1**: agua fría/caliente para bañera, lavabo e inodoro con cisterna empotrada.
+- **Baño 2**: agua fría/caliente para plato de ducha, lavabo e inodoro.
 - **Desagüe de climatización**: instalación de desagüe para la máquina centralizada de ACC.
 - **Ayudas de albañilería**: canalizaciones empotradas y pasamuros.
 
@@ -248,8 +248,8 @@ Según los datos del presupuesto de la constructora v2.0, la nueva distribución
 
 ### 6.5 Sanitarios y grifería (por determinar)
 
-- Plato de ducha de resina (colocado en baño 1).
-- Bañera de resina (colocada en baño 2).
+- Bañera de resina (colocada en baño 1).
+- Plato de ducha de resina (colocado en baño 2).
 - Cisterna empotrada (en baño 1).
 - **Marca, modelo y acabado de grifería e inodoros: pendiente de definir.**
 

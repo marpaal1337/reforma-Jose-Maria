@@ -3,17 +3,18 @@
  "puertas": [
   {
    "id": "D1",
-   "nombre": "Dormitorio 1",
+   "nombre": "Dormitorio 1 (cruce del pasillo)",
    "tipo": "abatible",
-   "pared": "h",
+   "pared": "v",
    "centro": [
-    -7.85,
-    -0.47
+    -4.62,
+    -0.915
    ],
-   "ancho": 0.7,
+   "ancho": 0.95,
    "alto": 2.03,
-   "bisagra": "E",
-   "apertura": "S"
+   "bisagra": "S",
+   "apertura": "O",
+   "en_paso": true
   },
   {
    "id": "D2",
@@ -126,6 +127,21 @@
    "alto": 2.36,
    "bisagra": "S",
    "apertura": "E"
+  },
+  {
+   "id": "D9",
+   "nombre": "Puerta del pasillo",
+   "tipo": "abatible",
+   "pared": "v",
+   "centro": [
+    -1.5,
+    -0.915
+   ],
+   "ancho": 0.95,
+   "alto": 2.03,
+   "bisagra": "S",
+   "apertura": "O",
+   "en_paso": true
   }
  ],
  "separadores": [

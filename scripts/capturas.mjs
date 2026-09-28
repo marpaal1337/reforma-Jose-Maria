@@ -4,15 +4,23 @@
  *
  * Uso:
  *   node scripts/capturas.mjs [--visor render3d.html] [--salida capturas/] [--ancho 1280] [--alto 800]
+ *   node scripts/capturas.mjs --medir [--visor render3d.html]
+ *   node scripts/capturas.mjs --maqueta [--salida capturas/]
  *
  * Requiere: playwright-core y chromium (los resuelve scripts/capturas.sh, que
  * los cachea en ~/.cache/opencode-reforma y ~/.cache/ms-playwright).
  * Vistas: orbita, salon (s4), terraza, cocina (s2), dormitorio (s3), fachada.
  * Activa el modo Realista si el horneado está disponible; si no, captura la maqueta.
+ *
+ * --medir no guarda capturas: informa del peso del HTML, el tiempo hasta estar
+ * listo, draw calls/triángulos/programas/memoria de cada modo y milisegundos
+ * por fotograma en reposo y orbitando. Chromium sin pantalla (WSL) no da FPS
+ * reales, pero sirve para comparar antes/después. Para FPS reales, abre el
+ * visor con ?perf y mira el indicador.
  */
 import { createRequire } from 'module';
 import { homedir } from 'os';
-import { mkdirSync, readdirSync, existsSync } from 'fs';
+import { mkdirSync, readdirSync, existsSync, statSync } from 'fs';
 import { resolve } from 'path';
 
 const require = createRequire(import.meta.url);
@@ -45,12 +53,14 @@ const opt = (n, d) => {
   const i = args.indexOf(n);
   return i >= 0 ? args[i + 1] : d;
 };
+const MEDIR = args.includes('--medir');
+const MAQUETA = args.includes('--maqueta');
 const VISOR = resolve(opt('--visor', 'render3d.html'));
 const SALIDA = resolve(opt('--salida', 'capturas'));
 const ANCHO = parseInt(opt('--ancho', '1280'), 10);
 const ALTO = parseInt(opt('--alto', '800'), 10);
 
-mkdirSync(SALIDA, { recursive: true });
+if (!MEDIR) mkdirSync(SALIDA, { recursive: true });
 
 // pos + target en coords Three.js (x=X, y=Z, z=-Y Blender)
 const VISTAS = {
@@ -70,18 +80,126 @@ if (!CHROME) {
 const browser = await chromium.launch({ executablePath: CHROME });
 const page = await browser.newPage({ viewport: { width: ANCHO, height: ALTO } });
 page.on('console', m => { if (m.type() === 'warning') console.log('[consola]', m.text().slice(0, 160)); });
+
+/* ── instrumentación de fotogramas (envolver renderer.render) ── */
+async function instrumentar() {
+  await page.evaluate(() => {
+    const R = window.__visor.renderer;
+    if (R.__t) return;
+    R.__t = [];
+    const orig = R.render.bind(R);
+    R.render = (...a) => { R.__t.push(performance.now()); return orig(...a); };
+  });
+}
+async function medirFrames(ms) {
+  return page.evaluate(ms => new Promise(res => {
+    const R = window.__visor.renderer;
+    R.__t.length = 0;
+    setTimeout(() => {
+      const t = R.__t, iv = [];
+      for (let i = 1; i < t.length; i++) iv.push(t[i] - t[i - 1]);
+      iv.sort((a, b) => a - b);
+      const q = p => iv.length ? +iv[Math.min(iv.length - 1, Math.floor(p * (iv.length - 1)))].toFixed(2) : null;
+      res({
+        fotogramas: t.length,
+        ms_medio: iv.length ? +(iv.reduce((s, v) => s + v, 0) / iv.length).toFixed(2) : null,
+        ms_p50: q(0.5), ms_p95: q(0.95),
+      });
+    }, ms);
+  }), ms);
+}
+async function info() {
+  return page.evaluate(() => {
+    const V = window.__visor, R = V.renderer;
+    R.render(V.scene, V.camera);
+    return {
+      drawCalls: R.info.render.calls,
+      triangulos: R.info.render.triangles,
+      programas: R.info.programs ? R.info.programs.length : null,
+      geometrias: R.info.memory.geometries,
+      texturas: R.info.memory.textures,
+      memoria_mb: typeof performance.memory === 'object'
+        ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(1) : null,
+    };
+  });
+}
+/* con dibujo bajo demanda, espera a que la cámara deje de animarse */
+async function esperarQuieto() {
+  await page.waitForFunction('window.__visor.animando === undefined || !window.__visor.animando',
+    null, { timeout: 60000 }).catch(() => {});
+}
+/* la intro de los muros (sólo maqueta) debe haber terminado antes de capturar */
+async function esperarIntro() {
+  await page.waitForFunction('window.__visor.intro === undefined || window.__visor.intro >= 1',
+    null, { timeout: 120000 }).catch(() => {});
+}
+
 await page.goto('file://' + VISOR);
 await page.waitForFunction('window.__visor && window.__visor.listo', null, { timeout: 120000 });
+
+if (MEDIR) {
+  const listo_ms = await page.evaluate(() => Math.round(performance.now()));
+  await page.waitForTimeout(1200);
+  // la intro crece los muros: hay que dejarla terminar antes de medir reposo
+  await esperarIntro();
+  const realista = await page.evaluate(() => document.body.classList.contains('realista'));
+  // si el horneado está listo, el visor arranca en Realista; si no, arranca en maqueta
+  await instrumentar();
+  await esperarQuieto();
+  const rep = {
+    archivo: VISOR.replace(process.cwd() + '/', ''),
+    mb: +(statSync(VISOR).size / 1048576).toFixed(1),
+    listo_ms,
+    realista,
+    info_inicial: await info(),
+    reposo: await medirFrames(2000),
+  };
+  // órbita: arrastrar en el lienzo durante 3 s
+  const caja = await page.evaluate(() => {
+    const r = document.querySelector('#c').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: Math.min(r.width, r.height) * 0.3 };
+  });
+  const medP = medirFrames(3000);
+  await page.mouse.move(caja.x, caja.y);
+  await page.mouse.down();
+  const tA = Date.now();
+  let ang = 0;
+  while (Date.now() - tA < 3000) {
+    ang += 0.22;
+    await page.mouse.move(caja.x + Math.cos(ang) * caja.r, caja.y + Math.sin(ang) * caja.r * 0.6);
+    await page.waitForTimeout(8);
+  }
+  await page.mouse.up();
+  rep.orbita = await medP;
+  rep.info_orbita = await info();
+  if (realista) {
+    await page.evaluate(() => document.querySelector('#b-real').click());
+    await page.waitForFunction('window.__visor.maquetaLista !== false', null, { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    await esperarQuieto();
+    rep.info_maqueta = await info();
+    rep.reposo_maqueta = await medirFrames(2000);
+  }
+  console.log(JSON.stringify(rep, null, 2));
+  await browser.close();
+  process.exit(0);
+}
+
 await page.waitForTimeout(1200);
 
 // El visor arranca en Realista si hay horneado (setRealista(realListo)):
-// solo clicar si está apagado.
-const realista = await page.evaluate(() => {
+// solo clicar si no está en el modo pedido.
+const realista = await page.evaluate((maqueta) => {
   const b = document.querySelector('#b-real');
   if (!b) return false;
-  if (b.getAttribute('aria-pressed') !== 'true') b.click();
+  const on = b.getAttribute('aria-pressed') === 'true';
+  if (maqueta && on) b.click();
+  if (!maqueta && !on) b.click();
   return document.body.classList.contains('realista');
-});
+}, MAQUETA);
+await page.waitForFunction('window.__visor.maquetaLista !== false', null, { timeout: 60000 }).catch(() => {});
+await esperarIntro();
+await esperarQuieto();
 await page.waitForTimeout(1500);
 console.log(`modo realista solicitado: ${realista}`);
 
@@ -100,6 +218,7 @@ for (const [nombre, v] of Object.entries(VISTAS)) {
       V.free.pitch = Math.asin(Math.min(1, Math.max(-1, fy / L)));
       V.free.vel.set(0, 0, 0);
     }
+    if (V.pedirFrame) V.pedirFrame();   // dibujo bajo demanda: fuerza un fotograma
   }, v);
   await page.waitForTimeout(900);
   const out = `${SALIDA}/${nombre}.png`;

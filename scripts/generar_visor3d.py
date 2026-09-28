@@ -81,8 +81,8 @@ if (VISOR / "visor.json").exists() and (VISOR / "interior.glb").exists() and EMB
         "edificios": [[b["pts"], b["plantas"]] for b in _ent["edificios"] if not b["propio"]],
         "propios": [b["pts"] for b in _ent["edificios"] if b["propio"]],
     }
-REAL_JS = (ROOT / "scripts" / "visor_realista.js").read_text(encoding="utf-8").replace(
-    "__REAL__", json.dumps(REAL, ensure_ascii=False, separators=(",", ":")) if REAL else "null")
+REAL_JS = (ROOT / "scripts" / "visor_realista.js").read_text(encoding="utf-8")
+REAL_JSON = json.dumps(REAL, ensure_ascii=False, separators=(",", ":")) if REAL else "null"
 
 HTML = r"""<!DOCTYPE html>
 <html lang="es">
@@ -165,6 +165,8 @@ aside.hidden{transform:translateX(-118%);opacity:0}
 .panel-head h2{font-family:var(--serif);font-size:15px;margin:0;font-weight:600}
 .panel-scroll{max-height:min(52vh,520px);overflow:auto;overscroll-behavior:contain}
 .ctl{padding:12px 16px;border-bottom:1px solid var(--line)}
+.ctl .seg{box-shadow:none;padding:2px}
+.ctl .seg button{padding:7px 10px}
 .ctl label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
 .ctl output{font-family:var(--serif);font-size:13px;color:var(--accent-2);text-transform:none;letter-spacing:0}
 input[type=range]{width:100%;accent-color:var(--accent);height:18px}
@@ -296,6 +298,12 @@ body.libre.pointerlock #c{cursor:none}
   font:500 12px/1.35 var(--sans);padding:10px 16px;border-radius:999px;box-shadow:var(--shadow);
   opacity:0;pointer-events:none;transition:.3s}
 #toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ── indicador de rendimiento opcional (?perf) ── */
+#perf{position:fixed;left:50%;top:calc(10px + var(--sat));transform:translateX(-50%);z-index:24;
+  pointer-events:none;white-space:pre;text-align:left;background:rgba(26,24,20,.84);color:#F5F1EA;
+  font:600 10.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  padding:7px 11px;border-radius:9px;box-shadow:var(--shadow)}
 
 /* ── hoja de acciones "Más" ── */
 #actions{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center}
@@ -441,6 +449,7 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
 <div id="app">
   <canvas id="c" aria-label="Modelo 3D de la vivienda"></canvas>
   <div id="labels"></div>
+  <div id="perf" hidden></div>
   <div id="stick" aria-hidden="true"><i></i></div>
   <div id="toast" role="status" aria-live="polite"></div>
 
@@ -491,6 +500,13 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
       <div class="ctl" id="ctl-sol">
         <label class="micro" for="s-sol">Posición del sol <output id="o-sol">140°</output></label>
         <input id="s-sol" type="range" min="0" max="359" step="1" value="140">
+      </div>
+      <div class="ctl">
+        <label class="micro">Mobiliario</label>
+        <div class="seg" role="group" aria-label="Mobiliario visible">
+          <button id="mob-todo" aria-pressed="true">Toda la casa</button>
+          <button id="mob-abierto" aria-pressed="false">Salón · cocina</button>
+        </div>
       </div>
       <ul class="rooms" id="rooms"></ul>
     </div>
@@ -631,6 +647,8 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
   </div>
 </div>
 
+<script type="application/octet-stream" id="d-mob">__MOB_B64__</script>
+<script type="application/json" id="d-real">__REAL_JSON__</script>
 <script>__THREE__</script>
 <script>__GLTFLOADER__</script>
 <script>
@@ -639,8 +657,15 @@ const PLAN = __DATA__;
 const TEX_SRC = "data:image/jpeg;base64,__TEXTURE__";
 const ENV_SRC = "__ENV_SRC__";
 const TEXTURAS_SRC = __TEXTURAS_JS__;
-const MOBILIARIO_B64 = "__MOB_B64__";
+const MOBILIARIO_B64 = leerBlob("d-mob");
 const MOBILIARIO_SRC = "__MOB_SRC__";
+function leerBlob(id){
+  const el = document.getElementById(id);
+  if(!el) return "";
+  const txt = el.textContent.trim();
+  el.remove();   // el bloque ya no hace falta en la página
+  return txt;
+}
 
 /* ── paleta de estancias ── */
 const STYLE = {
@@ -708,8 +733,7 @@ function shapeFrom(pts){
 /* ── escena ── */
 let renderer, scene, camera;
 try{
-  renderer = new THREE.WebGLRenderer({canvas:$("#c"),antialias:true,alpha:true,preserveDrawingBuffer:true,
-    logarithmicDepthBuffer:true});
+  renderer = new THREE.WebGLRenderer({canvas:$("#c"),antialias:true,alpha:true});
 }catch(e){
   $("#loader").classList.add("done");
   $("#fallback").style.display="grid";
@@ -717,14 +741,30 @@ try{
   if(w) w.textContent = "Detalle técnico: " + (e && e.message ? e.message : "no se pudo crear el contexto WebGL");
   throw e;
 }
-renderer.setPixelRatio(Math.min(devicePixelRatio, COARSE ? 1.5 : 2));
+/* resolución adaptativa: 1 mientras la cámara se mueve, completa al parar */
+const PR_MAX = Math.min(devicePixelRatio, COARSE ? 1.5 : 2);
+let prActual = PR_MAX;
+function setPixelRatio(pr){
+  if(Math.abs(pr-prActual) < 1e-6) return;
+  prActual = pr;
+  renderer.setPixelRatio(pr);
+}
+renderer.setPixelRatio(PR_MAX);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.92;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
+
+/* bucle bajo demanda: sólo se dibuja cuando algo cambia (cámara, intro,
+   teclas, sol, selección…). En reposo la GPU queda a cero. */
+let rafId = 0;
+function pedirFrame(){ if(!rafId) rafId = requestAnimationFrame(tick); }
 
 scene = new THREE.Scene();
+const FAR_CIUDAD = 5000;   // modo Realista: la ciudad OSM (el cielo a 0,9·far)
 camera = new THREE.PerspectiveCamera(38, 1, 0.1, 300);
 camera.position.set(12,14,16);
 
@@ -754,8 +794,10 @@ if(ENV_SRC){
 /* luces */
 const hemi = new THREE.HemisphereLight(0xFFFDF6, 0xCFC6B6, 0.66);
 scene.add(hemi);
+/* shadowMap.autoUpdate=false: el mapa de sombras sólo se recalcula cuando se
+   mueve el sol, cambia la altura de muros o se sale de Realista */
+let sombrasSucias = true;
 const sun = new THREE.DirectionalLight(0xFFF2DE, 0.92);
-sun.position.set(-8,16,10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(COARSE?1024:2048, COARSE?1024:2048);
 sun.shadow.camera.near = 1; sun.shadow.camera.far = 70;
@@ -764,7 +806,19 @@ sun.shadow.camera.top = 14; sun.shadow.camera.bottom = -14;
 sun.shadow.bias = -0.0006;
 sun.shadow.normalBias = 0.03;
 sun.shadow.camera.updateProjectionMatrix();
-scene.add(sun);
+scene.add(sun, sun.target);
+/* el sol no sigue a la cámara: se centra en la vivienda */
+const SOMBRA_C = new THREE.Vector3(
+  (PLAN.bounds.x0 + PLAN.bounds.x1) / 2, 0, (PLAN.bounds.z0 + PLAN.bounds.z1) / 2);
+function orientarSol(angDeg){
+  const rad = angDeg*Math.PI/180;
+  sun.position.set(SOMBRA_C.x + Math.cos(rad)*16, 15, SOMBRA_C.z + Math.sin(rad)*16);
+  sun.target.position.copy(SOMBRA_C);
+  sun.target.updateMatrixWorld();
+  sombrasSucias = true;
+  pedirFrame();
+}
+orientarSol(140);
 scene.add(new THREE.DirectionalLight(0xDCE6F0, 0.3).translateX(10).translateY(6).translateZ(-12));
 
 /* suelo de sombra (la maqueta flota sobre el degradado de la página) */
@@ -793,26 +847,66 @@ const matVidrio = new THREE.MeshStandardMaterial({color:0xBFD6DE, roughness:0.12
 const matLinea = new THREE.LineBasicMaterial({color:0x2B2B28, transparent:true, opacity:0.32});
 const ALTURA = PLAN.altura_muro;
 
-function addWall(poly, tipo, altura){
-  const geo = new THREE.ExtrudeGeometry(shapeFrom(poly), {depth:altura, bevelEnabled:false});
-  geo.rotateX(-Math.PI/2);
-  const mat = tipo === "vidrio" ? matVidrio : (tipo === "estructural" ? matMuro : matTabique);
-  const tapa = tipo === "estructural" ? matTapa : matTapaTab;
-  const mesh = new THREE.Mesh(geo, tipo === "vidrio" ? mat : [tapa, mat]);
-  mesh.castShadow = tipo !== "vidrio";
-  mesh.receiveShadow = true;
-  mesh.userData.tipo = tipo;
-  gMuros.add(mesh);
-  const line = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 24), matLinea);
-  line.userData.wall = mesh;
-  gLineas.add(line);
-  return mesh;
+/* Muros fusionados por tipo (estructural/tabique/vidrio → 3 mallas) y los
+   contornos en un solo LineSegments, en vez de una malla y un contorno por
+   muro (~180 draw calls menos). El crecimiento de la intro y el slider se
+   hacen con scale.y por tipo, igual que antes malla a malla. */
+function geoFusionada(geos){
+  let nCap = 0, nLado = 0;
+  geos.forEach(g => g.groups.forEach(gr => {
+    if(gr.materialIndex === 0) nCap += gr.count; else nLado += gr.count;
+  }));
+  const pos = new Float32Array((nCap+nLado)*3);
+  const nor = new Float32Array((nCap+nLado)*3);
+  const uv = new Float32Array((nCap+nLado)*2);
+  let vc = 0, vl = nCap;
+  geos.forEach(g => g.groups.forEach(gr => {
+    const dst = gr.materialIndex === 0 ? vc : vl;
+    pos.set(g.attributes.position.array.subarray(gr.start*3, (gr.start+gr.count)*3), dst*3);
+    nor.set(g.attributes.normal.array.subarray(gr.start*3, (gr.start+gr.count)*3), dst*3);
+    uv.set(g.attributes.uv.array.subarray(gr.start*2, (gr.start+gr.count)*2), dst*2);
+    if(gr.materialIndex === 0) vc += gr.count; else vl += gr.count;
+  }));
+  const fusion = new THREE.BufferGeometry();
+  fusion.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  fusion.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+  fusion.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  fusion.addGroup(0, nCap, 0);
+  if(nLado) fusion.addGroup(nCap, nLado, 1);
+  return fusion;
 }
-
-/* muros: se guardan las geometrías para poder "crecer" en la intro */
+const MATERIAL_MURO = {
+  estructural: [matTapa, matMuro], tabique: [matTapaTab, matTabique], vidrio: [matVidrio],
+};
 let wallMeshes = [];
-PLAN.muros.forEach(w => wallMeshes.push({def:w, mesh:addWall(w.pts, w.tipo, ALTURA),
-  mat:(w.tipo==="vidrio"?matVidrio:(w.tipo==="estructural"?matMuro:matTabique))}));
+{
+  const porTipo = {estructural: [], tabique: [], vidrio: []};
+  const contornos = [];
+  PLAN.muros.forEach(w => {
+    const geo = new THREE.ExtrudeGeometry(shapeFrom(w.pts), {depth:ALTURA, bevelEnabled:false});
+    geo.rotateX(-Math.PI/2);
+    (porTipo[w.tipo] || porTipo.tabique).push(geo);
+    contornos.push(new THREE.EdgesGeometry(geo, 24).attributes.position.array);
+  });
+  ["estructural", "tabique", "vidrio"].forEach(tipo => {
+    const geos = porTipo[tipo];
+    if(!geos.length) return;
+    const geo = geoFusionada(geos);
+    if(tipo === "vidrio"){ geo.clearGroups(); geo.addGroup(0, geo.attributes.position.count, 0); }
+    const mesh = new THREE.Mesh(geo, MATERIAL_MURO[tipo]);
+    mesh.castShadow = tipo !== "vidrio";
+    mesh.receiveShadow = true;
+    gMuros.add(mesh);
+    wallMeshes.push({mesh, tipo});
+  });
+  const n = contornos.reduce((s,a)=>s+a.length, 0);
+  const arr = new Float32Array(n);
+  let o = 0;
+  contornos.forEach(a => { arr.set(a, o); o += a.length; });
+  const gl = new THREE.BufferGeometry();
+  gl.setAttribute("position", new THREE.BufferAttribute(arr, 3));
+  gLineas.add(new THREE.LineSegments(gl, matLinea));
+}
 
 /* helpers de suelo con UV del recorte del plano */
 const texRect = PLAN.textura.rect_m;               // [x0,z0,x1,z1]
@@ -903,6 +997,7 @@ function setMode(m){
   $("#m-zonas").setAttribute("aria-pressed", String(m==="zonas"));
   $("#mb-suelo-txt").textContent = m==="plan" ? "Plano" : "Zonas";
   $("#mb-suelo").setAttribute("aria-pressed", String(m==="zonas"));
+  pedirFrame();
 }
 
 /* ── etiquetas ── */
@@ -971,6 +1066,7 @@ function flyTo(o){
   ctrl.theta2 = o.theta ?? ctrl.theta;
   ctrl.phi2 = Math.min(Math.max(o.phi ?? ctrl.phi, 0.12), 1.5);
   ctrl.dist2 = o.dist ?? ctrl.dist;
+  pedirFrame();
 }
 
 /* ── cámara libre: caminar (con colisiones) y vuelo ── */
@@ -1026,6 +1122,14 @@ function dentroDeHuella(x, z){
 }
 
 let orbitGuardada = null;
+/* near/far según el modo (sin logarithmicDepthBuffer): órbita = maqueta
+   entera, caminar/vuelo = interior, Realista = interior + ciudad a 5 km */
+function configurarCamara(){
+  if(realista){ camera.near = 0.08; camera.far = FAR_CIUDAD; }
+  else if(camMode === "orbita"){ camera.near = 0.1; camera.far = 300; }
+  else { camera.near = 0.08; camera.far = 250; }
+  camera.updateProjectionMatrix();
+}
 function setCamMode(m){
   if(m===camMode) return;
   if(m!=="orbita" && camMode==="orbita")
@@ -1063,7 +1167,7 @@ function setCamMode(m){
     camera.fov=62;
     if(matchMedia("(pointer:coarse)").matches) $("#stick").classList.add("on");
   }
-  camera.updateProjectionMatrix();
+  configurarCamara();
   document.body.classList.toggle("libre", m!=="orbita");
   ["orbita","caminar","vuelo"].forEach(k=>$("#c-"+k)
     .setAttribute("aria-pressed", String(k===camMode)));
@@ -1076,6 +1180,7 @@ function setCamMode(m){
     toast(m==="caminar" ? "Joystick para caminar · arrastra a la derecha para mirar"
                         : "Joystick para volar · toca «Cámara» para volver a Órbita");
   interactuado = true;
+  pedirFrame();
 }
 
 function moverLibre(dt){
@@ -1125,6 +1230,7 @@ document.addEventListener("mousemove", e=>{
   if(document.pointerLockElement!==$("#c")) return;
   free.yaw -= e.movementX*0.0021;
   free.pitch = clampPitch(free.pitch - e.movementY*0.0021);
+  pedirFrame();
 });
 
 /* táctil en modo libre: mitad izquierda = joystick, derecha = mirar */
@@ -1137,6 +1243,7 @@ function stickMove(e){
   joy.x = Math.max(-1,Math.min(1,(e.clientX-cx)/max));
   joy.y = Math.max(-1,Math.min(1,(e.clientY-cy)/max));
   stickKnob.style.transform = `translate(${joy.x*max*0.6}px,${joy.y*max*0.6}px)`;
+  pedirFrame();
 }
 function stickReset(){ joy.x=joy.y=0; stickKnob.style.transform=""; stickId=null; stick.classList.remove("act"); }
 /* el propio joystick también se puede agarrar directamente */
@@ -1187,6 +1294,7 @@ cvs.addEventListener("pointermove", e=>{
       free.yaw -= (e.clientX-lookLast.x)*0.005;
       free.pitch = clampPitch(free.pitch - (e.clientY-lookLast.y)*0.005);
       lookLast = {x:e.clientX, y:e.clientY};
+      pedirFrame();
     }
     return;
   }
@@ -1202,6 +1310,7 @@ cvs.addEventListener("pointermove", e=>{
     ctrl.theta2 -= dx*0.0055;
     ctrl.phi2 = Math.min(Math.max(ctrl.phi2 - dy*0.0045, 0.12), 1.5);
   }
+  pedirFrame();
 });
 addEventListener("pointerup", e=>{
   if(e.pointerId===stickId) stickReset();
@@ -1214,6 +1323,7 @@ cvs.addEventListener("wheel", e=>{
   if(camMode!=="orbita") return;
   interactuado = true;
   ctrl.dist2 = Math.min(Math.max(ctrl.dist2 * (1 + Math.sign(e.deltaY)*0.09), 3.5), 70);
+  pedirFrame();
 },{passive:false});
 
 /* táctil: pinch */
@@ -1231,6 +1341,7 @@ cvs.addEventListener("touchmove", e=>{
     const [a,b] = [...touches.values()];
     const d = Math.hypot(a.x-b.x,a.y-b.y);
     ctrl.dist2 = Math.min(Math.max(pinch0.dist * pinch0.d/d, 3.5), 70);
+    pedirFrame();
   }
 },{passive:true});
 cvs.addEventListener("touchend", e=>{
@@ -1258,6 +1369,7 @@ cvs.addEventListener("pointermove", e=>{
     hovered = hit;
     if(hovered) hovered.material.emissiveIntensity = 0.22;
     cvs.style.cursor = hovered ? "pointer" : "grab";
+    pedirFrame();
   }
 });
 cvs.addEventListener("pointerup", e=>{
@@ -1275,6 +1387,7 @@ cvs.addEventListener("pointerup", e=>{
 let selected = null;
 function select(id){
   selected = id;
+  pedirFrame();
   const z = ZONES.find(x=>x.id===id);
   ZONES.forEach(x=>{
     labelEls[x.id].classList.toggle("sel", x.id===id);
@@ -1377,6 +1490,7 @@ function setLabels(on){
   labelsOn = on;
   $("#b-labels").setAttribute("aria-pressed", String(on));
   $("#mb-labels").setAttribute("aria-pressed", String(on));
+  pedirFrame();
 }
 $("#m-plan").addEventListener("click", ()=>setMode("plan"));
 $("#m-zonas").addEventListener("click", ()=>setMode("zonas"));
@@ -1500,8 +1614,7 @@ $("#s-altura").addEventListener("input", e=>{
 $("#s-sol").addEventListener("input", e=>{
   const a = parseInt(e.target.value,10);
   $("#o-sol").textContent = a+"°";
-  const rad = a*Math.PI/180;
-  sun.position.set(Math.cos(rad)*16, 15, Math.sin(rad)*16);
+  orientarSol(a);
 });
 $("#b-export").addEventListener("click", exportPNG);
 let galeriaConstruida = false;
@@ -1531,6 +1644,7 @@ addEventListener("keydown", e=>{
     if(camMode!=="orbita" && !(e.target.tagName==="INPUT")){
       keys.add(k);
       e.preventDefault();
+      pedirFrame();
     }
   }
   if(e.key==="Escape"){
@@ -1558,14 +1672,16 @@ addEventListener("keydown", e=>{
   else if(k==="g") abrirGaleria();
   else if(k==="e") exportPNG();
 });
-addEventListener("keyup", e=>keys.delete(e.key.toLowerCase()));
+addEventListener("keyup", e=>{ keys.delete(e.key.toLowerCase()); pedirFrame(); });
 
 function setWallHeight(h){
   planoCorte.constant = h >= ALTURA - 1e-3 ? 99 : Math.max(h, 0.001);
-  wallMeshes.forEach(({mesh, def})=>{
-    const base = def.tipo==="vidrio" ? Math.min(PLAN.altura_vidrio, h) : h;
+  wallMeshes.forEach(({mesh, tipo})=>{
+    const base = tipo==="vidrio" ? Math.min(PLAN.altura_vidrio, h) : h;
     mesh.scale.y = Math.max(base, 0.0001)/ALTURA;
   });
+  sombrasSucias = true;
+  pedirFrame();
 }
 
 /* exportar PNG a 2x (en móvil usa la hoja de compartir si está disponible) */
@@ -1578,14 +1694,15 @@ function descargar(blob, nombre){
 }
 function exportPNG(){
   const w = innerWidth, h = innerHeight;
-  const pr = Math.min(devicePixelRatio, COARSE ? 1.5 : 2);
-  renderer.setPixelRatio(pr*2);
+  const pr = prActual;
+  setPixelRatio(PR_MAX*2);
   renderer.setSize(w, h, false);
   renderer.render(scene, camera);
   const nombre = "render3d_reforma_vivienda_"+new Date().toISOString().slice(0,10)+".png";
   renderer.domElement.toBlob(blob=>{
-    renderer.setPixelRatio(pr);
+    setPixelRatio(pr);
     renderer.setSize(w, h, false);
+    pedirFrame();   // vuelve a pintar a la resolución normal
     if(!blob){ toast("No se pudo generar la imagen"); return; }
     const file = new File([blob], nombre, {type:"image/png"});
     if(esMovil() && navigator.canShare && navigator.canShare({files:[file]})){
@@ -1614,38 +1731,77 @@ function updateLabels(){
   });
 }
 
-/* ── bucle ── */
-let intro = 0, ready = false, prevT = 0;
-function tick(t){
-requestAnimationFrame(tick);
-window.__visor = {scene, camera, renderer, gMob, free, setCamMode,
-  get modo(){ return camMode; }, get listo(){ return ready; }};
+/* ── bucle bajo demanda ── */
+let intro = 0, ready = false, maquetaLista = false, prevT = 0, ultimoAnimando = false;
+window.__visor = {scene, camera, renderer, gMob, free, setCamMode, pedirFrame,
+  get modo(){ return camMode; }, get listo(){ return ready; },
+  get realista(){ return realista; }, get maquetaLista(){ return maquetaLista; },
+  get intro(){ return intro; }, get animando(){ return ultimoAnimando; }};
 
+/* indicador opcional ?perf (fps reales en una máquina con GPU) */
+const PERF = /(?:^|[?&])perf(?:=1)?(?:&|$)/.test(location.search);
+if(PERF) $("#perf").hidden = false;
+let perfT = 0, fpsSuave = 0;
+function actualizarPerf(t){
+  const ms = perfT ? t-perfT : 0;
+  perfT = t;
+  if(ms > 0){ const fps = 1000/ms; fpsSuave = fpsSuave ? fpsSuave*0.9 + fps*0.1 : fps; }
+  const i = renderer.info;
+  $("#perf").textContent =
+    `${fpsSuave ? fpsSuave.toFixed(0) : "—"} fps · ${ms ? ms.toFixed(1) : "—"} ms · PR ${renderer.getPixelRatio().toFixed(1)}\n`+
+    `${i.render.calls} draws · ${(i.render.triangles/1000).toFixed(1)}k tris · ${i.programs ? i.programs.length : 0} programas\n`+
+    `${i.memory.geometries} geometrías · ${i.memory.textures} texturas`;
+}
+function tick(t){
+  rafId = 0;
   const dt = prevT ? Math.min(0.05, (t-prevT)/1000) : 0.016;
   prevT = t;
+  let animando = false;
   if(drag && !drag.pan) cvs.style.cursor="grabbing";
   if(camMode==="orbita"){
     const k = reduceMotion ? 1 : 0.12;
-    ctrl.target.lerp(ctrl.target2, k);
-    ctrl.theta += (ctrl.theta2-ctrl.theta)*k;
-    ctrl.phi += (ctrl.phi2-ctrl.phi)*k;
-    ctrl.dist += (ctrl.dist2-ctrl.dist)*k;
+    const d = Math.abs(ctrl.theta2-ctrl.theta) + Math.abs(ctrl.phi2-ctrl.phi)
+            + Math.abs(ctrl.dist2-ctrl.dist) + ctrl.target.distanceTo(ctrl.target2);
+    if(d > 1e-4){
+      ctrl.target.lerp(ctrl.target2, k);
+      ctrl.theta += (ctrl.theta2-ctrl.theta)*k;
+      ctrl.phi += (ctrl.phi2-ctrl.phi)*k;
+      ctrl.dist += (ctrl.dist2-ctrl.dist)*k;
+      animando = true;
+    }else if(d > 0){
+      ctrl.target.copy(ctrl.target2); ctrl.theta = ctrl.theta2;
+      ctrl.phi = ctrl.phi2; ctrl.dist = ctrl.dist2;
+    }
     applyCamera(false);
   }else{
     moverLibre(dt);
+    if(!keys.size && !drag && Math.abs(joy.x)+Math.abs(joy.y) < 0.01 && free.vel.lengthSq() < 1e-5)
+      free.vel.set(0,0,0);
+    animando = keys.size > 0 || !!drag || Math.abs(joy.x)+Math.abs(joy.y) > 0.01
+            || free.vel.lengthSq() > 1e-5;
   }
-  if(techoGLB) techoGLB.visible = camera.position.y < 2.45;
-  sun.target.position.set(camera.position.x, 0, camera.position.z);
-  sun.target.updateMatrixWorld();
+  if(techoGLB){
+    const verTecho = camera.position.y < 2.45;
+    if(verTecho !== techoGLB.visible){ techoGLB.visible = verTecho; sombrasSucias = true; }
+  }
   actualizarRealista();
-  updateLabels();
-  renderer.render(scene, camera);
   if(ready && intro < 1){
     intro = Math.min(1, intro + 0.012);
     const e = 1 - Math.pow(1-intro, 3);
     setWallHeight(ALTURA*e);
     if(intro===1) $("#s-altura").value = ALTURA;
+    animando = true;
   }
+  setPixelRatio(animando ? 1 : PR_MAX);
+  camera.updateMatrixWorld();   // si no, las etiquetas usan la cámara del fotograma anterior
+  updateLabels();
+  if(sombrasSucias && intro >= 1){ renderer.shadowMap.needsUpdate = true; sombrasSucias = false; }
+  renderer.render(scene, camera);
+  if(PERF) actualizarPerf(t);
+  ultimoAnimando = animando;
+  /* al parar el bucle, el siguiente arranque no debe calcular dt con el tiempo dormido */
+  if(!animando) prevT = 0;
+  if(animando) pedirFrame();
 }
 function resize(){
   camera.aspect = innerWidth/innerHeight;
@@ -1656,6 +1812,7 @@ function resize(){
   setLabels(labelsOn);
   setMode(mode);
   if(!interactuado) aplicarVistaInicial();
+  pedirFrame();
 }
 addEventListener("resize", resize);
 addEventListener("orientationchange", ()=>setTimeout(()=>{ resize(); }, 260));
@@ -1707,9 +1864,20 @@ function base64AB(b64){
   for(let i=0;i<bin.length;i++) buf[i] = bin.charCodeAt(i);
   return buf.buffer;
 }
-/* Solo se muestra el mobiliario del espacio abierto salón·cocina (sin el
-   conjunto de comedor: mesa, sillas y taburetes) y de la cocina;
-   el resto de habitaciones queda sin amueblar (arquitectura intacta). */
+/* los blobs grandes se decodifican con el decodificador nativo (fetch sobre
+   data:), sin recorrer 16 millones de bytes en el hilo principal; si el
+   navegador no deja descargar data:, se cae al bucle atob de siempre */
+async function bytesDeB64(b64){
+  if(!b64) return null;
+  try{
+    const r = await fetch("data:application/octet-stream;base64," + b64);
+    if(r.ok) return await r.arrayBuffer();
+  }catch(e){ /* sin fetch de data: -> atob */ }
+  return base64AB(b64);
+}
+/* El visor conserva toda la arquitectura y el mobiliario de la casa; el
+   conmutador del panel elige entre "toda la casa" (por defecto) y el espacio
+   abierto salón·cocina (sin el conjunto de comedor: mesa, sillas y taburetes). */
 const MOB_ESTRUCTURA = ["suelo", "pav_", "techo", "muro_", "marco_",
   "vidrio_", "mont_", "dintel_", "antepecho_", "pmarco_", "pdintel_", "phoja_",
   "dl_disco_", "peto_"];
@@ -1719,11 +1887,38 @@ const MOB_ESTRUCTURA = ["suelo", "pav_", "techo", "muro_", "marco_",
 const MOB_SALON = ["tv_", "tv", "pilar_visto", "sofa_", "cojin_", "alfombra",
   "mesa_centro", "butaca", "aparador", "cuadro_", "coc_", "isla", "isla_tapa",
   "placa", "campana", "lampara_", "planta_", "cortina_"];
-function mobConservar(nombre){
-  if(MOB_ESTRUCTURA.some(p => p === nombre || nombre.indexOf(p) === 0)) return true;
-  if(MOB_SALON.some(p => p === nombre || nombre.indexOf(p) === 0)) return true;
-  return false;
+/* resto de estancias y conjunto de comedor: visibles sólo con "toda la casa" */
+const MOB_RESTO = ["d1_", "d2_", "d3_", "dp_", "rec_", "tz_", "mesa", "silla_",
+  "taburete_"];
+function enLista(nombre, lista){
+  return lista.some(p => p === nombre || nombre.indexOf(p) === 0);
 }
+function esMobHabitacion(nombre){
+  if(nombre.indexOf("b1_") === 0 || nombre.indexOf("b2_") === 0)
+    return nombre.indexOf("azulejo") < 0;
+  return enLista(nombre, MOB_RESTO);
+}
+function mobConservar(nombre){
+  return enLista(nombre, MOB_ESTRUCTURA) || enLista(nombre, MOB_SALON)
+      || esMobHabitacion(nombre);
+}
+let mobTodo = true;
+function aplicarMobiliario(){
+  gMob.traverse(o=>{
+    if(!o.isMesh || o.userData.mobBase === undefined) return;
+    if(o.name === "suelo" || o.name === "techo") return;   // los gobiernan el visor / la cámara
+    o.visible = o.userData.mobBase || mobTodo;
+  });
+  if(ready){ sombrasSucias = true; pedirFrame(); }
+}
+function setMobTodo(todo){
+  mobTodo = todo;
+  $("#mob-todo").setAttribute("aria-pressed", String(todo));
+  $("#mob-abierto").setAttribute("aria-pressed", String(!todo));
+  aplicarMobiliario();
+}
+$("#mob-todo").addEventListener("click", ()=>setMobTodo(true));
+$("#mob-abierto").addEventListener("click", ()=>setMobTodo(false));
 function cargarMobiliario(){
   if(typeof THREE.GLTFLoader !== "function" || (!MOBILIARIO_B64 && !MOBILIARIO_SRC))
     return Promise.resolve(null);
@@ -1734,6 +1929,8 @@ function cargarMobiliario(){
       g.scene.traverse(o=>{
         if(!o.isMesh) return;
         if(!mobConservar(o.name)){ quitar.push(o); return; }
+        o.userData.mobBase = enLista(o.name, MOB_ESTRUCTURA) ||
+                             enLista(o.name, MOB_SALON);
         o.castShadow = true;
         o.receiveShadow = true;
         if(o.name.indexOf("peto_")===0) petos.push(o);
@@ -1757,40 +1954,72 @@ function cargarMobiliario(){
         SEGS.push([x0,z0,x1,z0],[x1,z0,x1,z1],[x1,z1,x0,z1],[x0,z1,x0,z0]);
       });
       gMob.add(g.scene);
+      aplicarMobiliario();
       res(g);
     };
     const onErr = err=>{ console.warn("No se pudo cargar el mobiliario:", err); res(null); };
     const loader = new THREE.GLTFLoader();
-    if(MOBILIARIO_B64) loader.parse(base64AB(MOBILIARIO_B64), "", onLoad, onErr);
+    if(MOBILIARIO_B64) bytesDeB64(MOBILIARIO_B64).then(
+      buf => buf ? loader.parse(buf, "", onLoad, onErr) : onErr(new Error("base64 vacío")), onErr);
     else loader.load(MOBILIARIO_SRC, onLoad, undefined, onErr);
   });
 }
-const tareas = [
-  cargarTextura(TEX_SRC).then(t=>{ if(t){ TEXTURA.plano = t; buildFloor(t); } }),
-  ...Object.entries(TEXTURAS_SRC).map(([n,src])=>cargarTextura(src).then(t=>{ if(t) TEXTURA[n] = t; })),
-  cargarMobiliario(),
-  cargarRealista()
-];
-bar.style.width = "35%";
-Promise.all(tareas).then(()=>{
-  aplicarTexturas();
-  setRealista(realListo);
-  bar.style.width = "90%";
-  renderer.compile(scene, camera);
-  bar.style.width = "100%";
+/* Carga: primero el modo Realista (el de arranque), la maqueta en segundo
+   plano, y se precompilan los dos modos para que el cambio no dé un tirón. */
+function alListo(){
+  if(ready) return;
   requestAnimationFrame(()=>{
     $("#loader").classList.add("done");
-    setWallHeight(reduceMotion ? ALTURA : 0);
-    intro = reduceMotion ? 1 : 0;
+    /* la intro recorta el interior del Realista (planoCorte): si ya se arranca
+       ahí, los muros aparecen a su altura final y se ahorran ~80 fotogramas */
+    const saltarIntro = reduceMotion || realista;
+    setWallHeight(saltarIntro ? ALTURA : 0);
+    intro = saltarIntro ? 1 : 0;
     ready = true;
+    pedirFrame();
     if(esMovil() && !coachVisto) setTimeout(abrirCoach, 650);
   });
-}).catch(err=>{
+}
+function compilarEscena(){
+  try{ renderer.compile(scene, camera); }catch(e){ console.warn("compile:", e); }
+}
+async function cargarTodo(){
+  bar.style.width = "20%";
+  const conReal = !!REAL;
+  if(conReal){
+    const ok = await cargarRealista();
+    bar.style.width = "55%";
+    setRealista(ok);
+    compilarEscena();
+    alListo();
+  }
+  await Promise.all([
+    cargarTextura(TEX_SRC).then(t=>{ if(t){ TEXTURA.plano = t; buildFloor(t); } }),
+    ...Object.entries(TEXTURAS_SRC).map(([n,src])=>cargarTextura(src).then(t=>{ if(t) TEXTURA[n] = t; })),
+    cargarMobiliario(),
+  ]);
+  aplicarTexturas();
+  maquetaLista = true;
+  bar.style.width = "90%";
+  if(!realListo){
+    setRealista(false);
+    compilarEscena();
+    alListo();
+  }else{
+    const inicial = realista;
+    setRealista(false);
+    compilarEscena();
+    setRealista(inicial);
+    compilarEscena();
+  }
+  bar.style.width = "100%";
+}
+cargarTodo().catch(err=>{
   console.warn(err);
   bar.style.width = "100%";
-  $("#loader").classList.add("done");
+  alListo();
 });
-requestAnimationFrame(tick);
+pedirFrame();
 </script>
 </body>
 </html>
@@ -1800,6 +2029,7 @@ html = (HTML
         .replace("__THREE__", THREE.read_text(encoding="utf-8"))
         .replace("__GLTFLOADER__", GLTF.read_text(encoding="utf-8"))
         .replace("__REALISTA_JS__", REAL_JS)
+        .replace("__REAL_JSON__", REAL_JSON)
         .replace("__TEXTURAS_JS__", json.dumps(TEXTURAS_JS, ensure_ascii=False, separators=(",", ":")))
         .replace("__MOB_B64__", MOB_B64)
         .replace("__MOB_SRC__", MOB_SRC)

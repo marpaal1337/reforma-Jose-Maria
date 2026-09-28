@@ -3,8 +3,16 @@
    render, y la ciudad real (OSM) alrededor, a la altura del 7º piso.
    Recursos: scripts/hornear_visor.py -> data/visor/ (inyectados por
    scripts/generar_visor3d.py). Coordenadas Three.js: x = X, y = Z, z = -Y de
-   Blender; el suelo de la calle está en REAL.info.suelo.y. */
-const REAL = __REAL__;
+   Blender; el suelo de la calle está en REAL.info.suelo.y. El JSON viaja en
+   una etiqueta de datos inerte (no se parsea como JS). */
+const REAL = (() => {
+  const el = document.getElementById("d-real");
+  if(!el) return null;
+  const txt = el.textContent;
+  el.remove();   // el JSON ya no hace falta en la página
+  try{ return JSON.parse(txt); }
+  catch(e){ console.warn("Realista: JSON ilegible", e); return null; }
+})();
 let realListo = false;   // `realista` se declara al principio del script
 const gReal = new THREE.Group(), gCiudad = new THREE.Group();
 gReal.visible = gCiudad.visible = false;
@@ -91,7 +99,6 @@ function matFachada(propio){
     uniforms: uni, side: THREE.DoubleSide,
     vertexShader: `
       #include <common>
-      #include <logdepthbuf_pars_vertex>
       attribute float aSem;
       attribute float aTecho;
       attribute float aTop;
@@ -107,11 +114,9 @@ function matFachada(propio){
         vec4 w = modelMatrix * vec4(position, 1.0);
         vPos = w.xyz;
         gl_Position = projectionMatrix * viewMatrix * w;
-        #include <logdepthbuf_vertex>
       }`,
     fragmentShader: `
       #include <common>
-      #include <logdepthbuf_pars_fragment>
       uniform vec3 uSol; uniform vec3 uSolE; uniform vec3 uCielo; uniform float uSuelo;
       uniform vec3 uHorizonte; uniform float uNiebla; uniform float uClipY; uniform float uVFlip;
       uniform vec3 uPaleta[7]; uniform vec3 uCubiertas[4];
@@ -126,7 +131,6 @@ function matFachada(propio){
         for(int k = 1; k < 4; k++) if(k == i) c = uCubiertas[k];
         return c; }
       void main(){
-        #include <logdepthbuf_fragment>
         if(vPos.y > uClipY) discard;
         const float P = ${PLANTA_ED.toFixed(2)}, B = ${BAJO_ED.toFixed(2)}, ANCHO = 3.1, JUNTA = 0.8;
         vec3 Nf = normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0);
@@ -383,8 +387,11 @@ function cargarRealista(){
     texDesde(REAL.cielo), texDesde(REAL.reflejo),
     texDesde(REAL.suelo.cerca), texDesde(REAL.suelo.lejos),
     texDesde(REAL.arbol && REAL.arbol.lado), texDesde(REAL.arbol && REAL.arbol.planta),
-    new Promise(res => new THREE.GLTFLoader().parse(base64AB(REAL.glb), "", res, err => {
-      console.warn("GLB realista:", err); res(null); }))
+    new Promise(res => bytesDeB64(REAL.glb).then(buf => {
+      if(!buf){ res(null); return; }
+      new THREE.GLTFLoader().parse(buf, "", res, err => {
+        console.warn("GLB realista:", err); res(null); });
+    }))
   ]).then(([lmsOk, cielo, reflejo, sCerca, sLejos, aLado, aPlanta, glb]) => {
     if(!glb || !cielo) return false;
     const LM = Object.fromEntries(lmsOk.filter(([, t]) => t));
@@ -396,7 +403,7 @@ function cargarRealista(){
     if(sLejos) planoSuelo(sLejos, I.suelo.lejos, 0.0);
     if(sCerca) planoSuelo(sCerca, I.suelo.cerca, 0.03);
     construirArboles(aLado, aPlanta);
-    const gs = new THREE.SphereGeometry(3500, 64, 32);
+    const gs = new THREE.SphereGeometry(FAR_CIUDAD*0.9, 64, 32);
     gs.scale(-1, 1, 1);
     const ms = new THREE.MeshBasicMaterial({map: cielo, fog: false, depthWrite: false});
     ms.color.setRGB(I.cielo.K, I.cielo.K, I.cielo.K);
@@ -429,14 +436,16 @@ function setRealista(on){
   renderer.toneMapping = on ? THREE.CustomToneMapping : THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = on ? Math.pow(2, REAL.info.exposicion + AJUSTE_EXPOSICION) : 0.92;
   scene.fog = on ? nieblaReal : null;
-  camera.near = on ? 0.05 : 0.1;
-  camera.far = on ? 5000 : 300;
-  camera.updateProjectionMatrix();
+  /* la luz del Realista ya viene horneada: sin sombras dinámicas */
+  renderer.shadowMap.enabled = !on;
+  if(!on) sombrasSucias = true;
+  configurarCamara();
   scene.traverse(o => { if(o.material) (Array.isArray(o.material) ? o.material : [o.material])
     .forEach(m => m.needsUpdate = true); });
   setMode(mode);
   $("#b-real").setAttribute("aria-pressed", String(on));
   document.body.classList.toggle("realista", on);
+  pedirFrame();
 }
 
 function actualizarRealista(){

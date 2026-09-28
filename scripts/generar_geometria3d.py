@@ -189,8 +189,8 @@ def punzonar_puertas(muros_pdf, cx, cz):
             continue
         if p["tipo"] in ("vidriera",):
             continue
-        if p["pared"] not in ("h", "v"):
-            continue
+        if p["pared"] not in ("h", "v") or p.get("en_paso"):
+            continue  # puertas de paso sin muro (D1, D9): solo marco y hoja
         cxm, czm = p["centro"]
         w = p["ancho"] / 2 + 0.03
         t = 0.20  # cubre cualquier espesor de muro/tabique

@@ -7,7 +7,13 @@ rectángulo en metros, ver data/planos3d.json -> textura.rect_m) se barren las
 líneas de muro con las puertas y se buscan tramos claros >= 0,55 m (= huecos).
 Los tipos de puerta, bisagras y sentidos de apertura están tomados del plano
 PEI.07 de carpintería interior y de los arcos/hojas dibujados en el PE.A.02
-(verificación manual 2026-09-18).
+(verificación manual 2026-09-18, revisión 2026-09-27).
+
+D1 no va en la fachada oeste (allí no hay hueco: el barrido daba un falso
+positivo sobre el fondo blanco del plano). Es la puerta que cruza el pasillo
+junto al baño 1 (x≈-4,6) y abre hacia el oeste. Falta, además, la puerta de
+paso del pasillo al salón (D9, x≈-1,5, 0,83 m). Ambas van en el plano
+vertical (pared "v") y por eso no punzonan ningún muro (en_paso).
 
 Uso (requiere PIL + numpy, p. ej. /tmp/opencode/venv):
     /tmp/opencode/venv/bin/python scripts/medir_puertas.py
@@ -77,7 +83,6 @@ def _borde_real(linea: str, fijo: float, ini: float, a: float, b: float) -> bool
 
 # (id, línea, coord_fija, desde, hasta, centros_esperados)
 LINEAS = [
-    ("sur-dorm1", "h", -0.47, -8.30, -6.30, [-7.85]),
     ("sur-dorm23", "h", -0.47, -6.50, -1.00, [-4.04, -3.14]),
     ("sur-bano1", "h", -1.50, -4.80, -1.70, [-2.22]),
     ("sur-bano2", "h", -1.50, -1.20, 2.00, []),
@@ -96,7 +101,6 @@ def main() -> None:
 
     # Verificación contra lo medido a mano (2026-09-18)
     esperado = {
-        "sur-dorm1": [(-8.20, -7.50)],
         "sur-dorm23": [(-4.42, -3.66), (-3.54, -2.74)],
         "sur-bano1": [(-2.63, -1.81)],
         "sur-bano2": [],
@@ -123,9 +127,13 @@ def main() -> None:
         raise SystemExit("La detección no coincide con la verificación manual")
 
     puertas = [
-        {"id": "D1", "nombre": "Dormitorio 1",
-         "tipo": "abatible", "pared": "h", "centro": [-7.85, -0.47],
-         "ancho": 0.70, "alto": 2.03, "bisagra": "E", "apertura": "S"},
+        # D1 cruza el pasillo junto al baño 1: cierra el ala privada
+        # (dormitorio 1, baño 1 y vestidor) desde el pasillo, abre al oeste.
+        # Va en plano vertical y sin muro (en_paso): marco y hoja, sin dintel.
+        {"id": "D1", "nombre": "Dormitorio 1 (cruce del pasillo)",
+         "tipo": "abatible", "pared": "v", "centro": [-4.62, -0.915],
+         "ancho": 0.95, "alto": 2.03, "bisagra": "S", "apertura": "O",
+         "en_paso": True},
         {"id": "D2", "nombre": "Dormitorio 2",
          "tipo": "abatible", "pared": "h", "centro": [-4.04, -0.47],
          "ancho": 0.76, "alto": 2.03, "bisagra": "E", "apertura": "S"},
@@ -151,6 +159,10 @@ def main() -> None:
         {"id": "D8", "nombre": "Distribuidor (vidriera P03)",
          "tipo": "vidriera", "pared": "v", "centro": [0.70, 4.01],
          "ancho": 0.78, "alto": 2.36, "bisagra": "S", "apertura": "E"},
+        {"id": "D9", "nombre": "Puerta del pasillo",
+         "tipo": "abatible", "pared": "v", "centro": [-1.50, -0.915],
+         "ancho": 0.95, "alto": 2.03, "bisagra": "S", "apertura": "O",
+         "en_paso": True},
     ]
     separadores = [
         {"id": "PA02", "nombre": "Separador recibidor (vidrio fijo)",
