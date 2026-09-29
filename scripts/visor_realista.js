@@ -212,14 +212,15 @@ function matFachada(propio){
           emis = vid * mVid * (1.0 - enBajo);
           /* toldos crema, equipos de A/A y bajos comerciales (fotos de la calle) */
           float vent = 1.0 - muro;
-          float hayT = step(0.28, rnd) * step(rnd, 0.55);
+          /* toldos en ~1/3 de las ventanas (fotos de la calle) */
+          float hayT = step(0.22, rnd) * step(rnd, 0.58);
           float bt = step(0.60, vr) * step(vr, 0.72);
           alb = mix(alb, fract(rnd * 7.7) > 0.5 ? vec3(0.82,0.78,0.67)
                                                 : vec3(0.72,0.66,0.52),
                     vent * hayT * bt);
           float st = vent * hayT * step(0.585, vr) * step(vr, 0.605);
           alb = mix(alb, vec3(0.30,0.28,0.24), st);
-          float hayA = step(0.06, rnd) * step(rnd, 0.24);
+          float hayA = step(0.05, rnd) * step(rnd, 0.30);
           float aa = vent * hayA * step(2.15, f.x) * step(f.x, 2.65)
                      * step(0.30, vr) * step(vr, 0.40);
           alb = mix(alb, fract(vr * 60.0) > 0.5 ? vec3(0.76,0.76,0.74)
@@ -396,7 +397,11 @@ function prepararInterior(g, LM, envInt, envCielo){
     }
     const lm = subir(o, p => p.userData && p.userData.lm);
     o.material = Array.isArray(o.material) ? o.material.map(m => conv(m, lm)) : conv(o.material, lm);
-    if(n === "techo" || n.indexOf("ext_voladizo") === 0 || n.indexOf("dl_disco") === 0) ocultarEnOrbita.push(o);
+    /* en órbita (vista de maqueta desde arriba) se ocultan los forjados y
+       falsos techos: su cara superior saldría negra y tapa las estancias */
+    if(n === "techo" || n.indexOf("falso_techo_") === 0 || n.indexOf("tabica_") === 0 ||
+       n.indexOf("rev_gap_") === 0 || n.indexOf("ext_voladizo") === 0 ||
+       n.indexOf("dl_disco") === 0) ocultarEnOrbita.push(o);
   });
   gReal.add(g.scene);
   /* barandilla y petos de la terraza: colisión en el paseo */

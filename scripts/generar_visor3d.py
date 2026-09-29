@@ -225,6 +225,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:18px}
   background:rgba(250,247,242,.9);border:1px solid var(--line);border-radius:999px;
   padding:5px 11px 6px;box-shadow:0 8px 24px -12px rgba(40,32,24,.4);
   backdrop-filter:blur(6px);transition:opacity .25s;
+  pointer-events:auto;cursor:pointer;
 }
 .label b{font-family:var(--serif);font-weight:600;font-size:12.5px}
 .label i{font-style:normal;color:var(--muted);font-size:11px;margin-left:5px}
@@ -651,6 +652,7 @@ const RENDERS = {
   "bano-2": [{src:"data/reales/baño-principal-render.jpeg", cap:"Baño · bañera y revestimiento pétreo"}]
 };
 const INTERIOR = ZONES.filter(e => e.id !== "terraza");
+const PANEL_ZONAS = INTERIOR.concat(ZONES.filter(e => e.id === "terraza"));
 const AREA_INT = INTERIOR.reduce((s,e)=>s+e.area,0);
 
 /* ── utilidades ── */
@@ -1052,7 +1054,7 @@ function empujarPoligono(p, pts){
 }
 const free = {pos:new THREE.Vector3(), yaw:0, pitch:0, vel:new THREE.Vector3()};
 const keys = new Set();
-let techoGLB = null;   // el forjado del GLB se oculta en órbita (vista de maqueta)
+let techosGLB = [];   // forjados y falsos del GLB: ocultos en órbita (maqueta)
 const EYE = 1.62, RADIO = 0.30, V_WALK = 2.6, V_RUN = 5.0, V_FLY = 4.4, V_FLY_RUN = 9.0;
 const joy = {x:0, y:0};
 let camMode = "orbita";
@@ -1444,7 +1446,7 @@ function zoneBounds(pts){
 
 /* ── panel: lista de estancias ── */
 const list = $("#rooms");
-INTERIOR.slice().sort((a,b)=>b.area-a.area).forEach(z=>{
+PANEL_ZONAS.slice().sort((a,b)=>b.area-a.area).forEach(z=>{
   const st = STYLE[z.id];
   const li = document.createElement("li");
   li.innerHTML = `<button data-id="${z.id}">
@@ -1453,7 +1455,7 @@ INTERIOR.slice().sort((a,b)=>b.area-a.area).forEach(z=>{
   li.querySelector("button").addEventListener("click", ()=>select(z.id));
   list.appendChild(li);
 });
-$("#panel-count").textContent = `${INTERIOR.length} estancias`;
+$("#panel-count").textContent = `${PANEL_ZONAS.length} estancias`;
 if(esMovil()){
   $("#panel").classList.add("hidden");
   $("#b-panel").setAttribute("aria-pressed","false");
@@ -1717,9 +1719,11 @@ function tick(t){
     animando = keys.size > 0 || !!drag || Math.abs(joy.x)+Math.abs(joy.y) > 0.01
             || free.vel.lengthSq() > 1e-5;
   }
-  if(techoGLB){
-    const verTecho = camera.position.y < 2.45;
-    if(verTecho !== techoGLB.visible){ techoGLB.visible = verTecho; sombrasSucias = true; }
+  if(techosGLB.length){
+    /* histéresis: muestra bajo 2,40 y oculta sobre 2,50 (sin parpadeo) */
+    const y = camera.position.y;
+    const ver = y < 2.40 ? true : (y > 2.50 ? false : techosGLB[0].visible);
+    if(ver !== techosGLB[0].visible){ techosGLB.forEach(o => o.visible = ver); sombrasSucias = true; }
   }
   actualizarRealista();
   setPixelRatio(animando ? 1 : PR_MAX);
@@ -1846,7 +1850,8 @@ function cargarMobiliario(){
         o.receiveShadow = true;
         if(o.name.indexOf("peto_")===0) petos.push(o);
         if(o.name === "suelo") o.visible = false;   // el visor pinta sus suelos
-        if(o.name === "techo") techoGLB = o;
+        if(o.name === "techo" || o.name.indexOf("falso_techo_") === 0 ||
+           o.name.indexOf("tabica_") === 0) techosGLB.push(o);
         const mats = Array.isArray(o.material) ? o.material : [o.material];
         mats.forEach(mt=>{
           if(mt.map) mt.map.encoding = THREE.sRGBEncoding;

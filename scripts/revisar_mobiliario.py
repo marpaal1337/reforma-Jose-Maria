@@ -315,13 +315,11 @@ EN_PARED = ("cuadro_", "espejo", "tv", "tv_",
             "dp_panelado", "dp_est_", "dp_cabecero", "dp_listones_",
             "dp_mesita_", "dp_banco",
             "d3_a04_", "d3_e02_", "d3_cabecero", "d3_escritorio",
-            "d2_a03_", "d2_e01_", "d2_cabecero", "d2_comoda",
-            "d2_escritorio",
-            "est_bajos_", "est_a_", "est_b_", "aparador_")
+            "d2_bajos_", "d2_a_", "d2_b_", "aparador_")
 
 PREFIJOS = (
     ("d1_", "dorm-3"), ("d3_", "dorm-3"), ("d2_", "dorm-2"),
-    ("est_", "estudio"), ("dp_", "dorm-principal"), ("ves_", "vestidor"),
+    ("dp_", "dorm-principal"), ("ves_", "vestidor"),
     ("b1_", "bano-1"), ("b2_", "bano-2"),
     ("rec_", "recibidor"), ("lav_", "lavadero"), ("tz_", "terraza"),
     ("coc_", "cocina"), ("isla", "cocina"), ("placa", "cocina"),
@@ -359,19 +357,12 @@ GRUPOS_SOLAPE = (
      "d3_cabecero"),
     ("d3_escritorio", "d3_escritorio_pie_"),
     ("d3_silla", "d3_silla_asiento", "d3_silla_respaldo", "d3_silla_pie_"),
-    ("d2_a03_",),
-    ("d2_e01_",),
-    ("d2_cama", "d2_cama_nido", "d2_colchon", "d2_manta", "d2_almohada",
-     "d2_cabecero"),
-    ("d2_comoda", "d2_comoda_cajon_", "d2_comoda_unero_"),
-    ("d2_escritorio", "d2_escritorio_pie_"),
+    ("d2_bajos_",),
+    ("d2_a_",),
+    ("d2_b_",),
+    ("d2_peninsula", "d2_peninsula_redondeo", "d2_peninsula_pie",
+     "d2_peninsula_base"),
     ("d2_silla", "d2_silla_asiento", "d2_silla_respaldo", "d2_silla_pie_"),
-    ("est_bajos_",),
-    ("est_a_",),
-    ("est_b_",),
-    ("est_peninsula", "est_peninsula_redondeo", "est_peninsula_pie",
-     "est_peninsula_base"),
-    ("est_silla", "est_silla_asiento", "est_silla_respaldo", "est_silla_pie_"),
     ("b1_",),
     ("b2_",),
     ("tz_",),
@@ -380,8 +371,8 @@ GRUPOS_SOLAPE = (
 # paso libre exigido delante de cada pieza (m); d3_armario es la excepción:
 # el dormitorio 3 mide 1,85 m y el paso real queda en 0,52 m
 PASO_MINIMO = {"ves_a01_cuerpo": 0.9,
-               "d3_a04_cuerpo": 0.9, "d2_a03_cuerpo": 0.9,
-               "est_a_fondo": 0.9, "est_b_fondo": 0.9,
+               "d3_a04_cuerpo": 0.9,
+               "d2_a_fondo": 0.9, "d2_b_fondo": 0.9,
                "coc_bajo_fregadero": 0.9, "coc_altos": 0.9}
 
 ALTURA_TAPA = 0.35      # por encima del antepecho se considera que tapa

@@ -8,10 +8,12 @@ Se invoca desde `generar_blender.build_mobiliario(m)`, que pasa el propio
 módulo como `h` con los helpers box/cylinder/sphere/uv_retrato/
 butaca_mariposa/planta_monstera/cargar_asset/mesh_from/poly_prism.
 
-Prefijos por estancia (los usa revisar_mobiliario.py): d3_ dorm-3, d2_ dorm-2,
-est_ estudio, dp_ dorm-principal, ves_ vestidor, b1_/b2_ baños, rec_ recibidor,
+Prefijos por estancia (los usa revisar_mobiliario.py): d3_ dorm-3,
+d2_ dorm-2 (incluye la biblioteca de cerezo trasladada del estudio),
+dp_ dorm-principal, ves_ vestidor, b1_/b2_ baños, rec_ recibidor,
 lav_ lavadero, tz_ balcón; cocina con coc_/isla/placa/taburete_/campana y el
-salón sin prefijo especial (tv_, sofa_, mesa_, silla_, …).
+salón sin prefijo especial (tv_, sofa_, mesa_, silla_, …). El estudio queda
+sin amueblar (est_ sin uso).
 """
 
 import math
@@ -153,14 +155,18 @@ def construir(m, h):
           bevel=0.004)
     h.box(-1.53, 1.69, -0.91, 1.75, 0.88, 0.90, "coc_encimera_b", dekton,
           bevel=0.004)
+    # franja trasera tras la cubeta: apoyo del grifo (antes flotaba en la cubeta)
+    h.box(-1.53, 1.14, -1.38, 1.69, 0.88, 0.90, "coc_encimera_c", dekton,
+          bevel=0.004)
     h.box(-1.53, 0.10, -0.91, 0.15, 0.83, 0.88, "coc_copete_n", dekton)
     h.box(-1.53, 1.70, -0.91, 1.75, 0.83, 0.88, "coc_copete_s", dekton)
     h.box(-1.38, 1.14, -0.97, 1.69, 0.84, 0.898, "coc_fregadero",
           negro_mate)
-    h.cylinder(-1.18, 1.415, 0.02, 0.90, 0.92, "coc_grifo_base", metal_negro,
-               n=16)
-    h.cylinder(-1.18, 1.415, 0.012, 0.90, 1.24, "coc_grifo", negro_mate, n=14)
-    h.box(-1.30, 1.398, -1.18, 1.432, 1.21, 1.24, "coc_grifo_pico",
+    h.cylinder(-1.455, 1.415, 0.02, 0.90, 0.92, "coc_grifo_base",
+               metal_negro, n=16)
+    h.cylinder(-1.455, 1.415, 0.012, 0.90, 1.24, "coc_grifo", negro_mate,
+               n=14)
+    h.box(-1.455, 1.398, -1.27, 1.432, 1.21, 1.24, "coc_grifo_pico",
           negro_mate, bevel=0.0)
     # salpicadero, altos y perfil LED (4000 K)
     h.box(-1.55, 0.10, -1.53, 1.75, 0.90, 1.50, "coc_salpicadero", dekton)
@@ -256,7 +262,7 @@ def construir(m, h):
         h.box(x, 1.58, x + 0.45, 1.94, 0.0, 0.36, f"mesa_centro_base_{k}",
               travertino, bevel=0.008)
     h.box(5.13, 1.44, 6.52, 2.08, 0.36, 0.378, "mesa_centro", cristal)
-    h.butaca_mariposa(7.38, 1.94, 215, m, name="butaca_mariposa")
+    # (butaca mariposa retirada: despeja el paso al ventanal)
     h.cylinder(7.60, 3.25, 0.15, 0.0, 0.02, "lampara_pie_base", metal_negro,
                n=24)
     h.cylinder(7.60, 3.25, 0.012, 0.02, 1.50, "lampara_pie", metal_negro,
@@ -398,115 +404,74 @@ def construir(m, h):
     _silla(h, tejido_claro, roble, -6.04, -2.62, -5.72, -2.18, "S",
            "d3_silla")
 
-    # ══ DORMITORIO 2 (suroeste, techo 2,46) ═════════════════════════════════
-    h.box(-7.04, -0.42, -6.42, 0.78, 0.0, 2.40, "d2_a03_cuerpo", roble_mel,
-          bevel=0.008)
-    for k in range(3):
-        z0 = -0.42 + k * 0.40
-        h.box(-6.42, z0 + 0.003, -6.408, z0 + 0.397, 0.04, 2.36,
-              f"d2_a03_puerta_{k}", roble_mel, bevel=0.004)
-        if k:
-            h.box(-6.42, z0 - 0.012, -6.408, z0 + 0.012, 1.00, 1.60,
-                  f"d2_a03_tirador_{k}", metal_negro, bevel=0.0)
-    # E01: estantería trapezoidal contra el muro oeste inclinado
-    for k, hh in enumerate((1.00, 1.48, 1.94)):
-        h.poly_prism([(-7.02, 0.80), (-6.42, 0.80), (-6.42, 2.44),
-                      (-6.67, 2.44)], hh, hh + 0.04,
-                     f"d2_e01_balda_{k}", roble_mel)
-    h.box(-6.44, 0.80, -6.42, 2.44, 0.0, 2.20, "d2_e01_frente", roble_mel,
-          bevel=0.004)
-    # cama nido con cabecero al sur
-    h.box(-6.37, 0.66, -5.57, 2.54, 0.02, 0.10, "d2_cama_nido", roble_mel)
-    h.box(-6.42, 0.58, -5.52, 2.58, 0.10, 0.28, "d2_cama", roble_mel,
-          bevel=0.02)
-    h.box(-6.38, 0.62, -5.56, 2.54, 0.28, 0.46, "d2_colchon", lino,
-          bevel=0.03)
-    h.box(-6.42, 2.58, -5.52, 2.64, 0.0, 0.80, "d2_cabecero", roble_mel,
-          bevel=0.01)
-    h.box(-6.40, 1.18, -5.54, 2.56, 0.46, 0.52, "d2_manta", m["colcha"],
-          bevel=0.02)
-    h.box(-6.18, 2.22, -5.78, 2.52, 0.46, 0.58, "d2_almohada", lino,
-          bevel=0.05)
-    # cómoda con 3 cajones, escritorio y silla
-    h.box(-5.80, -0.40, -4.65, 0.01, 0.0, 0.80, "d2_comoda", roble_mel,
+    # ══ DORMITORIO 2 · biblioteca de cerezo trasladada del estudio ══════════
+    # (techo 2,46). Composición del estudio reimplantada: bajos en L (sur bajo
+    # la ventana V07 + tramo en el muro norte), estantería alta A en el muro
+    # este (arranca en z=0,70: libre del barrido de P06 y de la banda de V07),
+    # península con pie metálico, estantería B girada al muro norte y silla
+    # al sur de la península (deja 0,90 m de paso delante de la estantería A).
+    # El estudio queda sin amueblar.
+    h.box(-5.53, 2.43, -3.94, 2.88, 0.08, 0.72, "d2_bajos_sur", cerezo,
           bevel=0.006)
-    for k in range(3):
-        h.box(-5.77, 0.01, -4.68, 0.022, 0.06 + k * 0.245,
-              0.06 + k * 0.245 + 0.23, f"d2_comoda_cajon_{k}", roble_mel,
-              bevel=0.004)
-        h.box(-5.28, 0.022, -5.18, 0.028, 0.15 + k * 0.245,
-              0.18 + k * 0.245, f"d2_comoda_unero_{k}", metal_negro)
-    h.box(-4.21, 1.39, -3.62, 2.88, 0.72, 0.75, "d2_escritorio",
-          roble_mel, bevel=0.008)
-    h.box(-4.21, 1.39, -4.15, 2.88, 0.0, 0.72, "d2_escritorio_pie_i",
-          roble_mel)
-    h.box(-3.68, 1.39, -3.62, 2.88, 0.0, 0.72, "d2_escritorio_pie_d",
-          roble_mel)
-    _silla(h, tejido_claro, roble, -4.52, 1.91, -4.21, 2.36, "O",
-           "d2_silla")
-
-    # ══ ESTUDIO · biblioteca de cerezo reutilizada (techo 2,46) ═════════════
-    # muebles bajos en L bajo la ventana sur y por la pared oeste
-    h.box(-3.53, 2.43, -1.94, 2.88, 0.08, 0.72, "est_bajos_sur", cerezo,
-          bevel=0.006)
-    h.box(-3.53, 2.43, -1.94, 2.88, 0.72, 0.75, "est_bajos_sur_tapa",
+    h.box(-5.53, 2.43, -3.94, 2.88, 0.72, 0.75, "d2_bajos_sur_tapa",
           cerezo, bevel=0.004)
-    h.box(-3.48, 2.48, -1.99, 2.83, 0.0, 0.08, "est_bajos_sur_zocalo",
+    h.box(-5.48, 2.48, -3.99, 2.83, 0.0, 0.08, "d2_bajos_sur_zocalo",
           cerezo)
     for k in range(2):
-        x0 = -3.51 + k * 0.45
+        x0 = -5.51 + k * 0.45
         h.box(x0 + 0.003, 2.418, x0 + 0.447, 2.43, 0.10, 0.70,
-              f"est_bajos_sur_puerta_{k}", cerezo, bevel=0.004)
+              f"d2_bajos_sur_puerta_{k}", cerezo, bevel=0.004)
     for k in range(4):
-        h.box(-2.63, 2.418, -1.96, 2.43, 0.10 + k * 0.155,
-              0.10 + k * 0.155 + 0.145, f"est_bajos_sur_cajon_{k}", cerezo,
+        h.box(-4.63, 2.418, -3.96, 2.43, 0.10 + k * 0.155,
+              0.10 + k * 0.155 + 0.145, f"d2_bajos_sur_cajon_{k}", cerezo,
               bevel=0.004)
-    h.box(-3.53, 1.30, -3.08, 2.43, 0.08, 0.72, "est_bajos_oeste", cerezo,
+    # tramo oeste de los bajos, girado al muro norte (misma pieza que en L)
+    h.box(-5.68, -0.41, -4.55, 0.04, 0.08, 0.72, "d2_bajos_norte", cerezo,
           bevel=0.006)
-    h.box(-3.53, 1.30, -3.08, 2.43, 0.72, 0.75, "est_bajos_oeste_tapa",
+    h.box(-5.68, -0.41, -4.55, 0.04, 0.72, 0.75, "d2_bajos_norte_tapa",
           cerezo, bevel=0.004)
-    for k in range(2):
-        z0 = 1.35 + k * 0.52
-        h.box(-3.068, z0 + 0.003, -3.08 + 0.012, z0 + 0.517, 0.10, 0.70,
-              f"est_bajos_oeste_puerta_{k}", cerezo, bevel=0.004)
-    # estantería alta A contra la pared este, con armario bajo en la calle central
-    h.box(-1.68, -0.40, -1.66, 1.05, 0.0, 2.25, "est_a_fondo", cerezo)
-    for k, zc in enumerate((-0.40, 0.05, 0.55, 1.05)):
-        h.box(-1.94 if k in (0, 3) else -1.95, zc - 0.0125,
-              -1.66, zc + 0.0125, 0.0, 2.25, f"est_a_costado_{k}", cerezo)
-    h.box(-1.92, 0.075, -1.68, 0.525, 0.0, 0.74, "est_a_armario", cerezo,
+    for k, (xa, xb) in enumerate(((-5.627, -5.113), (-5.107, -4.593))):
+        h.box(xa, 0.028, xb, 0.04, 0.10, 0.70,
+              f"d2_bajos_norte_puerta_{k}", cerezo, bevel=0.004)
+    # estantería alta A contra el muro este, con armario bajo en la calle central
+    h.box(-3.68, 0.70, -3.66, 2.15, 0.0, 2.25, "d2_a_fondo", cerezo)
+    for k, zc in enumerate((0.70, 1.15, 1.65, 2.15)):
+        h.box(-3.94 if k in (0, 3) else -3.95, zc - 0.0125,
+              -3.66, zc + 0.0125, 0.0, 2.25, f"d2_a_costado_{k}", cerezo)
+    h.box(-3.92, 1.175, -3.68, 1.625, 0.0, 0.74, "d2_a_armario", cerezo,
           bevel=0.006)
-    h.box(-1.94, 0.06, -1.66, 0.54, 0.74, 0.77, "est_a_encimera", cerezo,
+    h.box(-3.94, 1.16, -3.66, 1.64, 0.74, 0.77, "d2_a_encimera", cerezo,
           bevel=0.004)
     for k in range(5):
         hh = 0.80 + k * 0.33
-        h.box(-1.94, -0.40, -1.66, 1.05, hh, hh + 0.025,
-              f"est_a_balda_{k}", cerezo)
+        h.box(-3.94, 0.70, -3.66, 2.15, hh, hh + 0.025,
+              f"d2_a_balda_{k}", cerezo)
     # mesa península de extremo redondeado con pie metálico
-    h.box(-2.94, 0.45, -1.94, 1.05, 0.72, 0.75, "est_peninsula", cerezo,
+    h.box(-4.94, 0.45, -3.94, 1.05, 0.72, 0.75, "d2_peninsula", cerezo,
           bevel=0.004)
-    h.cylinder(-2.94, 0.75, 0.30, 0.72, 0.75, "est_peninsula_redondeo",
+    h.cylinder(-4.94, 0.75, 0.30, 0.72, 0.75, "d2_peninsula_redondeo",
                cerezo, n=36)
-    h.cylinder(-2.82, 0.75, 0.04, 0.02, 0.72, "est_peninsula_pie",
+    h.cylinder(-4.82, 0.75, 0.04, 0.02, 0.72, "d2_peninsula_pie",
                metal_negro, n=16)
-    h.cylinder(-2.82, 0.75, 0.16, 0.0, 0.02, "est_peninsula_base",
+    h.cylinder(-4.82, 0.75, 0.16, 0.0, 0.02, "d2_peninsula_base",
                metal_negro, n=28)
-    # estantería alta B exenta contra la pared este
-    h.box(-1.94, 1.10, -1.92, 2.40, 0.0, 2.30, "est_b_fondo", cerezo)
-    for k, zc in enumerate((1.10, 1.5333, 1.9667, 2.40)):
-        tope = 2.40 if k == 1 else 0.0
+    # estantería alta B girada al muro norte (mismo desarrollo, 1,30 m)
+    h.box(-7.00, -0.43, -5.70, -0.41, 0.0, 2.30, "d2_b_fondo", cerezo)
+    for k, xc in enumerate((-7.00, -6.5667, -6.1333, -5.70)):
         alto = 2.40 if k == 1 else 2.30
-        h.box(-1.92, zc - 0.0125, -1.66, zc + 0.0125, 0.0, alto,
-              f"est_b_costado_{k}", cerezo)
-        if tope:
-            h.box(-1.92, zc - 0.0125, -1.66, zc + 0.0125, 2.30, 2.40,
-                  f"est_b_sobre_{k}", cerezo)
+        h.box(xc - 0.0125, -0.41, xc + 0.0125, -0.15, 0.0, alto,
+              f"d2_b_costado_{k}", cerezo)
+        if k == 1:
+            h.box(xc - 0.0125, -0.41, xc + 0.0125, -0.15, 2.30, 2.40,
+                  f"d2_b_sobre_{k}", cerezo)
     for k in range(7):
         hh = 0.30 + k * 0.30
-        h.box(-1.92, 1.10, -1.66, 2.40, hh, hh + 0.025,
-              f"est_b_balda_{k}", cerezo)
-    _silla(h, tejido_claro, roble, -2.71, 1.09, -2.39, 1.53, "S",
-           "est_silla")
+        h.box(-7.00, -0.41, -5.70, -0.15, hh, hh + 0.025,
+              f"d2_b_balda_{k}", cerezo)
+    _silla(h, tejido_claro, roble, -4.71, 1.60, -4.39, 2.04, "S",
+           "d2_silla")
+
+    # ══ ESTUDIO · sin amueblar (biblioteca trasladada al dormitorio 2) ═══
 
     # ══ BAÑO 2 · con bañera (oeste, techo 2,30) ═════════════════════════════
     h.box(-3.97, -3.16, -3.31, -1.56, 0.0, 0.55, "b2_banera",
@@ -567,27 +532,10 @@ def construir(m, h):
     h.box(0.78, -3.21, 1.71, -3.19, 1.20, 2.31, "b1_espejo", espejo)
 
     # ══ BALCÓN (terraza) ════════════════════════════════════════════════════
-    h.box(8.83, 0.06, 8.89, 3.90, 1.05, 1.10, "tz_pasamanos_e", bronce)
-    h.box(8.23, 0.06, 8.86, 0.12, 1.05, 1.10, "tz_pasamanos_n",
-          bronce)
-    h.box(8.23, 3.84, 8.86, 3.90, 1.05, 1.10, "tz_pasamanos_s",
-          bronce)
-    _multi(h, [(8.85, 0.10, 8.87, 3.86, hh, hh + 0.02)
-               for hh in (0.25, 0.55, 0.85)], "tz_pletinas_e", bronce)
-    _multi(h, [(8.25, 0.08, 8.84, 0.10, hh, hh + 0.02)
-               for hh in (0.25, 0.55, 0.85)], "tz_pletinas_n", bronce)
-    _multi(h, [(8.25, 3.86, 8.84, 3.88, hh, hh + 0.02)
-               for hh in (0.25, 0.55, 0.85)], "tz_pletinas_s", bronce)
-    for k in range(7):
-        h.cylinder(8.86, 0.08 + k * 3.80 / 6, 0.018, 0.0, 1.10,
-                   f"tz_montante_e_{k}", bronce, n=10)
-    for k in range(2):
-        h.cylinder(8.30 + k * 0.50, 0.08, 0.018, 0.0, 1.10,
-                   f"tz_montante_n_{k}", bronce, n=10)
-        h.cylinder(8.30 + k * 0.50, 3.88, 0.018, 0.0, 1.10,
-                   f"tz_montante_s_{k}", bronce, n=10)
-    if not h.cargar_asset("potted_plant_02", 0.85, 8.55, 0.45, ang=130):
-        h.cylinder(8.55, 0.45, 0.16, 0.0, 0.35, "tz_maceta", m["maceta"],
+    # Sin barandilla propia: se usa la exterior del edificio (build_balcones);
+    # la interior duplicada se retiró. Solo la maceta, pegada al lateral norte.
+    if not h.cargar_asset("potted_plant_02", 0.85, 8.60, 0.30, ang=130):
+        h.cylinder(8.60, 0.30, 0.16, 0.0, 0.35, "tz_maceta", m["maceta"],
                    n=18)
-        h.sphere(8.55, 0.45, 0.62, 0.20, "tz_planta", m["planta"], seg=12,
+        h.sphere(8.60, 0.30, 0.62, 0.20, "tz_planta", m["planta"], seg=12,
                  ring=6, sy=0.85)

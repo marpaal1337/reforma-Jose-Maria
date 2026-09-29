@@ -997,6 +997,9 @@ def build_shell(m):
     # forjado superior a 2,46
     poly_ngon(PLAN["huella"], ALTURA, "techo", m["techo"])
     # falsos techos a 2,30 (bajada) en baños, vestidor, pasillo, cocina y recibidor
+    # (misma cota superior que el forjado: en órbita ambos se ocultan y desde
+    # abajo solo se ve la cara inferior; el hueco de 5 mm dejaba ver el forjado
+    # sin hornear a través de la tabica)
     for e in PLAN["estancias"]:
         if _altura_estancia(e) == 2.30:
             poly_prism(e["pts"], 2.30, ALTURA, f"falso_techo_{e['id']}",
@@ -1624,10 +1627,11 @@ def mat_fachadas():
     fx = _math(nt, "MULTIPLY",
                _math(nt, "FRACT", _math(nt, "DIVIDE", u, 3.1)), 3.1)
 
-    # toldo crema con raya en el tercio superior de algunas ventanas
+    # toldo crema con raya en el tercio superior (~1/3 de ventanas, como en
+    # las fotos de la calle; sincronizado con scripts/visor_realista.js)
     hay_toldo = _math(nt, "MULTIPLY",
-                      _math(nt, "GREATER_THAN", rnd, 0.28),
-                      _math(nt, "LESS_THAN", rnd, 0.55))
+                      _math(nt, "GREATER_THAN", rnd, 0.22),
+                      _math(nt, "LESS_THAN", rnd, 0.58))
     banda_t = _math(nt, "MULTIPLY",
                     _math(nt, "GREATER_THAN", vr, 0.60),
                     _math(nt, "LESS_THAN", vr, 0.72))
@@ -1643,10 +1647,11 @@ def mat_fachadas():
                            _math(nt, "LESS_THAN", vr, 0.605)))
     color = _mix(nt, sombra_t, color, (0.30, 0.28, 0.24))
 
-    # equipo de A/A junto al borde derecho de algunas ventanas
+    # equipo de A/A junto al borde derecho (~1/4 de ventanas, como en
+    # las fotos de la calle; sincronizado con scripts/visor_realista.js)
     hay_aa = _math(nt, "MULTIPLY",
-                   _math(nt, "GREATER_THAN", rnd, 0.06),
-                   _math(nt, "LESS_THAN", rnd, 0.24))
+                   _math(nt, "GREATER_THAN", rnd, 0.05),
+                   _math(nt, "LESS_THAN", rnd, 0.30))
     aa_x = _math(nt, "MULTIPLY",
                  _math(nt, "GREATER_THAN", fx, 2.15),
                  _math(nt, "LESS_THAN", fx, 2.65))
