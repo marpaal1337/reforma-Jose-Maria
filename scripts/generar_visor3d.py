@@ -75,6 +75,9 @@ REAL = None
 if (VISOR / "visor.json").exists() and (VISOR / "interior.glb").exists() and EMBED:
     _info = json.loads((VISOR / "visor.json").read_text(encoding="utf-8"))
     _ent = json.loads((DATA / "entorno.json").read_text(encoding="utf-8"))
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import fachada_propia
+    _ip = fachada_propia.principal(_ent["edificios"])
     REAL = {
         "info": _info,
         "glb": b64(VISOR / "interior.glb"),
@@ -84,8 +87,11 @@ if (VISOR / "visor.json").exists() and (VISOR / "interior.glb").exists() and EMB
         "reflejo": data_url(VISOR / "reflejo.jpg", "image/jpeg"),
         "arbol": {"lado": data_url(VISOR / "arbol_lado.webp", "image/webp"),
                   "planta": data_url(VISOR / "arbol_planta.webp", "image/webp")},
-        "edificios": [[b["pts"], b["plantas"]] for b in _ent["edificios"] if not b["propio"]],
-        "propios": [b["pts"] for b in _ent["edificios"] if b["propio"]],
+        # solo el edificio del piso es "propio" (el otro `propio` de OSM es el
+        # vecino de medianera y se dibuja como cualquier otro)
+        "edificios": [[b["pts"], b["plantas"]] for i, b in enumerate(_ent["edificios"])
+                      if i != _ip],
+        "propios": [_ent["edificios"][_ip]["pts"]] if _ip is not None else [],
     }
 REAL_JS = (ROOT / "scripts" / "visor_realista.js").read_text(encoding="utf-8")
 REAL_JSON = json.dumps(REAL, ensure_ascii=False, separators=(",", ":")) if REAL else "null"
@@ -1851,7 +1857,8 @@ function cargarMobiliario(){
         if(o.name.indexOf("peto_")===0) petos.push(o);
         if(o.name === "suelo") o.visible = false;   // el visor pinta sus suelos
         if(o.name === "techo" || o.name.indexOf("falso_techo_") === 0 ||
-           o.name.indexOf("tabica_") === 0) techosGLB.push(o);
+           o.name.indexOf("tabica_") === 0 ||
+           o.name.indexOf("dl_disco_") === 0) techosGLB.push(o);   // los discos cuelgan del techo
         const mats = Array.isArray(o.material) ? o.material : [o.material];
         mats.forEach(mt=>{
           if(mt.map) mt.map.encoding = THREE.sRGBEncoding;

@@ -9,3 +9,9 @@ capturas/
 data/assets/jacaranda_tree/
 data/visor/
 data/visor_nuevo/
+# fotos reales con fachada/personas o del piso antiguo (solo referencia local)
+data/reales/antiguo salon.jpeg
+data/reales/*bibloteca.jpeg
+data/reales/fachada *.jpeg
+data/reales/grua*.jpeg
+data/reales/vistaterraza.jpeg

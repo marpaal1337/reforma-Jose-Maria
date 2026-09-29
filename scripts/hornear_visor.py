@@ -80,8 +80,11 @@ TEX_MAX = 1024           # lado máximo de las texturas PBR en el visor
 # ── atlas de lightmap: el gutter entre islas debe superar al dilatado del
 # horneado (MARGEN_BAKE_PX con EXTEND), o el horneado mezcla islas vecinas
 # (bleeding -> manchas oscuras en isla/encimera y paredes).
-MARGEN_BAKE_PX = 8       # sc.render.bake.margin en hornear()
-MARGEN_ISLAS_PX = 16     # gutter mínimo entre islas en el pack (en píxeles)
+# El margen de isla es una fracción fija del atlas: con ~2.000 islas y un atlas
+# de 1024 px, 16 px por isla no caben y el empaquetado las encoge a menos de un
+# píxel (lightmap negro). Por debajo de 2048 px se usa un gutter menor.
+MARGEN_BAKE_PX = 8 if RES >= 2048 else 3     # sc.render.bake.margin en hornear()
+MARGEN_ISLAS_PX = 16 if RES >= 2048 else 6   # gutter mínimo entre islas (píxeles)
 ANGULO_SMART = 60.0      # smart UV project: corta en aristas > 60°
 ISLA_SMART = 0.02        # separación inicial entre islas (fracción UV)
 UMBRAL_SOLAPE = 8        # loops UV solapados tolerados tras select_overlap
@@ -95,7 +98,8 @@ ARQ = ("suelo", "pav_", "techo", "falso_techo_", "tabica_", "rev_", "muro_",
 # aluminio de los marcos y los metales oscuros sí se hornean (dan oclusión).
 NO_HORNEAR_MAT = {"cristal", "vidrio_acido", "cortina", "led", "led_frio",
                   "lampara_pantalla", "pantalla", "espejo"}
-EXTERIOR_EXPORT = ("ext_balcon", "ext_barandilla", "ext_voladizo", "ext_propio")
+EXTERIOR_EXPORT = ("ext_balcon", "ext_barandilla", "ext_voladizo", "ext_propio",
+                   "ext_azotea")
 
 
 def t_log(msg, t0=[time.time()]):
@@ -127,9 +131,16 @@ def mat0(ob):
     return ob.data.materials[0].name if ob.data.materials and ob.data.materials[0] else ""
 
 
+# piezas finas del exterior (barandillas, toldos, splits, azotea): son miles de
+# islas UV diminutas que desbordan el atlas (el margen por isla no cabe) y no
+# necesitan lightmap: en el visor se iluminan solo con el entorno
+SIN_LIGHTMAP = ("ext_propio", "asset_", "ext_barandilla", "ext_balcon_toldo",
+                "ext_balcon_split", "ext_azotea")
+
+
 def hornear_si(ob):
     # modelos CC0 (plantas, jarrones): los ilumina el entorno en el visor
-    if ob.name.startswith(("ext_propio", "asset_")):
+    if ob.name.startswith(SIN_LIGHTMAP):
         return False
     mats = {m.name for m in ob.data.materials if m}
     return not (mats and mats <= NO_HORNEAR_MAT)
@@ -221,6 +232,22 @@ def _loops_solapados(obs):
     return total
 
 
+def _comprobar_atlas(obs):
+    """El empaquetado con margen fijo desborda si hay demasiadas islas: las UV
+    fuera de [0,1] se hornean fuera de la imagen (lightmap negro)."""
+    mx = 0.0
+    for ob in obs:
+        uv = ob.data.uv_layers.get("LightMap")
+        if uv is None or not len(uv.data):
+            continue
+        a = np.empty(len(uv.data) * 2, dtype=np.float32)
+        uv.data.foreach_get("uv", a)
+        mx = max(mx, float(a.max()))
+    if mx > 1.001:
+        raise RuntimeError(f"atlas desbordado (UV máx {mx:.2f}): demasiadas islas; "
+                           "excluye piezas pequeñas de hornear_si o fusiona mallas")
+
+
 def empaquetar(obs, margen):
     bpy.context.scene.tool_settings.use_uv_select_sync = True
     seleccionar(obs)
@@ -241,6 +268,7 @@ def empaquetar(obs, margen):
         _desplegar(75.0, ISLA_SMART + 0.01)
         _empaquetar_islas(margen * 1.5)
         bpy.ops.object.mode_set(mode="OBJECT")
+    _comprobar_atlas(obs)
 
 
 # ── horneado ────────────────────────────────────────────────────────────────
@@ -366,6 +394,8 @@ SIMPLES = {  # materiales sin equivalente glTF: color base, rugosidad, alfa
     "cortina": ((0.96, 0.95, 0.92), 0.6, 0.55),
     "vidrio_acido": ((0.92, 0.94, 0.93), 0.45, 0.6),
     "lienzo": ((0.86, 0.83, 0.77), 0.9, 1.0),
+    # revoco de la fachada propia (mismo salmón que fachada_propia.SALMON)
+    "revoco_fachada": ((0.62, 0.34, 0.22), 0.9, 1.0),
     # pantalla de la lámpara de pie: el Mix+Translucent de Blender no viaja a
     # glTF; se simplifica a base ámbar y se le devuelve el glow por emisión
     "lampara_pantalla": ((0.82, 0.63, 0.42), 0.9, 1.0),
@@ -377,7 +407,7 @@ def preparar_materiales(obs):
     for mat in usados:
         nt = mat.node_tree
         if mat.name in SIMPLES or mat.name.startswith("ext_") or mat.name == "revoco_fachada":
-            col, rough, alfa = SIMPLES.get(mat.name, ((0.60, 0.38, 0.27), 0.9, 1.0))
+            col, rough, alfa = SIMPLES.get(mat.name, ((0.62, 0.34, 0.22), 0.9, 1.0))
             nt.nodes.clear()
             b = nt.nodes.new("ShaderNodeBsdfPrincipled")
             o = nt.nodes.new("ShaderNodeOutputMaterial")
@@ -601,11 +631,30 @@ def hornear_arbol(info):
     t_log(f"árboles: impostores + {len(arboles)} posiciones")
 
 
+def exportar_calle(info):
+    """Posiciones de coches, farolas y contenedores (los crea generar_blender:
+    son objetos reales para que proyecten su sombra en el suelo horneado; el
+    visor los redibuja instanciados). Three.js: x = X, z = -Y; el giro en Z de
+    Blender coincide con rotation.y de Three."""
+    coches, farolas, urbano = [], [], []
+    for ob in bpy.data.objects:
+        x, z, a = round(ob.location.x, 2), round(-ob.location.y, 2), round(ob.rotation_euler.z, 3)
+        if ob.name.startswith("ext_coche_i"):
+            coches.append([x, z, a, round(float(ob.get("color", 0.0)), 3)])
+        elif ob.name.startswith("ext_farola_i"):
+            farolas.append([x, z, a])
+        elif ob.name.startswith("ext_urbano_i"):
+            urbano.append([x, z, a, int(ob.get("tipo", 0))])
+    info["coches"], info["farolas"], info["urbano"] = coches, farolas, urbano
+    t_log(f"calle: {len(coches)} coches, {len(farolas)} farolas, {len(urbano)} contenedores")
+
+
 def hornear_suelo(info):
     """Suelo urbano (acera, calzadas con marcas, bici, verdes) con sus sombras,
     horneado en dos planos: cerca (160 m) y lejos (1000 m)."""
     fuentes = [o for o in bpy.data.objects if o.name in
-               ("ext_suelo", "ext_calzada", "ext_bici", "ext_verdes")]
+               ("ext_suelo", "ext_calzada", "ext_bici", "ext_verdes",
+                "ext_marcas", "ext_alcorques")]
     suelo_z = min(v.co.z for v in bpy.data.objects["ext_suelo"].data.vertices)
     info["suelo"] = {"y": round(suelo_z, 3)}
     sc = bpy.context.scene
@@ -661,12 +710,13 @@ def main():
     hornear_cielo(info)
     hornear_reflejo(info)
     hornear_arbol(info)
+    exportar_calle(info)
     hornear_suelo(info)
 
     # las jacarandas (22 m más abajo) no cambian la luz del piso y encarecen
     # cada rayo: fuera para hornear el interior (el suelo ya lleva sus sombras)
     for ob in bpy.data.objects:
-        if ob.name.startswith("ext_arbol_i"):
+        if ob.name.startswith(("ext_arbol_i", "ext_coche_i", "ext_farola_i")):
             ob.hide_render = True
     obs = objetos_interior()
     preparar_uv(obs)

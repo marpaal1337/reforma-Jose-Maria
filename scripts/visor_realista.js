@@ -78,12 +78,21 @@ function rng(sem){ return ()=>{ sem |= 0; sem = sem + 0x6D2B79F5 | 0;
   let t = Math.imul(sem ^ sem >>> 15, 1 | sem); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
   return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
-/* ── fachadas: retícula de ventanas como el material de Blender ── */
-const PALETA = [[0.60,0.38,0.27],[0.63,0.53,0.41],[0.72,0.68,0.61],[0.64,0.46,0.40],
-                [0.60,0.47,0.27],[0.38,0.17,0.11],[0.53,0.51,0.49]];
-const CUBIERTAS = [[0.42,0.19,0.14],[0.50,0.30,0.25],[0.55,0.54,0.50],[0.46,0.24,0.18]];
+/* ── fachadas: revoco / ladrillo, huecos, balcones, bajos y cubiertas ──
+   Todo el albedo es procedural (sin texturas): la luz es analítica (sol + cielo)
+   porque los edificios ocupan miles de m². Referencias: fotos y Street View de
+   la avenida (revoco pétreo con juntas de panel, ladrillo caravista en ~40 %,
+   bajos comerciales, azoteas de baldosín rojizo con peto y casetas). */
+const PALETA = [[0.68,0.36,0.21],[0.72,0.64,0.50],[0.78,0.76,0.71],[0.70,0.56,0.36],
+                [0.68,0.50,0.44],[0.62,0.62,0.60],[0.58,0.34,0.24]];
+const CUBIERTAS = [[0.40,0.17,0.11],[0.46,0.22,0.15],[0.36,0.15,0.10],[0.44,0.24,0.17]];
+/* revoco de las piezas horneadas del propio (losas de balcón…): el lightmap solo
+   lleva la iluminación, el color se ajusta aquí contra las fotos de la fachada */
+const REVOCO_HORNEADO = [0.66, 0.38, 0.25];
 const TIENDAS = [[0.55,0.07,0.05],[0.05,0.10,0.32],[0.08,0.26,0.12],
                  [0.78,0.76,0.70],[0.62,0.22,0.05],[0.10,0.32,0.36]];
+const PETO_ED = 1.05;                      // peto de coronación sobre la cubierta
+const Z_CUB_PROPIO = 2.95;                 // cubierta del propio sobre el suelo del piso
 function matFachada(propio){
   const i = REAL.info, s = i.sol, c = i.cielo;
   const senSol = Math.max(0, s.dir[1]);
@@ -96,6 +105,7 @@ function matFachada(propio){
     uNiebla: {value: 0.0009},
     uClipY: {value: 1e9},
     uVFlip: {value: propio ? 1 : 0},
+    uCubV: {value: propio ? (-i.suelo.y + Z_CUB_PROPIO) : 1e9},
     uPaleta: {value: PALETA.map(p=>new THREE.Vector3(...p))},
     uCubiertas: {value: CUBIERTAS.map(p=>new THREE.Vector3(...p))},
     uTiendas: {value: TIENDAS.map(p=>new THREE.Vector3(...p))}
@@ -124,6 +134,7 @@ function matFachada(propio){
       #include <common>
       uniform vec3 uSol; uniform vec3 uSolE; uniform vec3 uCielo; uniform float uSuelo;
       uniform vec3 uHorizonte; uniform float uNiebla; uniform float uClipY; uniform float uVFlip;
+      uniform float uCubV;
       uniform vec3 uPaleta[7]; uniform vec3 uCubiertas[4]; uniform vec3 uTiendas[6];
       varying vec2 vUv; varying float vSem; varying float vTecho; varying float vTop;
       varying vec3 vN; varying vec3 vPos;
@@ -140,56 +151,106 @@ function matFachada(propio){
         vec3 c = uTiendas[0];
         for(int k = 1; k < 6; k++) if(k == i) c = uTiendas[k];
         return c; }
+      /* 1 dentro de una línea de ancho w (m) cada 'per' m; se difumina al alejarse */
+      float linea(float x, float per, float w){
+        float f = fract(x / per) * per;
+        float d = min(f, per - f);
+        float fw = max(fwidth(x), 1e-4);
+        float vis = 1.0 - smoothstep(0.06, 0.20, fw);
+        return (1.0 - smoothstep(w * 0.5, w * 0.5 + max(fw, 0.004), d)) * vis;
+      }
+      /* ladrillo caravista a soga: pieza de 0,24 × 0,075 con llaga de 1 cm */
+      vec3 ladrillo(vec2 p, float sem){
+        float fila = floor(p.y / 0.075);
+        float u = p.x + 0.12 * mod(fila, 2.0);
+        vec2 cel = vec2(floor(u / 0.24), fila);
+        vec2 f = vec2(fract(u / 0.24) * 0.24, fract(p.y / 0.075) * 0.075);
+        float h = h21(cel * 0.37 + sem * 0.013);
+        vec3 c = mix(vec3(0.40, 0.17, 0.10), vec3(0.48, 0.25, 0.16), h);
+        c = mix(c, vec3(0.30, 0.16, 0.11), step(0.90, fract(h * 13.7)));
+        float junta = max(max(step(f.x, 0.01), step(0.23, f.x)), max(step(f.y, 0.01), step(0.065, f.y)));
+        vec3 col = mix(c, vec3(0.52, 0.49, 0.44), junta);
+        float fw = max(fwidth(p.x), fwidth(p.y));
+        return mix(col, vec3(0.43, 0.22, 0.15), smoothstep(0.02, 0.07, fw));
+      }
       void main(){
         if(vPos.y > uClipY) discard;
-        const float P = ${PLANTA_ED.toFixed(2)}, B = ${BAJO_ED.toFixed(2)}, ANCHO = 3.1, JUNTA = 0.8;
+        const float P = ${PLANTA_ED.toFixed(2)}, B = ${BAJO_ED.toFixed(2)}, ANCHO = 3.1, JUNTA = 0.8, JX = 1.0, PETO = ${PETO_ED.toFixed(2)};
         vec3 Nf = normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0);
         vec3 Vv = normalize(cameraPosition - vPos);
         float propio = uVFlip;
-        vec3 alb; vec3 emis = vec3(0.0);
-        if(vTecho > 0.5){
-          /* cubierta: teja/grava con dos escalas de grano + hileras */
-          vec3 cb = cubierta(vSem);
-          cb = mix(vec3(dot(cb, vec3(0.3333))), cb, 0.85);
-          float g1 = h21(floor(vPos.xz * 2.3) + floor(vSem * 997.0 + 0.5));
-          float g2 = h21(floor(vPos.xz * 0.55) + floor(vSem * 57.0 + 0.5));
-          float hilera = 0.90 + 0.10 * step(0.5, fract((vPos.x + vPos.z) * 1.35 + g1 * 0.6));
-          alb = cb * (0.60 + 0.40 * g1) * (0.90 + 0.10 * g2) * hilera;
+        float sem = floor(vSem * 997.0 + 0.5);
+        vec3 alb; vec3 emis = vec3(0.0); float ao = 1.0;
+        if(vTecho > 2.5){
+          /* tapa de sección del edificio propio (órbita): hormigón neutro */
+          alb = vec3(0.56, 0.54, 0.51) * (0.95 + 0.05 * h21(floor(vPos.xz * 2.0)));
+        }else if(vTecho > 1.5){
+          /* casetas de escalera y ascensor */
+          alb = vec3(0.82, 0.81, 0.77) * (0.94 + 0.06 * h21(floor(vPos.xz * 3.0)));
+        }else if(vTecho > 0.5){
+          /* azotea: baldosín cerámico rojizo de 0,20 m, algo de grava y cubiertas blancas */
+          vec2 q = vPos.xz / 0.20;
+          vec2 cel = floor(q), fr = fract(q);
+          vec3 cb = cubierta(propio > 0.5 ? 0.0 : vSem);
+          float pieza = h21(cel + sem * 0.011);
+          vec3 tile = cb * (0.88 + 0.24 * pieza);
+          float dj = min(min(fr.x, 1.0 - fr.x), min(fr.y, 1.0 - fr.y));
+          float fw = max(fwidth(q.x), fwidth(q.y));
+          float junta = (1.0 - smoothstep(0.02, 0.05, dj)) * (1.0 - smoothstep(0.15, 0.55, fw));
+          tile = mix(tile, vec3(0.62, 0.55, 0.48), junta);
+          float rt = propio > 0.5 ? 0.5 : h21(vec2(sem * 0.77 + 1.3, 4.1));
+          vec3 grava = vec3(0.50, 0.49, 0.46) * (0.90 + 0.20 * h21(floor(vPos.xz * 8.0)));
+          tile = rt < 0.20 ? grava : (rt > 0.92 ? vec3(0.72, 0.71, 0.68) : tile);
+          alb = tile * (0.85 + 0.15 * h21(floor(vPos.xz * 0.7) + sem));
         }else{
-          /* paleta continua en el espacio de semillas: los edificios con
-             semilla vecina comparten tono (sin saltos entre tramos) */
+          float u = vUv.x, v = vUv.y;
+          float vt = propio > 0.5 ? uCubV + PETO : vTop;
+          /* revoco de la paleta continua; ladrillo caravista en ~40 % de los vecinos */
           float sb = clamp(vSem * 7.0 - 0.5, 0.0, 6.0);
           float ft = smoothstep(0.30, 0.70, fract(sb));
           vec3 base = mix(palI(int(floor(sb))), palI(min(int(floor(sb)) + 1, 6)), ft);
-          base = mix(base, vec3(0.60, 0.47, 0.35), 0.32);
-          float vp = vUv.y - (B - P);
-          /* semilla entera: el varying interpolado varía en el último bit y el
-             hash lo amplifica (ruido píxel a píxel dentro de cada ventana) */
-          float sem = floor(vSem * 997.0 + 0.5);
-          vec2 celda = floor(vec2(vUv.x / ANCHO, vp / P));
-          vec2 f = vec2(fract(vUv.x / ANCHO) * ANCHO, fract(vp / P) * P);
+          base = mix(base, vec3(0.60, 0.47, 0.35), 0.10 * (1.0 - propio));
+          float ladr = (1.0 - propio) * step(0.60, h21(vec2(sem * 0.71 + 0.3, 5.3)));
+          float vp = v - (B - P);
+          vec2 celda = floor(vec2(u / ANCHO, vp / P));
+          vec2 f = vec2(fract(u / ANCHO) * ANCHO, fract(vp / P) * P);
           float rnd = h21(celda + vec2(sem * 0.131, sem * 0.293));
           float vr = f.y / P;
           float planta = floor(vp / P);
           float cal = h21(vec2(sem * 3.1 + planta * 0.37, planta * 1.7 + sem));
           vec3 revoco = base * (0.95 + 0.10 * cal);
-          revoco.r *= 1.0 + 0.06 * (cal - 0.5);
           revoco *= 0.96 + 0.08 * h21(floor(vUv * vec2(6.0, 9.0)) + sem);
           revoco *= 1.0 + 0.06 * sin(vPos.x * 0.33 + vPos.y * 0.17)
                              * sin(vPos.z * 0.29 - vPos.y * 0.11);
+          /* grano del revoco pétreo (se pierde con la distancia) */
+          float gr = h21(floor(vec2(u, v) * 55.0));
+          revoco *= 1.0 + (gr - 0.5) * 0.14 * (1.0 - smoothstep(0.02, 0.08, fwidth(u)));
+          /* juntas de panel: cada 1,5 m y a media planta */
+          float jp = max(linea(u, 1.5, 0.012), linea(vp, P * 0.5, 0.012));
+          revoco *= 1.0 - 0.28 * jp;
           float fr = fract(vp / P);
           revoco *= 0.90 + 0.10 * smoothstep(0.0, 0.12, fr);
-          float dTop = vTop - vUv.y;
-          revoco *= 1.0 - 0.32 * (1.0 - smoothstep(0.0, 0.5, dTop)) * step(0.5, vTop);
-          float muro = (f.x < JUNTA || f.x > ANCHO - JUNTA || f.y < JUNTA || f.y > P - JUNTA) ? 1.0 : 0.0;
+          vec3 pared = mix(revoco, ladrillo(vec2(u, v), sem) * (0.95 + 0.10 * cal), ladr);
+          /* canto de forjado de hormigón en los edificios de ladrillo */
+          pared = mix(pared, vec3(0.60, 0.58, 0.54), ladr * step(P - 0.28, f.y));
+          float dTop = vt - v;
+          pared *= 1.0 - 0.30 * (1.0 - smoothstep(0.0, 0.5, dTop)) * step(0.5, vt - PETO);
+          float enPeto = step(vt - PETO, v);
+          float bajo = 1.0 - step(B, v);
+          float muro = (f.x < JX || f.x > ANCHO - JX || f.y < JUNTA || f.y > P - JUNTA) ? 1.0 : 0.0;
+          muro = max(muro, max(enPeto, bajo));
           /* persiana con lamas horizontales y guías laterales en sombra */
           float umbral = 0.73 - rnd * 0.42;
           float pers = (1.0 - muro) * step(umbral, vr);
-          vec3 colP = fract(rnd * 5.3) > 0.55 ? vec3(0.68, 0.67, 0.64) : vec3(0.52, 0.46, 0.36);
+          float tp = fract(rnd * 5.3);
+          vec3 colP = tp > 0.92 ? vec3(0.16, 0.22, 0.16) : (tp > 0.45 ? vec3(0.42, 0.41, 0.38) : vec3(0.42, 0.36, 0.26));
           float lama = 0.74 + 0.26 * step(0.42, fract(vr * P / 0.055 + rnd));
-          float guia = smoothstep(0.0, 0.09, f.x) * smoothstep(0.0, 0.09, ANCHO - f.x);
+          float guia = smoothstep(JX, JX + 0.09, f.x) * smoothstep(JX, JX + 0.09, ANCHO - f.x);
           colP *= lama * (0.68 + 0.32 * guia);
           vec3 hueco = mix(vec3(0.016, 0.02, 0.026), colP, pers);
+          /* marco de carpintería bronce alrededor del hueco */
+          float dm = min(min(f.x - JX, ANCHO - JX - f.x), min(f.y - JUNTA, P - JUNTA - f.y));
+          hueco = mix(vec3(0.15, 0.10, 0.065), hueco, smoothstep(0.03, 0.07, dm));
           /* vidrio con reflejo de cielo/horizonte según ángulo (fresnel) */
           vec3 R = reflect(-Vv, Nf);
           vec3 cieloRefl = mix(uHorizonte, uCielo * 0.55, smoothstep(-0.05, 0.55, R.y));
@@ -199,43 +260,69 @@ function matFachada(propio){
           vec3 interior = mix(vec3(0.020, 0.026, 0.036), vec3(0.11, 0.075, 0.042), calido);
           float fres = mix(0.55, 1.0, pow(1.0 - max(dot(Nf, Vv), 0.0), 2.0));
           float mVid = (1.0 - muro) * (1.0 - pers);
-          vec3 vid = mix(interior, cieloRefl * tinte, clamp(fres * (0.70 + 0.30 * tinte), 0.0, 1.0));
+          vec3 vid = mix(interior, cieloRefl * tinte * 0.55, clamp(fres * (0.70 + 0.30 * tinte), 0.0, 1.0));
           vid += uSolE * pow(max(dot(R, uSol), 0.0), 60.0) * 0.020;
-          /* balcón: antepecho + barrotes + pasamanos en la mitad baja */
-          float balc = step(0.58, h21(vec2(sem * 1.71 + 3.0, celda.x * 1.37 + celda.y * 0.73)));
-          float enBajo = (1.0 - muro) * (1.0 - pers) * balc * step(vr, 0.55) * step(JUNTA / P, vr);
-          vec3 ant = revoco * 0.45;
+          /* balcones pintados en los vecinos: corridos, por columnas o sin balcón */
+          float estilo = h21(vec2(sem * 0.37 + 2.1, 8.2));
+          float hayB = (1.0 - propio) * (1.0 - bajo) * (estilo < 0.35 ? 1.0
+                       : (estilo < 0.75 ? step(0.45, h21(vec2(sem * 1.71 + 3.0, celda.x * 1.37))) : 0.0));
+          /* cara frontal del cuerpo de balcones del propio: balconera de vidrio */
+          float bay = propio * step(8.2, vPos.x) * step(0.9, Nf.x) * (1.0 - bajo) * (1.0 - enPeto);
+          float pasam = 1.0 - smoothstep(0.015, 0.055, abs(vr - 0.34) * P);
           float barrote = step(fract(f.x / 0.30), 0.13);
-          float pasam = 1.0 - smoothstep(0.015, 0.055, abs(vr - 0.55) * P);
-          vec3 colB = mix(ant, vec3(0.030, 0.030, 0.035), max(barrote * 0.9, pasam));
-          alb = mix(mix(hueco, revoco, muro), colB, enBajo);
-          emis = vid * mVid * (1.0 - enBajo);
-          /* toldos crema, equipos de A/A y bajos comerciales (fotos de la calle) */
-          float vent = 1.0 - muro;
-          /* toldos en ~1/3 de las ventanas (fotos de la calle) */
+          float enB = hayB * (1.0 - muro) * step(vr, 0.34);
+          vec3 colB = mix(revoco * 0.55, vec3(0.030, 0.030, 0.035), max(barrote * 0.9, pasam));
+          alb = mix(mix(hueco, pared, muro), colB, enB);
+          float losa = hayB * step(P - 0.45, f.y);            // canto de la losa del balcón
+          alb = mix(alb, revoco * 0.92, losa * (1.0 - enB));
+          emis = vid * mVid * (1.0 - enB);
+          /* balconera de vidrio (cara del cuerpo de balcones del propio) */
+          float dv = step(0.35, f.x) * step(f.x, ANCHO - 0.35) * step(0.10, f.y) * step(f.y, 2.25);
+          float mullion = step(abs(f.x - ANCHO * 0.5), 0.03);
+          alb = mix(alb, mix(vec3(0.02, 0.025, 0.03), vec3(0.12, 0.08, 0.05), mullion), bay * dv);
+          emis = mix(emis, vid * (1.0 - mullion), bay * dv);
+          /* toldos, equipos de A/A: variedad de color y densidad */
+          float vent = (1.0 - muro) * (1.0 - propio);
           float hayT = step(0.22, rnd) * step(rnd, 0.58);
           float bt = step(0.60, vr) * step(vr, 0.72);
-          alb = mix(alb, fract(rnd * 7.7) > 0.5 ? vec3(0.82,0.78,0.67)
-                                                : vec3(0.72,0.66,0.52),
-                    vent * hayT * bt);
+          float tt = fract(rnd * 7.7);
+          vec3 colT = tt > 0.66 ? vec3(0.16, 0.30, 0.18) : (tt > 0.33 ? vec3(0.82, 0.78, 0.67) : vec3(0.72, 0.66, 0.52));
+          colT *= 0.90 + 0.10 * step(0.5, fract(f.x / 0.14));
+          alb = mix(alb, colT, vent * hayT * bt);
           float st = vent * hayT * step(0.585, vr) * step(vr, 0.605);
-          alb = mix(alb, vec3(0.30,0.28,0.24), st);
-          float hayA = step(0.05, rnd) * step(rnd, 0.30);
-          float aa = vent * hayA * step(2.15, f.x) * step(f.x, 2.65)
-                     * step(0.30, vr) * step(vr, 0.40);
-          alb = mix(alb, fract(vr * 60.0) > 0.5 ? vec3(0.76,0.76,0.74)
-                                                : vec3(0.62,0.62,0.60), aa);
-          /* bajos comerciales de los vecinos: escaparate oscuro + rótulo */
-          float tb = (1.0 - smoothstep(2.7, 3.4, vUv.y)) * (1.0 - propio);
-          alb = mix(alb, vec3(0.020,0.026,0.038), tb * step(vUv.y, 2.7) * 0.9);
-          alb = mix(alb, palTienda(sem), tb * step(2.7, vUv.y) * 0.9);
-          emis *= 1.0 - tb * 0.6;
+          alb = mix(alb, vec3(0.30, 0.28, 0.24), st);
+          float hayA = step(0.05, rnd) * step(rnd, 0.40);
+          float aa = vent * hayA * step(2.15, f.x) * step(f.x, 2.65) * step(0.30, vr) * step(vr, 0.40);
+          alb = mix(alb, fract(vr * 60.0) > 0.5 ? vec3(0.76, 0.76, 0.74) : vec3(0.62, 0.62, 0.60), aa);
+          /* bajos comerciales: aplacado, escaparates, cierres, rótulos y portal */
+          float modu = floor(u / 3.1);
+          float rb = h21(vec2(modu * 1.31 + sem * 0.017, 7.7));
+          float fx = fract(u / 3.1) * 3.1;
+          float tipoA = h21(vec2(sem * 0.53 + 1.9, 2.3));
+          vec3 aplac = tipoA < 0.5 ? vec3(0.10, 0.10, 0.11)
+                     : (tipoA < 0.8 ? vec3(0.55, 0.52, 0.47) : revoco);
+          aplac *= 0.94 + 0.06 * h21(floor(vec2(u / 0.6, v / 0.4)));
+          vec3 bj = aplac;
+          float esc = step(rb, 0.70) * step(0.25, fx) * step(fx, 2.85) * step(0.35, v) * step(v, 3.0);
+          float cierre = step(0.70, rb) * step(rb, 0.90) * step(0.15, fx) * step(fx, 2.95) * step(v, 3.1);
+          float portal = step(0.90, rb) * step(0.55, fx) * step(fx, 2.45) * step(v, 2.7);
+          bj = mix(bj, vec3(0.020, 0.026, 0.038), esc);
+          bj = mix(bj, vec3(0.45, 0.46, 0.47) * (0.80 + 0.20 * step(0.5, fract(v / 0.08))), cierre);
+          bj = mix(bj, vec3(0.42, 0.19, 0.15), step(0.90, rb) * step(0.35, fx) * step(fx, 2.65) * step(v, 2.9) * (1.0 - portal));
+          bj = mix(bj, vec3(0.02, 0.025, 0.03), portal);
+          float rotulo = step(rb, 0.70) * step(0.35, h21(vec2(modu * 2.7 + sem * 0.019, 3.3))) * step(3.05, v) * step(v, 3.65);
+          bj = mix(bj, palTienda(sem + modu), rotulo * 0.95);
+          alb = mix(alb, bj, bajo);
+          emis = mix(emis * (1.0 - enB), vec3(0.0), bajo);
+          emis += vec3(0.015, 0.02, 0.03) * bajo * esc;
+          /* oclusión aproximada: la calle sombrea las plantas bajas */
+          ao = mix(0.62, 1.0, smoothstep(0.0, 14.0, v));
         }
         float cielo = 0.5 + 0.5 * Nf.y;
         /* el sol directo (E=14) lo lava todo: se comprime solo ese término */
         vec3 Esol = uSolE * max(dot(Nf, uSol), 0.0);
         Esol = Esol / (1.0 + dot(Esol, vec3(0.3333)) * 0.50);
-        vec3 E = Esol + uCielo * cielo + vec3(uSuelo) * (1.0 - cielo);
+        vec3 E = (Esol + uCielo * cielo + vec3(uSuelo) * (1.0 - cielo)) * ao * 1.15;
         vec3 col = alb * E * RECIPROCAL_PI;
         col = col / (1.0 + col * 0.15);
         col += emis;
@@ -248,10 +335,40 @@ function matFachada(propio){
   });
 }
 
+/* área con signo de un contorno (x, y) de Blender */
+function areaPoli(p){ let a = 0;
+  for(let i = 0; i < p.length; i++){ const [x1, y1] = p[i], [x2, y2] = p[(i + 1) % p.length];
+    a += x1 * y2 - x2 * y1; }
+  return a / 2; }
+function dentroPoli(x, y, p){ let c = false;
+  for(let i = 0, j = p.length - 1; i < p.length; j = i++)
+    if((p[i][1] > y) !== (p[j][1] > y) &&
+       x < (p[j][0] - p[i][0]) * (y - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c;
+  return c; }
+function holguraPoli(x, y, p){ let d = 1e9;
+  for(let i = 0; i < p.length; i++){ const [ax, ay] = p[i], [bx, by] = p[(i + 1) % p.length];
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2));
+    d = Math.min(d, Math.hypot(x - ax - t * dx, y - ay - t * dy)); }
+  return d; }
+
 function construirEdificios(){
   const Y0 = REAL.info.suelo.y, azar = rng(3);
   const pos = [], nor = [], uv = [], sem = [], tec = [], top = [];
   function v(x, y, z, n, u, w, s, t, h){ pos.push(x, y, z); nor.push(...n); uv.push(u, w); sem.push(s); tec.push(t); top.push(h); }
+  /* caja de azotea (caseta): 4 muros y tapa; t = 2 => shader de caseta blanca */
+  function caja(cx, cy, ex, ey, ang, z0, z1, s){
+    const c = Math.cos(ang), sn = Math.sin(ang);
+    const P = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => {
+      const x = a * ex / 2, y = b * ey / 2; return [cx + x * c - y * sn, cy + x * sn + y * c]; });
+    for(let i = 0; i < 4; i++){
+      const [ax, ay] = P[i], [bx, by] = P[(i + 1) % 4];
+      const L = Math.hypot(bx - ax, by - ay) || 1, n = [(by - ay) / L, 0, (bx - ax) / L];
+      const A0 = [ax, z0, -ay], B0 = [bx, z0, -by], B1 = [bx, z1, -by], A1 = [ax, z1, -ay];
+      [A0, B0, B1, A0, B1, A1].forEach(q => v(q[0], q[1], q[2], n, 0, 0, s, 2, z1 - z0));
+    }
+    [[0, 1, 2], [0, 2, 3]].forEach(t => t.forEach(k => v(P[k][0], z1, -P[k][1], [0, 1, 0], 0, 0, s, 2, z1 - z0)));
+  }
   REAL.edificios.forEach(([pts0, p])=>{
     p = p || 3;
     /* OSM trae contornos duplicados o solapados: cada edificio se encoge unos
@@ -262,6 +379,7 @@ function construirEdificios(){
     const pts = pts0.map(([x, y]) => { const d = Math.hypot(cx - x, cy - y) || 1;
       return [x + (cx - x) / d * k, y + (cy - y) / d * k]; });
     const h = p >= 3 ? BAJO_ED + (p - 1) * PLANTA_ED + 1.0 : p * 3.4;
+    const peto = p >= 3 ? 1.0 : 0.0;          // la cubierta baja un metro: peto perimetral
     const s = 0.15 + 0.85 * azar();
     let acc = 0;
     for(let i = 0; i < pts.length; i++){
@@ -275,7 +393,23 @@ function construirEdificios(){
       acc += L;
     }
     const tri = THREE.ShapeUtils.triangulateShape(pts.map(q => new THREE.Vector2(q[0], q[1])), []);
-    tri.forEach(t => t.forEach(k => v(pts[k][0], Y0 + h, -pts[k][1], [0, 1, 0], pts[k][0], pts[k][1], s, 1, h)));
+    tri.forEach(t => t.forEach(k => v(pts[k][0], Y0 + h - peto, -pts[k][1], [0, 1, 0], pts[k][0], pts[k][1], s, 1, h)));
+    /* casetas de escalera y ascensor (edificios altos y grandes) */
+    if(p >= 4 && Math.abs(areaPoli(pts)) >= 100){
+      const az = azar(), az2 = azar();
+      let best = null, bl = 0;
+      for(let i = 0; i < pts.length; i++){
+        const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length], L = Math.hypot(bx - ax, by - ay);
+        if(L > bl){ bl = L; best = Math.atan2(by - ay, bx - ax); } }
+      const gx = cx + (az - 0.5) * 6, gy = cy + (az2 - 0.5) * 6;
+      const [qx, qy] = dentroPoli(gx, gy, pts) ? [gx, gy] : [cx, cy];
+      if(dentroPoli(qx, qy, pts) && holguraPoli(qx, qy, pts) > 3.0){
+        const zb = Y0 + h - peto;
+        caja(qx, qy, 3.4, 3.6, best, zb, zb + 2.7, s);
+        if(az > 0.5 && holguraPoli(qx + 4.2, qy, pts) > 2.0 && dentroPoli(qx + 4.2, qy, pts))
+          caja(qx + 4.2, qy, 1.9, 1.9, best, zb, zb + 3.4, s);
+      }
+    }
   });
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -287,6 +421,139 @@ function construirEdificios(){
   const m = new THREE.Mesh(g, matFachada(false));
   m.frustumCulled = false;
   gCiudad.add(m);
+}
+
+
+/* ── vida de calle: coches aparcados, farolas y contenedores ──
+   Las posiciones las exporta hornear_visor.py (mismos objetos que proyectan su
+   sombra en el suelo horneado). Cada tipo es una malla instanciada. */
+function matSolido(doble){
+  const i = REAL.info, s = i.sol, c = i.cielo;
+  const senSol = Math.max(0, s.dir[1]);
+  return new THREE.ShaderMaterial({
+    side: doble ? THREE.DoubleSide : THREE.FrontSide,
+    uniforms: {
+      uSol: {value: new THREE.Vector3(...s.dir).normalize()},
+      uSolE: {value: new THREE.Color().setRGB(s.color[0]*s.E, s.color[1]*s.E, s.color[2]*s.E)},
+      uCielo: {value: new THREE.Color().setRGB(c.color[0]*c.E_up, c.color[1]*c.E_up, c.color[2]*c.E_up)},
+      uSuelo: {value: 0.3*(s.E*senSol + c.E_up)},
+      uHorizonte: {value: new THREE.Color().setRGB(...c.horizonte)},
+      uNiebla: {value: 0.0009}
+    },
+    vertexShader: `
+      #include <common>
+      attribute float aTipo;
+      varying vec3 vN; varying vec3 vPos; varying vec3 vCol; varying float vTipo;
+      void main(){
+        vec3 nrm = normal; vec4 lp = vec4(position, 1.0);
+        #ifdef USE_INSTANCING
+          lp = instanceMatrix * lp;
+          nrm = mat3(instanceMatrix) * nrm;
+        #endif
+        vec4 w = modelMatrix * lp;
+        vPos = w.xyz;
+        vN = normalize(mat3(modelMatrix) * nrm);
+        #ifdef USE_INSTANCING_COLOR
+          vCol = instanceColor;
+        #else
+          vCol = vec3(0.5);
+        #endif
+        vTipo = aTipo;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader: `
+      #include <common>
+      uniform vec3 uSol; uniform vec3 uSolE; uniform vec3 uCielo; uniform float uSuelo;
+      uniform vec3 uHorizonte; uniform float uNiebla;
+      varying vec3 vN; varying vec3 vPos; varying vec3 vCol; varying float vTipo;
+      void main(){
+        vec3 N = normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0);
+        vec3 Vv = normalize(cameraPosition - vPos);
+        /* tipo 0 pintura, 1 cristal, 2 goma, 3 metal oscuro, 4 color de instancia, 5 tronco */
+        vec3 alb = vTipo < 0.5 ? vCol : (vTipo < 1.5 ? vec3(0.02, 0.03, 0.04)
+                 : (vTipo < 2.5 ? vec3(0.025) : (vTipo < 3.5 ? vec3(0.10, 0.11, 0.11)
+                 : (vTipo < 4.5 ? vCol * 0.55 : vec3(0.22, 0.17, 0.11)))));
+        float cielo = 0.5 + 0.5 * N.y;
+        vec3 Esol = uSolE * max(dot(N, uSol), 0.0);
+        Esol = Esol / (1.0 + dot(Esol, vec3(0.3333)) * 0.50);
+        vec3 E = Esol + uCielo * cielo + vec3(uSuelo) * (1.0 - cielo);
+        vec3 col = alb * E * RECIPROCAL_PI;
+        /* brillo de cielo (fresnel) en pintura y cristal */
+        float fr = pow(1.0 - max(dot(N, Vv), 0.0), 3.0);
+        float brillo = vTipo < 0.5 ? 0.10 : (vTipo < 1.5 ? 0.35 : 0.0);
+        col += uCielo * 0.55 * (brillo + fr * brillo * 1.5) * 0.30;
+        col = col / (1.0 + col * 0.15);
+        float d = length(vPos - cameraPosition);
+        col = mix(col, uHorizonte, 1.0 - exp(-d * uNiebla));
+        gl_FragColor = vec4(col, 1.0);
+        #include <tonemapping_fragment>
+        #include <encodings_fragment>
+      }`
+  });
+}
+
+/* fusiona partes [{g, t}] en una geometría no indexada con atributo aTipo */
+function fusionarPartes(partes){
+  const pos = [], nor = [], tip = [];
+  partes.forEach(({g, t}) => {
+    const n = g.index ? g.toNonIndexed() : g;
+    n.computeVertexNormals();
+    const p = n.attributes.position.array, q = n.attributes.normal.array;
+    for(let i = 0; i < p.length; i++){ pos.push(p[i]); nor.push(q[i]); }
+    for(let i = 0; i < p.length / 3; i++) tip.push(t);
+  });
+  const G = new THREE.BufferGeometry();
+  G.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  G.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+  G.setAttribute("aTipo", new THREE.Float32BufferAttribute(tip, 1));
+  return G;
+}
+const PINTURA_COCHE = [[0.30, [0.80, 0.80, 0.78]], [0.55, [0.45, 0.46, 0.48]], [0.75, [0.03, 0.03, 0.035]],
+                       [0.85, [0.12, 0.12, 0.13]], [0.93, [0.04, 0.07, 0.16]], [1.01, [0.45, 0.04, 0.04]]];
+const COLOR_CONT = [[0.05, 0.25, 0.08], [0.15, 0.16, 0.16], [0.60, 0.50, 0.05], [0.05, 0.10, 0.35]];
+
+function construirCalle(){
+  const I = REAL.info, Y0 = I.suelo.y;
+  const mat = matSolido();
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), col = new THREE.Color();
+  function instanciar(geo, lista, alto, colorDe){
+    if(!lista || !lista.length) return;
+    const im = new THREE.InstancedMesh(geo, mat, lista.length);
+    lista.forEach((it, k) => {
+      e.set(0, it[2], 0); q.setFromEuler(e);
+      M.compose(new THREE.Vector3(it[0], Y0 + alto, it[1]), q, new THREE.Vector3(1, 1, 1));
+      im.setMatrixAt(k, M);
+      const c = colorDe(it); col.setRGB(c[0], c[1], c[2]); im.setColorAt(k, col);
+    });
+    im.instanceMatrix.needsUpdate = true;
+    if(im.instanceColor) im.instanceColor.needsUpdate = true;
+    im.frustumCulled = false;
+    gCiudad.add(im);
+  }
+  /* coche: carrocería, cabina de cristal con techo pintado y cuatro ruedas */
+  const cabina = new THREE.BoxGeometry(2.0, 0.52, 1.55).translate(-0.05, 1.18, 0);
+  const cp = cabina.attributes.position;
+  for(let k = 0; k < cp.count; k++) if(cp.getY(k) > 1.2){ cp.setX(k, -0.05 + (cp.getX(k) + 0.05) * 0.72); cp.setZ(k, cp.getZ(k) * 0.90); }
+  const partes = [
+    {g: new THREE.BoxGeometry(4.3, 0.62, 1.75).translate(0, 0.61, 0), t: 0},
+    {g: cabina, t: 1},
+    {g: new THREE.BoxGeometry(1.45, 0.03, 1.38).translate(-0.05, 1.445, 0), t: 0}
+  ];
+  [[1.35, 0.85], [1.35, -0.85], [-1.35, 0.85], [-1.35, -0.85]].forEach(([x, z]) =>
+    partes.push({g: new THREE.CylinderGeometry(0.31, 0.31, 0.2, 10).rotateX(Math.PI / 2).translate(x, 0.31, z), t: 2}));
+  instanciar(fusionarPartes(partes), I.coches, 0.0, it => {
+    for(const [lim, c] of PINTURA_COCHE) if(it[3] < lim) return c; return PINTURA_COCHE[0][1]; });
+  /* farola: fuste, brazo curvado hacia la calzada y luminaria */
+  const fuste = new THREE.CylinderGeometry(0.07, 0.11, 9.0, 8).translate(0, 4.5, 0);
+  const brazo = new THREE.BoxGeometry(1.9, 0.07, 0.07).translate(0.95, 9.0, 0);
+  const cabeza = new THREE.BoxGeometry(0.75, 0.12, 0.32).translate(1.95, 8.95, 0);
+  instanciar(fusionarPartes([{g: fuste, t: 3}, {g: brazo, t: 3}, {g: cabeza, t: 3}]),
+             I.farolas, 0.0, () => [1, 1, 1]);
+  /* contenedor: cuerpo del color de la recogida y tapa oscura */
+  instanciar(fusionarPartes([
+      {g: new THREE.BoxGeometry(1.05, 1.0, 0.95).translate(0, 0.55, 0), t: 4},
+      {g: new THREE.BoxGeometry(1.1, 0.08, 1.0).translate(0, 1.09, 0), t: 3}]),
+    I.urbano, 0.0, it => COLOR_CONT[it[3] % 4]);
 }
 
 function planoSuelo(tex, conf, dy){
@@ -304,9 +571,49 @@ function planoSuelo(tex, conf, dy){
   gCiudad.add(mesh);
 }
 
+/* palmera: tronco de 10 m y 16 frondas curvadas (cintas) en un solo InstancedMesh */
+function construirPalmeras(lista){
+  if(!lista.length) return;
+  const Y0 = REAL.info.suelo.y, azar = rng(21);
+  const partes = [{g: new THREE.CylinderGeometry(0.20, 0.30, 10, 8).translate(0, 5, 0), t: 5}];
+  const N = 16, S = 7;
+  for(let f = 0; f < N; f++){
+    const ang = f / N * 2 * Math.PI + azar() * 0.3, L = 3.0 + azar() * 0.9, ca = Math.cos(ang), sa = Math.sin(ang);
+    const pos = [];
+    const pt = (t, lado) => { const w = (0.55 * Math.pow(1 - t, 0.7) + 0.03) * lado;
+      const x = L * t, y = 10.0 + 1.3 * t - 2.1 * t * t;
+      return [x * ca - w * sa, y, -(x * sa + w * ca)]; };
+    for(let k = 0; k < S; k++){
+      const a = pt(k / S, -1), b = pt(k / S, 1), c = pt((k + 1) / S, 1), d = pt((k + 1) / S, -1);
+      pos.push(...a, ...b, ...c, ...a, ...c, ...d);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    partes.push({g, t: 4});
+  }
+  const im = new THREE.InstancedMesh(fusionarPartes(partes), matSolido(true), lista.length);
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), col = new THREE.Color();
+  lista.forEach(([x, z, h, w, rot], k) => {
+    const s = Math.min(1.25, Math.max(0.7, (h || 9) / 9.5));
+    e.set(0, rot || 0, 0); q.setFromEuler(e);
+    M.compose(new THREE.Vector3(x, Y0, z), q, new THREE.Vector3(s, s, s));
+    im.setMatrixAt(k, M);
+    col.setRGB(0.20 + azar() * 0.08, 0.34 + azar() * 0.10, 0.10 + azar() * 0.05);
+    im.setColorAt(k, col);
+  });
+  im.instanceMatrix.needsUpdate = true;
+  if(im.instanceColor) im.instanceColor.needsUpdate = true;
+  im.frustumCulled = false;
+  gCiudad.add(im);
+}
+
 function construirArboles(lado, planta){
-  const A = REAL.info.arbol, lista = REAL.info.arboles || [];
-  if(!A || !lista.length || !lado) return;
+  const A = REAL.info.arbol, todos = REAL.info.arboles || [];
+  if(!A || !todos.length || !lado) return;
+  /* ~10 % de los árboles son palmeras (geometría propia, ver construirPalmeras) */
+  const esPalma = (k) => ((Math.imul(k + 1, 2654435761) >>> 0) % 100) < 10;
+  const lista = todos.filter((_, k) => !esPalma(k));
+  construirPalmeras(todos.filter((_, k) => esPalma(k)));
   const Y0 = REAL.info.suelo.y;
   const gl = new THREE.PlaneGeometry(1, 1);
   gl.translate(0, 0.5, 0);
@@ -353,7 +660,7 @@ function construirTapas(){
     const tri = THREE.ShapeUtils.triangulateShape(pts.map(q => new THREE.Vector2(q[0], q[1])), []);
     const pos = [], nor = [], uv = [], sem = [], tec = [], top = [];
     tri.forEach(t => t.forEach(k => { pos.push(pts[k][0], -0.035, -pts[k][1]); nor.push(0, 1, 0);
-      uv.push(pts[k][0], pts[k][1]); sem.push(0.55); tec.push(1); top.push(0); }));
+      uv.push(pts[k][0], pts[k][1]); sem.push(0.55); tec.push(3); top.push(0); }));
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
@@ -373,9 +680,10 @@ function prepararInterior(g, LM, envInt, envCielo){
     const k = mt.uuid + "|" + (lm || "");
     if(cache[k]) return cache[k];
     const m = mt.clone();
+    if(mt.name === "revoco_fachada") m.color.setRGB(...REVOCO_HORNEADO);
     if(lm && LM[lm]){
       m.lightMap = LM[lm];
-      m.lightMapIntensity = I.K[lm] * Math.PI;
+      m.lightMapIntensity = I.K[lm] * Math.PI * (mt.name === "revoco_fachada" ? 0.85 : 1.0);
       m.onBeforeCompile = sinIrradianciaIBL;
     }
     const vidrio = m.transparent && m.opacity < 0.4;
@@ -401,7 +709,7 @@ function prepararInterior(g, LM, envInt, envCielo){
        falsos techos: su cara superior saldría negra y tapa las estancias */
     if(n === "techo" || n.indexOf("falso_techo_") === 0 || n.indexOf("tabica_") === 0 ||
        n.indexOf("rev_gap_") === 0 || n.indexOf("ext_voladizo") === 0 ||
-       n.indexOf("dl_disco") === 0) ocultarEnOrbita.push(o);
+       n.indexOf("dl_disco") === 0 || n.indexOf("ext_azotea") === 0) ocultarEnOrbita.push(o);
   });
   gReal.add(g.scene);
   /* barandilla y petos de la terraza: colisión en el paseo */
@@ -433,6 +741,7 @@ function cargarRealista(){
     if(sLejos) planoSuelo(sLejos, I.suelo.lejos, 0.0);
     if(sCerca) planoSuelo(sCerca, I.suelo.cerca, 0.03);
     construirArboles(aLado, aPlanta);
+    construirCalle();
     const gs = new THREE.SphereGeometry(FAR_CIUDAD*0.9, 64, 32);
     gs.scale(-1, 1, 1);
     const ms = new THREE.MeshBasicMaterial({map: cielo, fog: false, depthWrite: false});

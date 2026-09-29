@@ -594,6 +594,9 @@ def build_materials():
     m["aluminio"] = principled("aluminio", base=(0.030, 0.030, 0.032), rough=0.34,
                                metal=1.0, spec=0.6)
     set_in(m["aluminio"].node_tree.nodes["Principled BSDF"], "Anisotropic", 0.45)
+    m["porcelana"] = principled("porcelana", base=(0.92, 0.92, 0.91), rough=0.10,
+                                spec=0.5)
+    m["fregadero"] = principled("fregadero", base=(0.025, 0.025, 0.028), rough=0.35)
     m["cristal"] = vidrio_arquitectonico("cristal")
     m["espejo"] = principled("espejo", base=(0.95, 0.95, 0.95), rough=0.02, metal=1.0)
     m["concreto"] = pbr_material("concreto", "brushed_concrete", tex_m=1.6,
@@ -710,6 +713,26 @@ def poly_ngon(pts, h, name, mat):
 def box(x0, z0, x1, z1, h0, h1, name, mat, bevel=0.006):
     pts = [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
     return poly_prism(pts, h0, h1, name, mat, bevel=bevel)
+
+
+def prismas(lista, name, mat):
+    """Varios prismas en una sola malla. Cada uno = 8 vértices (x, z, h): cuatro
+    de la base (x0z0, x1z0, x1z1, x0z1) y los cuatro de arriba en el mismo orden."""
+    verts, faces = [], []
+    for v8 in lista:
+        b = len(verts)
+        verts += [(x, -z, h) for x, z, h in v8]
+        faces += [[b, b + 3, b + 2, b + 1], [b + 4, b + 5, b + 6, b + 7],
+                  [b, b + 1, b + 5, b + 4], [b + 1, b + 2, b + 6, b + 5],
+                  [b + 2, b + 3, b + 7, b + 6], [b + 3, b, b + 4, b + 7]]
+    return mesh_from(verts, faces, name, mat)
+
+
+def cajas(lista, name, mat):
+    """Cajas alineadas (x0, z0, x1, z1, h0, h1) fusionadas en una malla."""
+    return prismas([[(x0, z0, h0), (x1, z0, h0), (x1, z1, h0), (x0, z1, h0),
+                     (x0, z0, h1), (x1, z0, h1), (x1, z1, h1), (x0, z1, h1)]
+                    for x0, z0, x1, z1, h0, h1 in lista], name, mat)
 
 
 def cylinder(x, z, r, h0, h1, name, mat, n=24):
@@ -983,6 +1006,15 @@ def uv_proyectar(escala=1.0):
 def _altura_estancia(e):
     a = e.get("altura")
     return a if a else ALTURAS_ESTANCIA.get(e["id"])
+
+
+def _techo_en(x, z):
+    """Cota de la cara inferior del techo en el punto (x, z) del plano: 2,30 bajo
+    falso techo, 2,46 (forjado) en el resto. Los downlights cuelgan de ella."""
+    for e in PLAN["estancias"]:
+        if e["id"] != "terraza" and _dentro((x, z), e["pts"]):
+            return _altura_estancia(e) or ALTURA
+    return ALTURA
 
 
 def build_shell(m):
@@ -1695,36 +1727,69 @@ def mat_fachadas():
     return mat, cub
 
 
+def _desglose_via(w):
+    """(carriles, bandas de aparcamiento) de una calzada: extraer_entorno da
+    ancho = carriles·3,1 + aparcamiento·2,2 por banda y la solución es única."""
+    for k in (0, 1, 2):
+        n = (w - 2.2 * k) / 3.1
+        if round(n) >= 1 and abs(n - round(n)) < 0.06:
+            return int(round(n)), k
+    return max(1, int(w // 3.1)), 0
+
+
 def mat_asfalto():
-    """Asfalto con marcas viales en UV métricas (u a lo largo, v a lo ancho):
-    líneas de borde continuas y separadores de carril discontinuos cada 3,1 m."""
+    """Asfalto con bordillo, rígola, línea de aparcamiento y separadores de carril
+    en UV métricas (u a lo largo, v a lo ancho desde el lado derecho). Atributos
+    de cara: `ancho` y `p_der`/`p_izq` (ancho de la banda de aparcamiento)."""
     mat = bpy.data.materials.new("ext_asfalto")
     mat.use_nodes = True
     nt = mat.node_tree
     bsdf = nt.nodes["Principled BSDF"]
     u, v = _uv_xy(nt)
-    at = nt.nodes.new("ShaderNodeAttribute")
-    at.attribute_type = "GEOMETRY"
-    at.attribute_name = "ancho"
-    w = at.outputs["Fac"]
-    borde1 = _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", v, 0.35),
-                   _math(nt, "LESS_THAN", v, 0.47))
+
+    def atr(nombre):
+        a = nt.nodes.new("ShaderNodeAttribute")
+        a.attribute_type = "GEOMETRY"
+        a.attribute_name = nombre
+        return a.outputs["Fac"]
+
+    def entre(x, lo, hi):
+        return _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", x, lo),
+                     _math(nt, "LESS_THAN", x, hi))
+
+    w, pd, pi_ = atr("ancho"), atr("p_der"), atr("p_izq")
     vd = _math(nt, "SUBTRACT", w, v)
-    borde2 = _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", vd, 0.35),
-                   _math(nt, "LESS_THAN", vd, 0.47))
+    bord = _math(nt, "MAXIMUM", _math(nt, "LESS_THAN", v, 0.12),
+                 _math(nt, "LESS_THAN", vd, 0.12))
+    rig = _math(nt, "MAXIMUM", entre(v, 0.12, 0.40), entre(vd, 0.12, 0.40))
+
+    def raya(x, ref):        # línea de 10 cm a la distancia `ref` del borde (si hay banda)
+        return _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", ref, 0.1),
+                     _math(nt, "LESS_THAN", _math(nt, "ABSOLUTE", _math(
+                         nt, "SUBTRACT", x, ref)), 0.05))
+
+    lin_ap = _math(nt, "MAXIMUM", raya(v, pd), raya(vd, pi_))
+    # sin aparcamiento: línea de borde continua junto a la rígola
+    borde1 = _math(nt, "MULTIPLY", entre(v, 0.52, 0.64), _math(nt, "LESS_THAN", pd, 0.1))
+    borde2 = _math(nt, "MULTIPLY", entre(vd, 0.52, 0.64), _math(nt, "LESS_THAN", pi_, 0.1))
+    # separadores de carril discontinuos cada 3,1 m desde el borde de la banda
+    vv = _math(nt, "SUBTRACT", v, pd)
     carril = _math(nt, "LESS_THAN", _math(nt, "ABSOLUTE", _math(
-        nt, "SUBTRACT", v, _math(nt, "MULTIPLY", _math(nt, "ROUND", _math(
-            nt, "DIVIDE", v, 3.1)), 3.1))), 0.06)
-    dentro_ = _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", v, 1.0),
-                    _math(nt, "GREATER_THAN", vd, 1.0))
+        nt, "SUBTRACT", vv, _math(nt, "MULTIPLY", _math(nt, "ROUND", _math(
+            nt, "DIVIDE", vv, 3.1)), 3.1))), 0.06)
+    dentro_ = _math(nt, "MULTIPLY", _math(nt, "GREATER_THAN", vv, 0.9),
+                    _math(nt, "GREATER_THAN", _math(nt, "SUBTRACT", vd, pi_), 0.9))
     trazo = _math(nt, "LESS_THAN", _math(nt, "FRACT", _math(nt, "DIVIDE", u, 9.0)), 0.35)
     carril = _math(nt, "MULTIPLY", _math(nt, "MULTIPLY", carril, dentro_), trazo)
-    marca = _math(nt, "MAXIMUM", _math(nt, "MAXIMUM", borde1, borde2), carril)
+    marca = _math(nt, "MAXIMUM", _math(nt, "MAXIMUM", lin_ap, carril),
+                  _math(nt, "MAXIMUM", borde1, borde2))
     nz = nt.nodes.new("ShaderNodeTexNoise")
     nz.inputs["Scale"].default_value = 0.8
     base = _mix(nt, _math(nt, "MULTIPLY", nz.outputs["Fac"], 0.5),
-                (0.032, 0.032, 0.034), (0.07, 0.068, 0.066))
-    color = _mix(nt, marca, base, (0.55, 0.55, 0.52))
+                (0.085, 0.085, 0.088), (0.125, 0.122, 0.118))
+    color = _mix(nt, rig, base, (0.20, 0.20, 0.20))
+    color = _mix(nt, bord, color, (0.46, 0.45, 0.43))
+    color = _mix(nt, marca, color, (0.62, 0.62, 0.58))
     nt.links.new(color, bsdf.inputs["Base Color"])
     set_in(bsdf, "Roughness", 0.85)
     return mat
@@ -1742,9 +1807,9 @@ def mat_suelo_urbano():
     for k, val in (("Scale", 1.0), ("Mortar Size", 0.006), ("Brick Width", 0.4),
                    ("Row Height", 0.4), ("Bias", 0.0)):
         br.inputs[k].default_value = val
-    br.inputs["Color1"].default_value = (0.29, 0.28, 0.26, 1.0)
-    br.inputs["Color2"].default_value = (0.36, 0.34, 0.31, 1.0)
-    br.inputs["Mortar"].default_value = (0.17, 0.16, 0.15, 1.0)
+    br.inputs["Color1"].default_value = (0.50, 0.48, 0.44, 1.0)
+    br.inputs["Color2"].default_value = (0.57, 0.55, 0.51, 1.0)
+    br.inputs["Mortar"].default_value = (0.38, 0.36, 0.33, 1.0)
     nt.links.new(tc.outputs["Object"], br.inputs["Vector"])
     nt.links.new(br.outputs["Color"], bsdf.inputs["Base Color"])
     set_in(bsdf, "Roughness", 0.8)
@@ -1861,10 +1926,13 @@ def _vaciar_volumen_propio(ob, mats):
     ter = next(e for e in PLAN["estancias"] if e["id"] == "terraza")
     tx = [p[0] for p in ter["pts"]]
     tz = [p[1] for p in ter["pts"]]
-    cortes = [([(x, -z) for x, z in PLAN["huella"]], -0.02, ALTURA),
+    # el corte sube 1 cm sobre el forjado (2,46): así su cara superior no queda
+    # coplanaria con `techo` y los downlights no acaban dentro de un macizo
+    z_corte = ALTURA + 0.01
+    cortes = [([(x, -z) for x, z in PLAN["huella"]], -0.02, z_corte),
               ([(min(tx) - 0.05, -(min(tz) - 0.2)), (max(tx) + 0.3, -(min(tz) - 0.2)),
                 (max(tx) + 0.3, -(max(tz) + 0.2)), (min(tx) - 0.05, -(max(tz) + 0.2))],
-               -0.02, ALTURA)]
+               -0.02, z_corte)]
     for x0, z0, x1, z1 in ((-7.0, 3.20, 0.25, 6.8),     # patio SO: V03–V07
                            (-8.6, -6.8, -5.0, -3.40)):  # patio NE: V08
         cortes.append(([(x0, -z0), (x1, -z0), (x1, -z1), (x0, -z1)],
@@ -1888,38 +1956,164 @@ def _vaciar_volumen_propio(ob, mats):
         bpy.data.objects.remove(cutter, do_unlink=True)
 
 
-def build_balcones(m):
-    """Balcón del 7º como en las fotos del edificio: canto de forjado macizo de
-    revoco y barandilla negra de pletinas horizontales, voladizo de la cubierta
-    encima y el mismo balcón apilado en las seis plantas inferiores."""
+def build_cubierta_propia(m, pts, fach, cub):
+    """Coronación del edificio propio: peto perimetral con albardilla, casetas de
+    escalera y ascensor, chimeneas y antenas (colocadas por fachada_propia).
+    El peto es una malla aparte (`ext_propio_peto`, misma UV que los muros) para
+    no romper el booleano del volumen, que necesita un sólido cerrado."""
+    if not pts:
+        return
+    fp = _fachada_propia()
+    t = 0.25                               # espesor del peto
+    z0, z1 = fp.Z_CUB, fp.Z_CUB + fp.PETO
+    n = len(pts)
+    # normales hacia dentro (polígono antihorario) y vértices del contorno interior
+    dirs = []
+    for i in range(n):
+        (xa, ya), (xb, yb) = pts[i], pts[(i + 1) % n]
+        L = math.hypot(xb - xa, yb - ya) or 1.0
+        dirs.append(((xb - xa) / L, (yb - ya) / L, L))
+    ints = []
+    for i in range(n):
+        d0, d1 = dirs[i - 1], dirs[i]
+        n0, n1 = (-d0[1], d0[0]), (-d1[1], d1[0])
+        k = 1.0 + n0[0] * n1[0] + n0[1] * n1[1]
+        f = t / max(k, 0.35)
+        ints.append((pts[i][0] + (n0[0] + n1[0]) * f, pts[i][1] + (n0[1] + n1[1]) * f))
+
+    def en_patio(x, y):      # patios de luces que recorta _vaciar_volumen_propio
+        return any(min(a, c) - 0.3 <= x <= max(a, c) + 0.3 and
+                   min(b, d) - 0.3 <= y <= max(b, d) + 0.3
+                   for a, b, c, d in ((-7.0, -6.8, 0.25, -3.2), (-8.6, 3.4, -5.0, 6.8)))
+
+    mp = _Malla()
+    acc = 0.0
+    v0, v1 = z0 + ALTURA_PISO, z1 + ALTURA_PISO
+    for i in range(n):
+        j = (i + 1) % n
+        (xa, ya), (xb, yb), L = pts[i], pts[j], dirs[i][2]
+        if not en_patio((xa + xb) / 2, (ya + yb) / 2):
+            (ia, ib) = ints[i], ints[j]
+            mp.cara([(xa, ya, z0), (xb, yb, z0), (xb, yb, z1), (xa, ya, z1)],
+                    [(acc, v0), (acc + L, v0), (acc + L, v1), (acc, v1)], 0, semilla=0.0)
+            mp.cara([(ib[0], ib[1], z0), (ia[0], ia[1], z0), (ia[0], ia[1], z1),
+                     (ib[0], ib[1], z1)],
+                    [(acc + L, v0), (acc, v0), (acc, v1), (acc + L, v1)], 0, semilla=0.0)
+            mp.cara([(xa, ya, z1), (xb, yb, z1), (ib[0], ib[1], z1), (ia[0], ia[1], z1)],
+                    [(acc, v1), (acc + L, v1), (acc + L, v1), (acc, v1)], 0, semilla=0.0)
+        acc += L
+    if mp.f:
+        mp.objeto("ext_propio_peto", [fach, cub])
+
+    # casetas, chimeneas y antenas de la azotea
+    for nombre, rgb, rough in (("caseta_blanco", (0.84, 0.83, 0.80), 0.85),
+                               ("albardilla", (0.82, 0.81, 0.78), 0.8),
+                               ("antena", (0.35, 0.36, 0.38), 0.5)):
+        if nombre not in m:
+            m[nombre] = principled(nombre, base=rgb, rough=rough)
+    az = fp.azotea(pts)
+    cas = []
+    for clave, (dx, dy, alto) in (("escalera", (3.3, 3.9, 2.7)), ("ascensor", (1.9, 1.9, 3.4))):
+        if az[clave]:
+            x, y = az[clave]
+            cas.append((x - dx / 2, -(y + dy / 2), x + dx / 2, -(y - dy / 2), z0, z0 + alto))
+    for x, y in az["chimeneas"]:
+        cas.append((x - 0.225, -(y + 0.225), x + 0.225, -(y - 0.225), z0, z0 + 1.40))
+        cas.append((x - 0.30, -(y + 0.30), x + 0.30, -(y - 0.30), z0 + 1.40, z0 + 1.46))
+    if cas:
+        cajas(cas, "ext_azotea", m["caseta_blanco"])
+    ant = []
+    for x, y in az["antenas"]:
+        ant.append((x - 0.02, -(y + 0.02), x + 0.02, -(y - 0.02), z0, z0 + 3.2))
+        ant.append((x - 0.6, -(y + 0.015), x + 0.6, -(y - 0.015), z0 + 2.8, z0 + 2.83))
+        ant.append((x - 0.45, -(y + 0.015), x + 0.45, -(y - 0.015), z0 + 3.1, z0 + 3.13))
+    if ant:
+        cajas(ant, "ext_azotea_antena", m["antena"])
+
+
+def _fachada_propia():
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import fachada_propia
+    return fachada_propia
+
+
+# balcón del piso (plano PE): x[8,23; 9,55] z[-0,62; 3,55]
+BALCON_PISO = (8.23, 9.55, -0.62, 3.55)
+
+
+def build_balcones(m, columnas):
+    """Balcones volados apilados en columnas como en las fotos del edificio:
+    canto de forjado grueso de revoco (~0,5 m), barandilla de pletinas de
+    bronce, splits y toldos en algunas plantas y la cubierta del último balcón
+    (voladizo). La columna del piso usa las cotas del plano; las demás salen de
+    los entrantes de OSM. Cada columna son 3-6 mallas (no un objeto por pieza)."""
     rev, neg = m["revoco"], m["bronce_barandilla"]
-    xi, xf, zi, zf = 8.23, 9.55, -0.62, 3.55
-    for k in range(7):
-        h = -k * PLANTA
-        box(xi, zi, xf, zf, h - 0.30, h + (0.0 if k == 0 else 0.004),
-            f"ext_balcon_losa_{k}", rev, bevel=0.0)
-        box(xf - 0.13, zi, xf, zf, h, h + 0.30, f"ext_balcon_canto_{k}_f", rev, bevel=0.0)
-        box(xi, zf - 0.13, xf, zf, h, h + 0.30, f"ext_balcon_canto_{k}_s", rev, bevel=0.0)
-        box(xi, zi, xf, zi + 0.12, h, h + 0.30, f"ext_balcon_canto_{k}_n", rev, bevel=0.0)
+    for nombre, col, rgb, rough in (
+            ("split", None, (0.80, 0.80, 0.78), 0.45),
+            ("toldo_a", None, (0.78, 0.70, 0.52), 0.9),
+            ("toldo_b", None, (0.90, 0.87, 0.78), 0.9)):
+        if nombre not in m:
+            m[nombre] = principled(nombre, base=rgb, rough=rough)
+    cols = []
+    for c in columnas:
+        if c["piso"]:
+            cols.append(BALCON_PISO)
+        else:
+            cols.append((c["x"] - 0.17, c["x"] + 1.15, -c["y1"], -c["y0"]))
+    if not cols:
+        cols = [BALCON_PISO]
+    voladizos = []
+    for ci, (xi, xf, zi, zf) in enumerate(cols):
+        losas, postes, rails, splits = [], [], [], []
+        toldos_a, toldos_b = [], []
         xm = xf - 0.065                       # eje de la barandilla frontal
         zs_, zn_ = zf - 0.065, zi + 0.06      # ejes de las laterales
         n = max(2, math.ceil((zs_ - zn_) / 1.1))
-        postes = [(xm, zn_ + (zs_ - zn_) * i / n) for i in range(n + 1)]
-        postes += [(x, zc) for x in (xi + 0.2, (xi + xm) / 2) for zc in (zn_, zs_)]
-        for j, (px, pz) in enumerate(postes):
-            box(px - 0.018, pz - 0.018, px + 0.018, pz + 0.018, h + 0.30, h + 1.02,
-                f"ext_barandilla_{k}_p{j}", neg, bevel=0.0)
-        for j, (a, b, e) in enumerate(((0.02, 0.04, 1.02), (0.007, 0.03, 0.45),
-                                       (0.007, 0.03, 0.60), (0.007, 0.03, 0.75),
-                                       (0.007, 0.03, 0.90))):
-            box(xm - a, zn_, xm + a, zs_, h + e, h + e + b,
-                f"ext_barandilla_{k}_f{j}", neg, bevel=0.0)
-            box(xi, zs_ - a, xm + a, zs_ + a, h + e, h + e + b,
-                f"ext_barandilla_{k}_s{j}", neg, bevel=0.0)
-            box(xi, zn_ - a, xm + a, zn_ + a, h + e, h + e + b,
-                f"ext_barandilla_{k}_n{j}", neg, bevel=0.0)
-    box(xi, zi - 0.10, xf + 0.15, zf + 0.10, ALTURA + 0.05, PLANTA,
-        "ext_voladizo", rev, bevel=0.0)
+        pos_post = [(xm, zn_ + (zs_ - zn_) * i / n) for i in range(n + 1)]
+        pos_post += [(x, zc) for x in (xi + 0.2, (xi + xm) / 2) for zc in (zn_, zs_)]
+        for k in range(7):
+            h = -k * PLANTA
+            losas.append((xi, zi, xf, zf, h - 0.50, h + (0.0 if k == 0 else 0.004)))
+            for px, pz in pos_post:
+                postes.append((px - 0.018, pz - 0.018, px + 0.018, pz + 0.018,
+                               h, h + 1.02))
+            for a, b, e in ((0.02, 0.04, 1.02), (0.007, 0.03, 0.30),
+                            (0.007, 0.03, 0.50), (0.007, 0.03, 0.70),
+                            (0.007, 0.03, 0.90)):
+                rails.append((xm - a, zn_, xm + a, zs_, h + e, h + e + b))
+                rails.append((xi, zs_ - a, xm + a, zs_ + a, h + e, h + e + b))
+                rails.append((xi, zn_ - a, xm + a, zn_ + a, h + e, h + e + b))
+            if k > 0 and (k * 3 + ci) % 4 == 1:          # split en la esquina
+                splits.append((xf - 1.05, zn_ + 0.12, xf - 0.20, zn_ + 0.42,
+                               h + 0.05, h + 0.60))
+            if k > 0 and (k + ci) % 3 == 1:               # toldo a rayas
+                ha, hb = h + 2.38, h + 1.88
+                x0, x1, t = xi + 0.05, xf - 0.02, 0.015
+                nb = max(4, int((zs_ - zn_) / 0.125))
+                for j in range(nb):
+                    za = zn_ + (zs_ - zn_) * j / nb
+                    zb = zn_ + (zs_ - zn_) * (j + 1) / nb
+                    dst = toldos_a if j % 2 == 0 else toldos_b
+                    dst.append([(x0, za, ha - t), (x1, za, hb - t), (x1, zb, hb - t),
+                                (x0, zb, ha - t), (x0, za, ha), (x1, za, hb),
+                                (x1, zb, hb), (x0, zb, ha)])
+                    dst.append([(x1 - t, za, hb - 0.22), (x1, za, hb - 0.22),
+                                (x1, zb, hb - 0.22), (x1 - t, zb, hb - 0.22),
+                                (x1 - t, za, hb), (x1, za, hb), (x1, zb, hb),
+                                (x1 - t, zb, hb)])
+        voladizos.append((xi, zi - 0.10, xf + 0.15, zf + 0.10, ALTURA + 0.05, PLANTA))
+        cajas(losas, f"ext_balcon_c{ci}", rev)
+        cajas(postes + rails, f"ext_barandilla_c{ci}", neg)
+        if splits:
+            cajas(splits, f"ext_balcon_split_c{ci}", m["split"])
+        if toldos_a:
+            prismas(toldos_a, f"ext_balcon_toldo_a_c{ci}", m["toldo_a"])
+            prismas(toldos_b, f"ext_balcon_toldo_b_c{ci}", m["toldo_b"])
+    # cubierta de los últimos balcones: una malla con el nombre que el visor
+    # oculta en órbita (si no, tapa el piso desde arriba)
+    cajas(voladizos, "ext_voladizo", rev)
 
 
 def pintar_fachada_exterior(mat):
@@ -1994,6 +2188,154 @@ def _arboles_alineacion(vias, edificios, existentes, radio=170.0):
     return nuevos
 
 
+def build_calle(m, arboles):
+    """Vida de calle: pasos de cebra en los cruces, alcorques, coches aparcados
+    en las bandas de aparcamiento, farolas y contenedores. Los coches y farolas
+    son objetos reales (proyectan su sombra en el suelo horneado); el visor los
+    redibuja instanciados a partir de las posiciones que exporta hornear_visor."""
+    import random
+    from collections import defaultdict
+    rnd = random.Random(11)
+    suelo = -ALTURA_PISO
+    calz = [v for v in ENTORNO["vias"] if v["tipo"] == "calzada"]
+    tramos_ = [(_limpiar(v["pts"]), v["ancho"]) for v in calz]
+    clave = lambda p: (round(p[0], 1), round(p[1], 1))
+    inc = defaultdict(list)             # nodo -> [(ancho, dirección saliente)]
+    for pts, w in tramos_:
+        for j in range(len(pts) - 1):
+            (x0, y0), (x1, y1) = pts[j], pts[j + 1]
+            L = math.hypot(x1 - x0, y1 - y0) or 1.0
+            inc[clave(pts[j])].append((w, ((x1 - x0) / L, (y1 - y0) / L), pts[j]))
+            inc[clave(pts[j + 1])].append((w, ((x0 - x1) / L, (y0 - y1) / L), pts[j + 1]))
+    # ── pasos de cebra (barras blancas de 0,5 × 3,5 m cada metro)
+    blanco = principled("ext_marca", base=(0.60, 0.60, 0.57), rough=0.7)
+    mm = _Malla()
+    nz_ = 0
+    for nodo, lista in inc.items():
+        P = lista[0][2]
+        if len(lista) < 3 or math.hypot(*P) > 240:
+            continue
+        for w, (dx, dy), _ in lista:
+            if w < 5.0:
+                continue
+            otros = max(o[0] for o in lista if o[1] != (dx, dy)) if len(lista) > 1 else w
+            s0 = otros / 2 + 1.2
+            nx, ny = -dy, dx
+            nb = int((w - 0.8) / 1.0)
+            for j in range(nb):
+                off = -w / 2 + 0.7 + j * 1.0
+                a = (P[0] + dx * s0 + nx * (off - 0.25), P[1] + dy * s0 + ny * (off - 0.25))
+                b = (a[0] + nx * 0.5, a[1] + ny * 0.5)
+                c = (b[0] + dx * 3.5, b[1] + dy * 3.5)
+                d = (a[0] + dx * 3.5, a[1] + dy * 3.5)
+                mm.cara([(q[0], q[1], suelo + 0.045) for q in (a, b, c, d)],
+                        [(0, 0)] * 4, 0)
+                nz_ += 1
+    if mm.f:
+        mm.objeto("ext_marcas", [blanco])
+    # ── alcorques bajo cada árbol
+    mt = _Malla()
+    tierra = principled("ext_alcorque", base=(0.10, 0.08, 0.06), rough=0.95)
+    for x, y in arboles:
+        if math.hypot(x, y) < 260:
+            mt.cara([(x - 0.6, y - 0.6, suelo + 0.04), (x + 0.6, y - 0.6, suelo + 0.04),
+                     (x + 0.6, y + 0.6, suelo + 0.04), (x - 0.6, y + 0.6, suelo + 0.04)],
+                    [(0, 0)] * 4, 0)
+    if mt.f:
+        mt.objeto("ext_alcorques", [tierra])
+    # ── coches, farolas y contenedores
+    cajas_ed = []
+    for b in ENTORNO["edificios"]:
+        xs = [q[0] for q in b["pts"]]
+        ys = [q[1] for q in b["pts"]]
+        cajas_ed.append((min(xs) - 1, max(xs) + 1, min(ys) - 1, max(ys) + 1, b["pts"]))
+
+    def en_edificio(p):
+        return any(x0 < p[0] < x1 and y0 < p[1] < y1 and _dentro(p, poly)
+                   for x0, x1, y0, y1, poly in cajas_ed)
+
+    car = bpy.data.meshes.new("ext_coche_base")
+    cv, cf = [], []
+    for (x0, y0, x1, y1, h0, h1) in ((-2.15, -0.87, 2.15, 0.87, 0.28, 0.95),
+                                     (-1.05, -0.78, 1.15, 0.78, 0.95, 1.45)):
+        b = len(cv)
+        cv += [(x0, y0, h0), (x1, y0, h0), (x1, y1, h0), (x0, y1, h0),
+               (x0, y0, h1), (x1, y0, h1), (x1, y1, h1), (x0, y1, h1)]
+        cf += [[b, b + 3, b + 2, b + 1], [b + 4, b + 5, b + 6, b + 7], [b, b + 1, b + 5, b + 4],
+               [b + 1, b + 2, b + 6, b + 5], [b + 2, b + 3, b + 7, b + 6], [b + 3, b, b + 4, b + 7]]
+    car.from_pydata(cv, [], cf)
+    car.validate()
+    pole = bpy.data.meshes.new("ext_farola_base")
+    pv, pf = [], []
+    for (x0, y0, x1, y1, h0, h1) in ((-0.08, -0.08, 0.08, 0.08, 0.0, 9.0),
+                                     (-0.03, -0.03, 1.8, 0.03, 8.9, 9.05)):
+        b = len(pv)
+        pv += [(x0, y0, h0), (x1, y0, h0), (x1, y1, h0), (x0, y1, h0),
+               (x0, y0, h1), (x1, y0, h1), (x1, y1, h1), (x0, y1, h1)]
+        pf += [[b, b + 3, b + 2, b + 1], [b + 4, b + 5, b + 6, b + 7], [b, b + 1, b + 5, b + 4],
+               [b + 1, b + 2, b + 6, b + 5], [b + 2, b + 3, b + 7, b + 6], [b + 3, b, b + 4, b + 7]]
+    pole.from_pydata(pv, [], pf)
+    pole.validate()
+    coches = farolas = urbano = 0
+    for pts, w in tramos_:
+        n_, k_ = _desglose_via(w)
+        for j in range(len(pts) - 1):
+            (x0, y0), (x1, y1) = pts[j], pts[j + 1]
+            L = math.hypot(x1 - x0, y1 - y0)
+            if L < 6:
+                continue
+            ux, uy = (x1 - x0) / L, (y1 - y0) / L
+            nx, ny = -uy, ux
+            t0 = 9.0 if len(inc[clave(pts[j])]) >= 3 else 1.5
+            t1 = 9.0 if len(inc[clave(pts[j + 1])]) >= 3 else 1.5
+            for lado, activo in ((-1, k_ >= 1), (1, k_ >= 2)):
+                if not activo:
+                    continue
+                off = lado * (w / 2 - 1.1)
+                t = t0 + 2.3
+                while t < L - t1 - 2.3:
+                    p = (x0 + ux * t + nx * off, y0 + uy * t + ny * off)
+                    if math.hypot(*p) < 230 and rnd.random() < 0.78:
+                        ob = bpy.data.objects.new(f"ext_coche_i{coches:04d}", car)
+                        ob.location = (p[0], p[1], suelo + 0.03)
+                        ob.rotation_euler = (0, 0, math.atan2(uy, ux)
+                                             + (0.0 if lado < 0 else math.pi)
+                                             + rnd.uniform(-0.03, 0.03))
+                        ob["color"] = rnd.random()
+                        bpy.context.collection.objects.link(ob)
+                        coches += 1
+                    t += 5.0 + rnd.uniform(-0.2, 0.6)
+            if w >= 8.4:
+                t = 5.0 + (j % 2) * 14.0
+                lado = -1 if (j % 2 == 0) else 1
+                while t < L - 5.0:
+                    off = lado * (w / 2 + 0.6)
+                    p = (x0 + ux * t + nx * off, y0 + uy * t + ny * off)
+                    if math.hypot(*p) < 230 and not en_edificio(p):
+                        ob = bpy.data.objects.new(f"ext_farola_i{farolas:04d}", pole)
+                        ob.location = (p[0], p[1], suelo)
+                        ob.rotation_euler = (0, 0, math.atan2(-lado * ny, -lado * nx))
+                        bpy.context.collection.objects.link(ob)
+                        farolas += 1
+                    t += 28.0
+                    lado = -lado
+            if w >= 5.3:
+                t = 20.0 + rnd.uniform(0, 30)
+                while t < L - 10.0:
+                    off = -(w / 2 + 0.8)
+                    p = (x0 + ux * t + nx * off, y0 + uy * t + ny * off)
+                    if math.hypot(*p) < 200 and not en_edificio(p):
+                        for q in range(rnd.randint(3, 4)):
+                            e = bpy.data.objects.new(f"ext_urbano_i{urbano:04d}", None)
+                            e.location = (p[0] + ux * 1.25 * q, p[1] + uy * 1.25 * q, suelo)
+                            e.rotation_euler = (0, 0, math.atan2(uy, ux))
+                            e["tipo"] = rnd.choice((0, 0, 1, 2, 3))
+                            bpy.context.collection.objects.link(e)
+                            urbano += 1
+                    t += 60.0
+    print(f"CALLE cebras {nz_} barras, {coches} coches, {farolas} farolas, {urbano} contenedores")
+
+
 def build_arboles(m, puntos):
     """Jacarandas CC0 (Poly Haven `jacaranda_tree`, glTF 1k en data/assets/, no
     versionado por tamaño) instanciadas en cada árbol; si falta el modelo, copa
@@ -2049,16 +2391,22 @@ def build_entorno(m):
     import random
     rnd = random.Random(3)
 
+    fp = _fachada_propia()
+    ip = fp.principal(ENTORNO["edificios"])
     ciudad = _Malla()
     propios = []
-    for b in ENTORNO["edificios"]:
+    pts_propio, cols_propio = None, []
+    for i, b in enumerate(ENTORNO["edificios"]):
         pts = _limpiar(b["pts"])
         if len(pts) < 3:
             continue
-        if b["propio"]:
+        if i == ip:
+            # PB + 7 plantas: el piso es la última (OSM da 9 plantas). Cubierta
+            # a la cota real; el peto se añade aparte (build_cubierta_propia)
             mp = _Malla()
-            mp.prisma(pts, suelo, PLANTA + 1.0, 0.0, tapa_inferior=True)
+            mp.prisma(pts, suelo, fp.Z_CUB, 0.0, tapa_inferior=True)
             propios.append(mp)
+            pts_propio, cols_propio = pts, fp.columnas(b["pts"])
             continue
         p = b["plantas"] or 3
         h = BAJO + (p - 1) * PLANTA + 1.0 if p >= 3 else p * 3.4
@@ -2078,6 +2426,8 @@ def build_entorno(m):
             if v["tipo"] != tipo:
                 continue
             pts, w = _limpiar(v["pts"]), v["ancho"]
+            _, k_ap = _desglose_via(w) if tipo == "calzada" else (1, 0)
+            p_d, p_i = (2.2 if k_ap >= 1 else 0.0), (2.2 if k_ap >= 2 else 0.0)
             z = suelo + dz + (i % 50) * 0.0002
             acc = 0.0
             for j in range(len(pts) - 1):
@@ -2086,12 +2436,14 @@ def build_entorno(m):
                 nx, ny = -(y1 - y0) / L * w / 2, (x1 - x0) / L * w / 2
                 mv.cara([(x0 + nx, y0 + ny, z), (x0 - nx, y0 - ny, z),
                          (x1 - nx, y1 - ny, z), (x1 + nx, y1 + ny, z)],
-                        [(acc, w), (acc, 0.0), (acc + L, 0.0), (acc + L, w)], 0, ancho=w)
+                        [(acc, w), (acc, 0.0), (acc + L, 0.0), (acc + L, w)], 0, ancho=w,
+                        p_der=p_d, p_izq=p_i)
                 acc += L
             for x, y in pts[1:-1]:
                 r = w / 2
                 mv.cara([(x + r * math.cos(a * math.pi / 4), y + r * math.sin(a * math.pi / 4),
-                          z - 0.001) for a in range(8)], [(-50.0, 1.5)] * 8, 0, ancho=w)
+                          z - 0.001) for a in range(8)], [(-50.0, 1.5)] * 8, 0, ancho=w,
+                        p_der=0.0, p_izq=0.0)
         if mv.f:
             mv.objeto(f"ext_{tipo}", [mat])
 
@@ -2104,6 +2456,9 @@ def build_entorno(m):
         if len(pts) < 3:
             continue
         z = suelo + (0.012 if g["tipo"] == "parque" else 0.02)
+        if sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1]
+               for i in range(len(pts))) < 0:
+            pts = pts[::-1]        # antihorario: la cara hacia abajo se hornea negra
         mg.cara([(x, y, z) for x, y in pts], list(pts), 0 if g["tipo"] == "cesped" else 1)
     if mg.f:
         mg.objeto("ext_verdes", [cesped, tierra])
@@ -2116,7 +2471,9 @@ def build_entorno(m):
     arboles = [tuple(p) for p in ENTORNO["arboles"]]
     arboles += _arboles_alineacion(ENTORNO["vias"], ENTORNO["edificios"], arboles)
     build_arboles(m, arboles)
-    build_balcones(m)
+    build_calle(m, arboles)
+    build_balcones(m, cols_propio)
+    build_cubierta_propia(m, pts_propio, fach, cub)
     pintar_fachada_exterior(m["revoco"])
 
 
@@ -2268,17 +2625,22 @@ def build_luces(m):
         (-3.4, -1.0), (-1.2, -1.0), (1.0, -1.0),
         (0.4, 2.9), (0.9, 3.7),
     ]
+    DL_W = 22.0
     for k, (x, z) in enumerate(dls):
+        hc = _techo_en(x, z)          # 2,30 bajo falso techo, 2,46 bajo forjado
         ld = bpy.data.lights.new(f"dl_{k}", "SPOT")
-        ld.energy = 22.0
+        ld.energy = DL_W
         ld.color = (1.0, 0.84, 0.66)
         ld.spot_size = math.radians(70)
         ld.spot_blend = 0.5
-        ld.shadow_soft_size = 0.04
+        ld.shadow_soft_size = 0.025
         lo = bpy.data.objects.new(f"dl_{k}", ld)
         bpy.context.collection.objects.link(lo)
-        lo.location = (x, -z, 2.47)
-        cylinder(x, z, 0.05, 2.485, 2.50, f"dl_disco_{k}", m["led"], n=16)
+        lo.location = (x, -z, hc - 0.03)
+        disco = cylinder(x, z, 0.05, hc - 0.012, hc - 0.002, f"dl_disco_{k}",
+                         m["led"], n=16)
+        if disco is not None:
+            disco.visible_shadow = False   # solo aspecto: no tapa la luz del spot
 
     # lámpara de pie (pantalla)
     lp = bpy.data.lights.new("lampara_pt", "POINT")

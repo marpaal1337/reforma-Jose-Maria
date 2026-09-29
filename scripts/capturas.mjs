@@ -9,7 +9,10 @@
  *
  * Requiere: playwright-core y chromium (los resuelve scripts/capturas.sh, que
  * los cachea en ~/.cache/opencode-reforma y ~/.cache/ms-playwright).
- * Vistas: orbita, salon (s4), terraza, cocina (s2), dormitorio (s3), fachada.
+ * Vistas: orbita, salon (s4), terraza, cocina (s2), dormitorio (s3), fachada,
+ * calle (tipo Street View), aerea (tipo Google 3D), satelite, bano1, bano2
+ * y fregadero.
+ * --vistas a,b limita las capturas a esas vistas.
  * El visor arranca siempre en Realista; --maqueta lo fuerza a la maqueta.
  *
  * --medir no guarda capturas: informa del peso del HTML, el tiempo hasta estar
@@ -70,7 +73,19 @@ const VISTAS = {
   cocina: { pos: [4.6, 1.55, 3.1], target: [0.2, 1.15, 0.6] },
   dormitorio: { pos: [3.1, 1.5, -0.95], target: [5.9, 1.05, -3.0] },
   fachada: { pos: [20, 7.0, -8.0], target: [0, 1.0, 0.6] },
+  calle: { pos: [26, -19.2, 6], target: [8.4, -8, 0] },
+  aerea: { pos: [70, 55, 60], target: [0, -15, 0] },
+  satelite: { pos: [0.1, 280, 0.1], target: [0, -21.7, -1] },
+  bano1: { pos: [0.9, 1.5, -1.75], target: [1.05, 0.8, -3.0] },
+  bano2: { pos: [-2.3, 1.5, -1.75], target: [-3.0, 0.7, -2.9] },
+  fregadero: { pos: [0.3, 1.6, 1.4], target: [-1.3, 0.85, 1.4] },
 };
+// --vistas a,b,c limita las capturas a esas vistas
+const SOLO = opt('--vistas', '');
+if (SOLO) {
+  const lista = SOLO.split(',');
+  for (const k of Object.keys(VISTAS)) if (!lista.includes(k)) delete VISTAS[k];
+}
 
 const CHROME = buscarChrome();
 if (!CHROME) {

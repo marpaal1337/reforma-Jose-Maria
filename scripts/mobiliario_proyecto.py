@@ -59,6 +59,141 @@ def _disco(h, name, mat, cx, cz, hc, r, grosor, normal, n=32):
     return h.mesh_from(verts, faces, name, mat, smooth=False)
 
 
+def _orientar(verts, faces):
+    """Caras hacia fuera: si el volumen con signo del sólido es negativo se
+    invierte el orden de todas (no depende de Blender)."""
+    vol = 0.0
+    for f in faces:
+        a = verts[f[0]]
+        for i in range(1, len(f) - 1):
+            b, c = verts[f[i]], verts[f[i + 1]]
+            vol += (a[0] * (b[1] * c[2] - b[2] * c[1])
+                    - a[1] * (b[0] * c[2] - b[2] * c[0])
+                    + a[2] * (b[0] * c[1] - b[1] * c[0]))
+    return [f[::-1] for f in faces] if vol < 0 else faces
+
+
+def _superelipse(a, b, e, n, frente=0, taper=0.0, e_atras=None):
+    """Contorno |x/a|^e + |z/b|^e = 1 (n puntos, centro en el origen). Con
+    `frente` = ±1 (sentido de z) el frente se estrecha `taper` (0-1) y la parte
+    trasera usa el exponente `e_atras`, más recto, para apoyarse en el muro."""
+    pts = []
+    for i in range(n):
+        t = 2 * math.pi * i / n
+        c, s = math.cos(t), math.sin(t)
+        ee = e_atras if (frente and e_atras and s * frente < 0) else e
+        p = 2.0 / ee
+        x = a * math.copysign(abs(c) ** p, c)
+        z = b * math.copysign(abs(s) ** p, s)
+        if frente and taper:
+            x *= 1.0 - taper * (1.0 + s * frente) / 2.0
+        pts.append((x, z))
+    return pts
+
+
+def _loft(h, name, mat, cx, cz, a, b, perfil, e=2.0, n=40, frente=0, taper=0.0,
+          e_atras=None):
+    """Sólido cerrado por anillos superelípticos centrados en (cx, cz).
+    `perfil` = [(d, altura[, e[, s]])] de abajo arriba: los semiejes del anillo
+    son (a·s − d, b·s − d); d ≥ semieje lo colapsa a un punto (cierra la pieza:
+    d = 9 es el centro). Recorre el borde exterior, el canto y el interior.
+    Los quiebros de más de ~35° del perfil se marcan como aristas vivas
+    (sharp) para que el suavizado no emborrone cantos y bordes."""
+    def dur(k):
+        if k == 0 or k == len(perfil) - 1:
+            return False
+        (d0, h0), (d1, h1), (d2, h2) = ((min(max(perfil[j][0], -1.0), 1.0),
+                                          perfil[j][1]) for j in (k - 1, k, k + 1))
+        u, v = (d1 - d0, h1 - h0), (d2 - d1, h2 - h1)
+        lu, lv = math.hypot(*u), math.hypot(*v)
+        return lu > 0 and lv > 0 and (u[0] * v[0] + u[1] * v[1]) / (lu * lv) < 0.82
+
+    verts, anillos, duros = [], [], []
+    for k, r in enumerate(perfil):
+        d, alt = r[0], r[1]
+        ee = r[2] if len(r) > 2 and r[2] else e
+        s = r[3] if len(r) > 3 else 1.0
+        ra, rb = a * s - d, b * s - d
+        if ra <= 1e-3 or rb <= 1e-3:
+            verts.append((cx, -cz, alt))
+            anillos.append(len(verts) - 1)            # punto (cierre)
+            continue
+        i0 = len(verts)
+        verts += [(cx + x, -(cz + z), alt)
+                  for x, z in _superelipse(ra, rb, ee, n, frente, taper, e_atras)]
+        anillos.append((i0, n))
+        if dur(k):
+            duros.append(i0)
+    faces = []
+    for r0, r1 in zip(anillos, anillos[1:]):
+        p0, p1 = isinstance(r0, int), isinstance(r1, int)
+        if p0 and p1:
+            continue
+        for i in range(n):
+            j = (i + 1) % n
+            if p0:
+                faces.append([r0, r1[0] + j, r1[0] + i])
+            elif p1:
+                faces.append([r0[0] + i, r0[0] + j, r1])
+            else:
+                faces.append([r0[0] + i, r0[0] + j, r1[0] + j, r1[0] + i])
+    if not isinstance(anillos[0], int):
+        faces.append([anillos[0][0] + i for i in range(n)][::-1])
+    if not isinstance(anillos[-1], int):
+        faces.append([anillos[-1][0] + i for i in range(n)])
+    ob = h.mesh_from(verts, _orientar(verts, faces), name, mat, smooth=True)
+    for ed in ob.data.edges:
+        v0, v1 = ed.vertices
+        if any(i0 <= v0 < i0 + n and i0 <= v1 < i0 + n for i0 in duros):
+            ed.use_edge_sharp = True
+    return ob
+
+
+def _tubo(h, name, mat, pts, r, n=12):
+    """Caño de radio r que sigue la polilínea pts = [(x, z, altura)], con
+    marcos de transporte paralelo y tapas planas en los extremos."""
+    P = [(x, -z, alt) for x, z, alt in pts]
+
+    def norm(v):
+        L = math.sqrt(sum(c * c for c in v)) or 1.0
+        return tuple(c / L for c in v)
+
+    def cruz(u, v):
+        return (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2],
+                u[0] * v[1] - u[1] * v[0])
+
+    T = []
+    for i in range(len(P)):
+        a, b = P[max(i - 1, 0)], P[min(i + 1, len(P) - 1)]
+        T.append(norm(tuple(b[k] - a[k] for k in range(3))))
+    up = (0, 0, 1) if abs(T[0][2]) < 0.9 else (1, 0, 0)
+    N = norm(cruz(T[0], up))
+    verts, faces = [], []
+    for i, p in enumerate(P):
+        if i:
+            dp = sum(N[k] * T[i][k] for k in range(3))
+            N = norm(tuple(N[k] - T[i][k] * dp for k in range(3)))
+        B = cruz(T[i], N)
+        for j in range(n):
+            t = 2 * math.pi * j / n
+            c, s = r * math.cos(t), r * math.sin(t)
+            verts.append(tuple(p[k] + c * N[k] + s * B[k] for k in range(3)))
+    for i in range(len(P) - 1):
+        for j in range(n):
+            k = (j + 1) % n
+            faces.append([i * n + j, i * n + k, (i + 1) * n + k, (i + 1) * n + j])
+    faces.append(list(range(n))[::-1])
+    faces.append([(len(P) - 1) * n + j for j in range(n)])
+    return h.mesh_from(verts, _orientar(verts, faces), name, mat, smooth=True)
+
+
+def _arco(xc, z, hc, R, a0, a1, k=12):
+    """Puntos (x, z, altura) de un arco en el plano x–altura a z constante."""
+    return [(xc + R * math.cos(math.radians(a0 + (a1 - a0) * i / k)), z,
+             hc + R * math.sin(math.radians(a0 + (a1 - a0) * i / k)))
+            for i in range(k + 1)]
+
+
 def _silla(h, asiento, madera, x0, z0, x1, z1, respaldo, nombre):
     """Silla simple de 4 patas; el respaldo queda en el lado indicado."""
     h.box(x0, z0, x1, z1, 0.44, 0.475, f"{nombre}_asiento", asiento,
@@ -97,6 +232,8 @@ def construir(m, h):
     laca = m["laca"]
     metal_negro = m["metal_negro"]
     cobre = m["cobre"]
+    porcelana = m["porcelana"]
+    cromo = m["cromo"]
     negro_mate = m["negro_mate"]
     cristal = m["cristal"]
     vidrio_acido = m["vidrio_acido"]
@@ -125,8 +262,14 @@ def construir(m, h):
           roble_mel, bevel=0.006)
     h.box(-1.53, 0.50, -0.93, 0.95, 0.10, 0.88, "coc_bajo_basuras",
           roble_mel, bevel=0.006)
-    h.box(-1.53, 0.95, -0.93, 1.75, 0.10, 0.88, "coc_bajo_fregadero",
+    # bajo del fregadero: cuerpo hasta 0,66 y anillo alrededor de la cubeta
+    h.box(-1.53, 0.95, -0.93, 1.75, 0.10, 0.66, "coc_bajo_fregadero",
           roble_mel, bevel=0.006)
+    _multi(h, [(-1.53, 0.95, -1.41, 1.75, 0.66, 0.88),
+               (-0.95, 0.95, -0.93, 1.75, 0.66, 0.88),
+               (-1.41, 0.95, -0.95, 1.11, 0.66, 0.88),
+               (-1.41, 1.72, -0.95, 1.75, 0.66, 0.88)],
+           "coc_bajo_fregadero_alto", roble_mel)
     h.box(-1.53, 1.75, -0.93, 2.35, 0.10, 0.88, "coc_bajo_horno",
           roble_mel, bevel=0.006)
     # puertas de los bajos (ranura de uñero como línea oscura)
@@ -160,14 +303,23 @@ def construir(m, h):
           bevel=0.004)
     h.box(-1.53, 0.10, -0.91, 0.15, 0.83, 0.88, "coc_copete_n", dekton)
     h.box(-1.53, 1.70, -0.91, 1.75, 0.83, 0.88, "coc_copete_s", dekton)
-    h.box(-1.38, 1.14, -0.97, 1.69, 0.84, 0.898, "coc_fregadero",
-          negro_mate)
-    h.cylinder(-1.455, 1.415, 0.02, 0.90, 0.92, "coc_grifo_base",
-               metal_negro, n=16)
-    h.cylinder(-1.455, 1.415, 0.012, 0.90, 1.24, "coc_grifo", negro_mate,
-               n=14)
-    h.box(-1.455, 1.398, -1.27, 1.432, 1.21, 1.24, "coc_grifo_pico",
-          negro_mate, bevel=0.0)
+    h.box(-0.97, 1.14, -0.91, 1.69, 0.88, 0.90, "coc_encimera_d", dekton,
+          bevel=0.004)         # cubre la franja que dejaba la cubeta
+    # cubeta bajo encimera (compuesto negro) con canto y válvula
+    _loft(h, "coc_fregadero", m["fregadero"], -1.175, 1.415, 0.205, 0.275,
+          [(9, .668), (0, .668), (-.005, .68), (-.005, .868), (-.02, .868),
+           (-.02, .878), (0, .878), (.010, .870), (.012, .700), (.03, .682),
+           (9, .682)], e=12, n=48)
+    h.cylinder(-1.175, 1.415, 0.045, 0.682, 0.686, "coc_valvula", cromo, n=20)
+    # grifo monomando negro: base, caño en cuello de cisne y maneta lateral
+    h.cylinder(-1.455, 1.415, 0.028, 0.90, 0.93, "coc_grifo_base", metal_negro,
+               n=20)
+    _tubo(h, "coc_grifo", negro_mate,
+          [(-1.455, 1.415, 0.93), (-1.455, 1.415, 1.20)]
+          + _arco(-1.30, 1.415, 1.20, 0.155, 180, 0, 14)[1:]
+          + [(-1.145, 1.415, 1.16)], 0.014)
+    h.barra((-1.455, 1.43, 1.06), (-1.455, 1.53, 1.09), 0.007, "coc_grifo_maneta",
+            negro_mate, n=8)
     # salpicadero, altos y perfil LED (4000 K)
     h.box(-1.55, 0.10, -1.53, 1.75, 0.90, 1.50, "coc_salpicadero", dekton)
     h.box(-1.53, 0.10, -1.18, 1.75, 1.50, 2.30, "coc_altos", roble_mel,
@@ -474,29 +626,69 @@ def construir(m, h):
     # ══ ESTUDIO · sin amueblar (biblioteca trasladada al dormitorio 2) ═══
 
     # ══ BAÑO 2 · con bañera (oeste, techo 2,30) ═════════════════════════════
-    h.box(-3.97, -3.16, -3.31, -1.56, 0.0, 0.55, "b2_banera",
-          travertino_porc, bevel=0.02)
-    h.box(-3.90, -3.09, -3.38, -1.63, 0.42, 0.52, "b2_banera_seno",
-          blanco_laca, bevel=0.02)
-    h.box(-3.96, -2.43, -3.80, -2.37, 1.15, 1.18, "b2_grifo_pico", cobre,
-          bevel=0.0)
-    h.cylinder(-3.98, -2.40, 0.015, 0.80, 1.18, "b2_grifo", cobre, n=14)
+    # bañera de porcelana en el hueco de obra: base y faldón alicatados
+    _multi(h, [(-3.97, -3.16, -3.31, -1.56, 0.0, 0.10),
+               (-3.36, -3.16, -3.31, -1.56, 0.10, 0.55)],
+           "b2_banera", travertino_porc)
+    _loft(h, "b2_banera_seno", porcelana, -3.665, -2.36, 0.305, 0.80,
+          [(9, .10), (.005, .10, 12), (.005, .53, 12), (0, .535, 12),
+           (0, .55, 12), (.055, .55, 5), (.065, .54, 5), (.075, .45, 5),
+           (.09, .20, 5), (.13, .145, 5), (9, .14)], n=48)
+    # termostática mural a 0,80 (cobre), caño bajo y ducha de mano con flexo
+    h.box(-3.99, -2.52, -3.975, -2.28, 0.76, 0.84, "b2_grifo", cobre,
+          bevel=0.004)
+    for k, z in enumerate((-2.47, -2.33)):
+        h.barra((-3.975, z, 0.80), (-3.94, z, 0.80), 0.024,
+                f"b2_grifo_mando_{k}", cobre, n=16)
+    _tubo(h, "b2_grifo_pico", cobre,
+          [(-3.975, -2.40, 0.66), (-3.92, -2.40, 0.66), (-3.86, -2.40, 0.62)],
+          0.011)
+    h.barra((-3.975, -2.40, 1.00), (-3.975, -2.40, 1.50), 0.008,
+            "b2_ducha_barra", cromo, n=8)
+    h.barra((-3.955, -2.40, 1.30), (-3.90, -2.40, 1.24), 0.013, "b2_ducha_mano",
+            cromo, n=10)
+    h.barra((-3.90, -2.40, 1.24), (-3.885, -2.40, 1.22), 0.04, "b2_ducha_cabezal",
+            cromo, n=16)
+    _tubo(h, "b2_ducha_flexo", cromo,
+          [(-3.975, -2.30, 0.70), (-3.90, -2.28, 0.78), (-3.88, -2.30, 0.95),
+           (-3.93, -2.36, 1.15), (-3.955, -2.40, 1.28)], 0.008, n=8)
     h.box(-3.31, -3.16, -3.29, -2.44, 0.55, 2.00, "b2_mampara",
           vidrio_acido)
-    h.box(-3.08, -3.16, -2.73, -3.02, 0.40, 0.85, "b2_cisterna",
-          blanco_laca, bevel=0.02)
-    h.box(-3.05, -3.02, -2.76, -2.60, 0.0, 0.42, "b2_wc", blanco_laca,
-          bevel=0.04)
-    h.box(-1.75, -2.94, -1.32, -1.56, 0.30, 0.86, "b2_mueble", roble_mel,
+    # inodoro de suelo con cisterna
+    _loft(h, "b2_cisterna", porcelana, -2.905, -3.09, 0.175, 0.07,
+          [(9, .40), (0, .40), (0, .85), (.01, .86), (9, .86)], e=8, n=32)
+    h.cylinder(-2.905, -3.09, 0.025, 0.86, 0.868, "b2_pulsador", cromo, n=18)
+    _loft(h, "b2_wc", porcelana, -2.905, -2.81, 0.16, 0.21,
+          [(9, 0.0), (0, 0.0, None, 0.62), (0, 0.15, None, 0.60),
+           (0, 0.28, None, 0.85), (0, 0.37, None, 1.0), (0, 0.40, None, 1.0),
+           (0.03, 0.407, None, 1.0), (9, 0.407)],
+          e=2.4, frente=1, taper=0.15, e_atras=8)
+    # mueble con lavabo de resina integrado (seno bajo la encimera)
+    h.box(-1.75, -2.94, -1.32, -1.56, 0.30, 0.74, "b2_mueble", roble_mel,
           bevel=0.006)
+    _multi(h, [(-1.75, -2.94, -1.32, -2.412, 0.74, 0.86),
+               (-1.75, -2.068, -1.32, -1.56, 0.74, 0.86),
+               (-1.75, -2.412, -1.632, -2.068, 0.74, 0.86),
+               (-1.408, -2.412, -1.32, -2.068, 0.74, 0.86)],
+           "b2_mueble_alto", roble_mel)
     for k, (z0, z1) in enumerate(((-2.90, -2.26), (-2.24, -1.60))):
         h.box(-1.762, z0, -1.75, z1, 0.32, 0.84, f"b2_mueble_cajon_{k}",
               roble_mel, bevel=0.004)
-    h.box(-1.77, -2.94, -1.30, -1.56, 0.86, 0.88, "b2_encimera", resina,
-          bevel=0.004)
-    h.box(-1.62, -2.40, -1.42, -2.08, 0.86, 0.895, "b2_seno", blanco_laca)
-    h.box(-1.34, -2.27, -1.20, -2.21, 1.03, 1.07, "b2_grifo_lavabo", cobre,
-          bevel=0.0)
+    _multi(h, [(-1.77, -2.94, -1.30, -2.40, 0.86, 0.88),
+               (-1.77, -2.08, -1.30, -1.56, 0.86, 0.88),
+               (-1.77, -2.40, -1.62, -2.08, 0.86, 0.88),
+               (-1.42, -2.40, -1.30, -2.08, 0.86, 0.88)],
+           "b2_encimera", resina, bevel=0.002)
+    _loft(h, "b2_seno", resina, -1.52, -2.24, 0.10, 0.16,
+          [(9, .748), (-.012, .748), (-.012, .86), (0, .86), (0, .775),
+           (.02, .758), (9, .758)], e=5, n=36)
+    # grifo mural del lavabo: roseta, caño y maneta
+    _disco(h, "b2_grifo_roseta", cromo, -1.305, -2.24, 1.05, 0.03, 0.012, "O")
+    _tubo(h, "b2_grifo_lavabo", cromo,
+          [(-1.31, -2.24, 1.06), (-1.40, -2.24, 1.065), (-1.46, -2.24, 1.05),
+           (-1.50, -2.24, 1.02)], 0.011)
+    h.barra((-1.32, -2.24, 1.12), (-1.40, -2.24, 1.15), 0.007,
+            "b2_grifo_maneta", cromo, n=8)
     h.box(-1.75, -2.92, -1.34, -1.58, 0.29, 0.30, "b2_led", led)
     h.box(-1.33, -2.94, -1.32, -1.54, 1.20, 2.10, "b2_espejo", espejo)
     h.box(-1.32, -2.94, -1.30, -1.54, 2.10, 2.12, "b2_led_espejo", led)
@@ -504,30 +696,57 @@ def construir(m, h):
     # ══ BAÑO 1 · con ducha (este, techo 2,30) ═══════════════════════════════
     h.box(-0.90, -3.06, -0.12, -1.56, 0.0, 0.02, "b1_plato",
           travertino_porc)
-    h.box(-0.60, -2.40, -0.30, -2.10, 2.20, 2.22, "b1_rociador", cobre,
-          bevel=0.0)
-    h.box(-0.90, -2.40, -0.82, -2.30, 1.05, 1.10, "b1_grifo_ducha", cobre,
-          bevel=0.0)
+    # rociador de techo (cuadrado de 0,30 a 2,20) con brazo y roseta
+    h.cylinder(-0.45, -2.25, 0.035, 2.29, 2.30, "b1_rociador_roseta", cromo,
+               n=18)
+    h.barra((-0.45, -2.25, 2.29), (-0.45, -2.25, 2.215), 0.011,
+            "b1_rociador_brazo", cromo, n=10)
+    _loft(h, "b1_rociador", cromo, -0.45, -2.25, 0.15, 0.15,
+          [(9, 2.200), (0, 2.200, 10), (0, 2.212, 10), (9, 2.212)], e=10, n=40)
+    # monomando de ducha en la pared oeste
+    h.box(-0.92, -2.45, -0.905, -2.25, 1.02, 1.12, "b1_grifo_ducha", cobre,
+          bevel=0.004)
+    for k, z in enumerate((-2.40, -2.30)):
+        h.barra((-0.905, z, 1.07), (-0.875, z, 1.07), 0.022,
+                f"b1_grifo_mando_{k}", cobre, n=16)
     h.box(-0.14, -3.06, -0.12, -2.49, 0.0, 2.00, "b1_mampara",
           vidrio_acido)
-    h.box(0.14, -3.06, 0.49, -2.55, 0.40, 0.80, "b1_wc", blanco_laca,
-          bevel=0.04)
-    h.box(0.20, -3.09, 0.43, -3.04, 0.98, 1.03, "b1_pulsador", cobre,
-          bevel=0.0)
+    # inodoro suspendido: parte superior a 0,40 (spec) y placa de accionamiento
+    _loft(h, "b1_wc", porcelana, 0.315, -2.805, 0.175, 0.255,
+          [(9, .12), (0, .12, None, .80), (0, .20, None, .95),
+           (0, .375, None, 1.0), (-.004, .380, None, 1.0),
+           (-.004, .386, None, 1.0), (.03, .405, None, 1.0), (9, .405)],
+          e=2.4, frente=1, taper=0.15, e_atras=10)
+    h.box(0.19, -3.080, 0.44, -3.072, 0.92, 1.08, "b1_pulsador", cobre,
+          bevel=0.003)
     h.box(-0.12, -3.24, 0.76, -3.08, 1.20, 2.31, "b1_armario", laca,
           bevel=0.006)
     for k, (x0, x1) in enumerate(((-0.10, 0.31), (0.33, 0.74))):
         h.box(x0, -3.08, x1, -3.068, 1.22, 2.29,
               f"b1_armario_puerta_{k}", laca, bevel=0.004)
-    h.box(0.76, -3.21, 1.73, -2.78, 0.30, 0.86, "b1_mueble", roble_mel,
+    h.box(0.76, -3.21, 1.73, -2.78, 0.30, 0.74, "b1_mueble", roble_mel,
           bevel=0.006)
+    _multi(h, [(0.76, -3.21, 1.73, -3.115, 0.74, 0.86),
+               (0.76, -2.785, 1.73, -2.78, 0.74, 0.86),
+               (0.76, -3.115, 1.085, -2.785, 0.74, 0.86),
+               (1.415, -3.115, 1.73, -2.785, 0.74, 0.86)],
+           "b1_mueble_alto", roble_mel)
     for k, (x0, x1) in enumerate(((0.78, 1.23), (1.25, 1.71))):
         h.box(x0, -2.78, x1, -2.768, 0.32, 0.84, f"b1_mueble_cajon_{k}",
               roble_mel, bevel=0.004)
-    h.box(0.76, -3.23, 1.73, -2.76, 0.86, 0.88, "b1_encimera", resina,
-          bevel=0.004)
-    h.box(1.10, -3.10, 1.40, -2.80, 0.86, 0.895, "b1_seno", blanco_laca)
-    h.box(1.23, -3.22, 1.29, -3.08, 1.03, 1.07, "b1_grifo", cobre, bevel=0.0)
+    _multi(h, [(0.76, -3.23, 1.73, -3.10, 0.86, 0.88),
+               (0.76, -2.80, 1.73, -2.76, 0.86, 0.88),
+               (0.76, -3.10, 1.10, -2.80, 0.86, 0.88),
+               (1.40, -3.10, 1.73, -2.80, 0.86, 0.88)],
+           "b1_encimera", resina, bevel=0.002)
+    _loft(h, "b1_seno", resina, 1.25, -2.95, 0.15, 0.15,
+          [(9, .748), (-.012, .748), (-.012, .86), (0, .86), (0, .775),
+           (.02, .758), (9, .758)], e=5, n=36)
+    # grifo mural del lavabo (bajo el espejo, que empieza a 1,20)
+    _disco(h, "b1_grifo_roseta", cromo, 1.25, -3.225, 1.05, 0.03, 0.012, "S")
+    _tubo(h, "b1_grifo", cromo,
+          [(1.25, -3.225, 1.05), (1.25, -3.10, 1.06), (1.25, -3.02, 1.05),
+           (1.25, -2.98, 1.02)], 0.011)
     h.box(0.78, -3.19, 1.71, -2.80, 0.29, 0.30, "b1_led", led)
     h.box(0.78, -3.21, 1.71, -3.19, 1.20, 2.31, "b1_espejo", espejo)
 
