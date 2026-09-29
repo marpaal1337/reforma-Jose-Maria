@@ -1,182 +1,177 @@
 #!/usr/bin/env python3
 """
-Mide los huecos de puerta del plano de distribución y vuelca data/puertas.json.
+Construye data/puertas.json a partir de los arcos de barrido medidos en
+data/carpinteria_medida.json (plano PE/I.06 carpintería interior) más la tabla
+de metadatos de las hojas (plano PE/I.07).
 
-Método: sobre data/imagenes/planta_textura.jpg (del que se conoce su
-rectángulo en metros, ver data/planos3d.json -> textura.rect_m) se barren las
-líneas de muro con las puertas y se buscan tramos claros >= 0,55 m (= huecos).
-Los tipos de puerta, bisagras y sentidos de apertura están tomados del plano
-PEI.07 de carpintería interior y de los arcos/hojas dibujados en el PE.A.02
-(verificación manual 2026-09-18, revisión 2026-09-27).
+Método: cada puerta abatible del plano está dibujada con su arco de barrido
+(centro = bisagra, radio = hoja, p0/p1 = extremos de la hoja cerrada y abierta).
+El script localiza ese arco, comprueba que su bisagra coincide con la esperada
+(tolerancia 5 cm; si no, aborta con error) y deriva de él el centro del hueco,
+el ancho, la bisagra y el sentido de apertura. Las correderas (P04) y el
+separador fijo (PA02) no dibujan arco: se toman de la tabla.
 
-D1 no va en la fachada oeste (allí no hay hueco: el barrido daba un falso
-positivo sobre el fondo blanco del plano). Es la puerta que cruza el pasillo
-junto al baño 1 (x≈-4,6) y abre hacia el oeste. Falta, además, la puerta de
-paso del pasillo al salón (D9, x≈-1,5, 0,83 m). Ambas van en el plano
-vertical (pared "v") y por eso no punzonan ningún muro (en_paso).
-
-Uso (requiere PIL + numpy, p. ej. /tmp/opencode/venv):
-    /tmp/opencode/venv/bin/python scripts/medir_puertas.py
+Uso:
+    python3 scripts/medir_puertas.py
 """
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
-from PIL import Image
-
 ROOT = Path(__file__).resolve().parent.parent
-PLAN = json.loads((ROOT / "data" / "planos3d.json").read_text(encoding="utf-8"))
-RECT = PLAN["textura"]["rect_m"]
-IMG = Image.open(ROOT / "data" / "imagenes" / "planta_textura.jpg").convert("L")
-W, H = IMG.size
-SXM = W / (RECT[2] - RECT[0])
-SZM = H / (RECT[3] - RECT[1])
-PX = IMG.load()
+MEDIDA = ROOT / "data" / "carpinteria_medida.json"
+OUT = ROOT / "data" / "puertas.json"
 
-UMBRAL = 170          # < umbral => trazo de muro
-ANCHO_MIN = 0.55      # hueco mínimo de puerta (m)
+TOL_BISAGRA = 0.05  # m (tolerancia bisagra medida vs. esperada)
 
+# Tabla de metadatos (PE/I.07 + PE/I.06). "bisagra_esperada" es la posición del
+# centro del arco en el plano; el resto de geometría se deriva del arco.
+PUERTAS_ESPEC = [
+    {"id": "PE", "nombre": "Entrada (existente)", "tipo": "existente",
+     "bisagra_esperada": (0.815, 4.326), "hoja": 0.80, "alto": 2.03,
+     "acabado": "lacado blanco, panelada", "abre_a": "recibidor",
+     "hoja_estado": "cerrada"},
+    {"id": "P01", "nombre": "Vestidor · dormitorio principal", "tipo": "abatible",
+     "bisagra_esperada": (1.854, -0.624), "hoja": 0.72, "alto": 2.03,
+     "acabado": "lacado blanco, manivela blanca", "abre_a": "vestidor",
+     "en_paso": True},
+    {"id": "P02", "nombre": "Baño 1 (ducha)", "tipo": "abatible",
+     "bisagra_esperada": (1.754, -1.644), "hoja": 0.72, "alto": 2.03,
+     "acabado": "lacado blanco", "abre_a": "bano-1"},
+    {"id": "P03", "nombre": "Pasillo · zona de día", "tipo": "vidriera",
+     "bisagra_esperada": (-1.576, -0.574), "hoja": 0.82, "alto": 2.30,
+     "acabado": "roble natural + vidrio translúcido, travesaño 0.88 m, tirador de madera",
+     "abre_a": "pasillo", "en_paso": True, "marco_ancho": 0.98},
+    {"id": "P04", "nombre": "Baño 2 (bañera)", "tipo": "corredera",
+     "bisagra_esperada": None, "hoja": 0.72, "alto": 2.03,
+     "acabado": "lacado blanco, uñero", "abre_a": "bano-2",
+     "pared": "h", "centro": [-2.22, -1.49], "ancho": 0.82,
+     "bolsillo": "O", "vidrio": False},
+    {"id": "P05", "nombre": "Estudio", "tipo": "abatible",
+     "bisagra_esperada": (-3.475, -0.424), "hoja": 0.72, "alto": 2.03,
+     "acabado": "lacado blanco", "abre_a": "estudio"},
+    {"id": "P06", "nombre": "Dormitorio 2", "tipo": "abatible",
+     "bisagra_esperada": (-3.676, -0.424), "hoja": 0.72, "alto": 2.03,
+     "acabado": "lacado blanco", "abre_a": "dorm-2"},
+    {"id": "P07", "nombre": "Dormitorio 3", "tipo": "abatible",
+     "bisagra_esperada": (-4.707, -0.624), "hoja": 0.72, "alto": 2.03,
+     "acabado": "lacado blanco", "abre_a": "dorm-3", "en_paso": True},
+    {"id": "PL", "nombre": "Lavadero", "tipo": "vidriera_negra",
+     "bisagra_esperada": (0.028, 2.493), "hoja": 0.70, "alto": 2.30,
+     "acabado": "perfil de acero negro + vidrio translúcido", "abre_a": "lavadero",
+     "marco_ancho": 0.78},
+]
 
-def oscuro(x: float, z: float) -> bool:
-    xi = int((x - RECT[0]) * SXM)
-    zi = int((z - RECT[1]) * SZM)
-    return 0 <= xi < W and 0 <= zi < H and PX[xi, zi] < UMBRAL
-
-
-def barrido(linea: str, fijo: float, a: float, b: float,
-            paso: float = 0.04, banda: float = 0.05) -> list[tuple[float, float]]:
-    """Devuelve [(x0,x1), ...] de tramos claros sobre la línea de muro."""
-    vals = []
-    v = a
-    while v <= b + 1e-9:
-        if linea == "h":
-            n = sum(oscuro(v, fijo + d) for d in (-banda, 0.0, banda))
-        else:
-            n = sum(oscuro(fijo + d, v) for d in (-banda, 0.0, banda))
-        vals.append((v, n < 2))
-        v += paso
-    huecos, ini = [], None
-    for v, libre in vals:
-        if libre and ini is None:
-            ini = v
-        elif not libre and ini is not None:
-            if v - ini >= ANCHO_MIN and _borde_real(linea, fijo, ini, a, b):
-                huecos.append((round(ini, 2), round(v, 2)))
-            ini = None
-    if ini is not None and vals[-1][0] - ini >= ANCHO_MIN \
-            and _borde_real(linea, fijo, ini, a, b):
-        huecos.append((round(ini, 2), round(vals[-1][0], 2)))
-    return huecos
-
-
-def _borde_real(linea: str, fijo: float, ini: float, a: float, b: float) -> bool:
-    """Un hueco que nace en el borde del rango solo vale si fuera hay vacío
-    (muro que continúa = rango truncado, no hueco)."""
-    if ini <= a + 0.045:
-        v = ini - 0.08
-        if linea == "h":
-            return not any(oscuro(v, fijo + d) for d in (-0.05, 0.0, 0.05))
-        return not any(oscuro(fijo + d, v) for d in (-0.05, 0.0, 0.05))
-    return True
-
-
-# (id, línea, coord_fija, desde, hasta, centros_esperados)
-LINEAS = [
-    ("sur-dorm23", "h", -0.47, -6.50, -1.00, [-4.04, -3.14]),
-    ("sur-bano1", "h", -1.50, -4.80, -1.70, [-2.22]),
-    ("sur-bano2", "h", -1.50, -1.20, 2.00, []),
-    ("este-bano2", "v", 1.70, -3.20, -1.40, [-1.96]),
-    ("oeste-dormprin", "v", 1.90, -2.20, -0.40, [-0.97]),
-    ("fachada", "h", 4.42, 0.00, 2.00, [1.19]),
+SEPARADORES = [
+    {"id": "PA02", "nombre": "Separador recibidor · salón (vidrio ácido fijo)",
+     "tipo": "fijo", "pared": "v", "alto": 2.30, "marco": "roble 0.04",
+     "travesano_altura": 0.87,
+     "tramos": [{"de": [1.78, 2.44], "a": [1.78, 3.47]}]},
 ]
 
 
-def main() -> None:
-    detectados: dict[str, list[tuple[float, float]]] = {}
-    for lid, linea, fijo, a, b, _esp in LINEAS:
-        huecos = barrido(linea, fijo, a, b)
-        detectados[lid] = huecos
-        print(f"{lid:15s} huecos: {huecos}")
+def cargar_arcos() -> list[dict]:
+    data = json.loads(MEDIDA.read_text(encoding="utf-8"))
+    return [a for a in data["carpinteria"]["arcos"] if a.get("puerta_probable")]
 
-    # Verificación contra lo medido a mano (2026-09-18)
-    esperado = {
-        "sur-dorm23": [(-4.42, -3.66), (-3.54, -2.74)],
-        "sur-bano1": [(-2.63, -1.81)],
-        "sur-bano2": [],
-        "este-bano2": [(-2.36, -1.56)],
-        "oeste-dormprin": [(-1.30, -0.64)],
-        "fachada": [(0.78, 1.60)],
-    }
-    ok = True
-    for lid, huecos in esperado.items():
-        det = detectados[lid]
-        for (e0, e1) in huecos:
-            bueno = [d for d in det
-                     if abs(d[0] - e0) <= 0.12 and abs(d[1] - e1) <= 0.12]
-            if not bueno:
-                print(f"  !! {lid}: sin detección para {(e0, e1)} "
-                      f"(detectados {det})")
-                ok = False
-        extra = [d for d in det if not any(
-            abs(d[0] - e0) <= 0.12 and abs(d[1] - e1) <= 0.12
-            for (e0, e1) in huecos)]
-        if extra:
-            print(f"  .. {lid}: tramos abiertos extra (sin puerta): {extra}")
-    if not ok:
-        raise SystemExit("La detección no coincide con la verificación manual")
 
-    puertas = [
-        # D1 cruza el pasillo junto al baño 1: cierra el ala privada
-        # (dormitorio 1, baño 1 y vestidor) desde el pasillo, abre al oeste.
-        # Va en plano vertical y sin muro (en_paso): marco y hoja, sin dintel.
-        {"id": "D1", "nombre": "Dormitorio 1 (cruce del pasillo)",
-         "tipo": "abatible", "pared": "v", "centro": [-4.62, -0.915],
-         "ancho": 0.95, "alto": 2.03, "bisagra": "S", "apertura": "O",
-         "en_paso": True},
-        {"id": "D2", "nombre": "Dormitorio 2",
-         "tipo": "abatible", "pared": "h", "centro": [-4.04, -0.47],
-         "ancho": 0.76, "alto": 2.03, "bisagra": "E", "apertura": "S"},
-        {"id": "D3", "nombre": "Dormitorio 3",
-         "tipo": "abatible", "pared": "h", "centro": [-3.14, -0.47],
-         "ancho": 0.80, "alto": 2.03, "bisagra": "O", "apertura": "S"},
-        {"id": "D4", "nombre": "Dormitorio principal",
-         "tipo": "abatible", "pared": "v", "centro": [1.90, -0.97],
-         "ancho": 0.66, "alto": 2.03, "bisagra": "S", "apertura": "E"},
-        {"id": "D5", "nombre": "Baño 2 (en suite)",
-         "tipo": "abatible", "pared": "v", "centro": [1.70, -1.96],
-         "ancho": 0.80, "alto": 2.03, "bisagra": "S", "apertura": "O"},
-        {"id": "D6", "nombre": "Baño 1 (corredera vidriera)",
-         "tipo": "corredera", "pared": "h", "centro": [-2.22, -1.50],
-         "ancho": 0.82, "alto": 2.03, "bolsillo": "O", "vidrio": True,
-         "hoja": "cerrada"},
-        {"id": "D7", "nombre": "Casoneto P04 (corredera)",
-         "tipo": "corredera", "pared": "h", "centro": [-0.10, 2.48],
-         "ancho": 0.60, "alto": 2.03, "bolsillo": "E", "vidrio": False},
-        {"id": "D0", "nombre": "Entrada (existente)",
-         "tipo": "existente", "pared": "h", "centro": [1.19, 4.42],
-         "ancho": 0.82, "alto": 2.00, "hoja": "cerrada"},
-        {"id": "D8", "nombre": "Distribuidor (vidriera P03)",
-         "tipo": "vidriera", "pared": "v", "centro": [0.70, 4.01],
-         "ancho": 0.78, "alto": 2.36, "bisagra": "S", "apertura": "E"},
-        {"id": "D9", "nombre": "Puerta del pasillo",
-         "tipo": "abatible", "pared": "v", "centro": [-1.50, -0.915],
-         "ancho": 0.95, "alto": 2.03, "bisagra": "S", "apertura": "O",
-         "en_paso": True},
-    ]
-    separadores = [
-        {"id": "PA02", "nombre": "Separador recibidor (vidrio fijo)",
-         "tipo": "fijo", "tramos": [
-             {"de": [-0.66, 2.44], "a": [-0.10, 2.44]},
-             {"de": [-0.10, 2.44], "a": [0.12, 3.19]},
-         ]},
-    ]
-    out = {"generado": "medición plano PE.A.02 + PEI.07",
-           "puertas": puertas, "separadores": separadores}
-    (ROOT / "data" / "puertas.json").write_text(
-        json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
-    print("escrito data/puertas.json (%d puertas)" % len(puertas))
+def buscar_arco(arcos: list[dict], bisagra: tuple[float, float]) -> dict | None:
+    """Arco cuya bisagra (centro) está a menos de TOL_BISAGRA del esperado."""
+    mejor, dist = None, TOL_BISAGRA
+    for a in arcos:
+        d = math.hypot(a["cx"] - bisagra[0], a["cz"] - bisagra[1])
+        if d <= dist:
+            mejor, dist = a, d
+    return mejor
+
+
+def derivar(arc: dict) -> dict:
+    """A partir del arco deduce centro del hueco, ancho, bisagra y apertura."""
+    hx, hz = arc["cx"], arc["cz"]
+    p0, p1 = arc["p0"], arc["p1"]
+
+    def alineacion(p):
+        return min(abs(p[0] - hx), abs(p[1] - hz))
+
+    # extremo cerrado = el más alineado con la bisagra (sobre el eje del muro)
+    if alineacion(p0) <= alineacion(p1):
+        cerrado, abierto = p0, p1
+    else:
+        cerrado, abierto = p1, p0
+    dx, dz = abs(cerrado[0] - hx), abs(cerrado[1] - hz)
+    if dz <= dx:                      # muro horizontal: bisagra y jamba comparten z
+        pared = "h"
+        bisagra = "O" if hx < cerrado[0] else "E"
+        apertura = "S" if abierto[1] > hz else "N"
+    else:
+        pared = "v"
+        bisagra = "N" if hz < cerrado[1] else "S"
+        apertura = "E" if abierto[0] > hx else "O"
+    centro = [round((hx + cerrado[0]) / 2, 3), round((hz + cerrado[1]) / 2, 3)]
+    return {"pared": pared, "bisagra": bisagra, "apertura": apertura,
+            "centro": centro, "bisagra_xz": [round(hx, 3), round(hz, 3)],
+            "ancho_medido": round(math.hypot(cerrado[0] - hx, cerrado[1] - hz), 3)}
+
+
+def main() -> int:
+    arcos = cargar_arcos()
+    puertas, errores = [], []
+    for esp in PUERTAS_ESPEC:
+        bis = esp["bisagra_esperada"]
+        arc = buscar_arco(arcos, bis) if bis else None
+        if bis and arc is None:
+            errores.append(f"{esp['id']}: sin arco cerca de {bis}")
+            continue
+        p = {"id": esp["id"], "nombre": esp["nombre"], "tipo": esp["tipo"],
+             "alto": esp["alto"], "hoja_ancho": esp["hoja"],
+             "acabado": esp["acabado"], "abre_a": esp["abre_a"],
+             "en_paso": bool(esp.get("en_paso"))}
+        if arc is not None:
+            d = derivar(arc)
+            if abs(d["ancho_medido"] - esp["hoja"]) > 0.08:
+                print(f"  .. {esp['id']}: hoja medida {d['ancho_medido']:.2f} m "
+                      f"(esperada {esp['hoja']:.2f})")
+            p["pared"] = d["pared"]
+            p["centro"] = d["centro"]
+            p["bisagra"] = d["bisagra"]
+            p["apertura"] = d["apertura"]
+            p["bisagra_xz"] = d["bisagra_xz"]
+            p["ancho"] = round(esp.get("marco_ancho", esp["hoja"] + 0.08), 2)
+        else:  # P04 corredera: geometría de la tabla, sin arco
+            p["pared"] = esp["pared"]
+            p["centro"] = list(esp["centro"])
+            p["ancho"] = esp["ancho"]
+            p["bolsillo"] = esp["bolsillo"]
+            p["vidrio"] = esp["vidrio"]
+        if esp.get("hoja_estado"):
+            p["hoja"] = esp["hoja_estado"]
+        puertas.append(p)
+
+    if errores:
+        for e in errores:
+            print(f"  !! {e}")
+        raise SystemExit("No cuadran las bisagras con los arcos medidos")
+    if len(puertas) != 9:
+        raise SystemExit(f"Se esperaban 9 puertas, hay {len(puertas)}")
+
+    out = {"generado": "medición PE/I.06 (arcos) + PE/I.07 (hojas)",
+           "fuente": ["Planos/PE_carpinteria_interior.pdf", "data/carpinteria_medida.json"],
+           "puertas": puertas, "separadores": SEPARADORES}
+    OUT.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    print(f"escrito data/puertas.json ({len(puertas)} puertas + "
+          f"{len(SEPARADORES)} separador)")
+    for p in puertas:
+        bis = p.get("bisagra", "-")
+        ap = p.get("apertura", "-")
+        print(f"  {p['id']:3s} {p['nombre']:34s} {p['tipo']:15s} "
+              f"pared={p['pared']} centro=({p['centro'][0]:6.2f},{p['centro'][1]:6.2f}) "
+              f"ancho={p['ancho']:.2f} bisagra={bis} abre={ap} "
+              f"en_paso={p['en_paso']}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

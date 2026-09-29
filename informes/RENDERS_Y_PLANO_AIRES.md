@@ -15,7 +15,7 @@ _Generado el 2026-09-18 a partir de las imágenes aportadas en `data/reales/`._
 | `plano-aires.jpeg` (921×2048) | Plano marcado a mano | Plano de **conductos de clima** con estancias etiquetadas y trazado verde/azul/rojo |
 | `grua al 7º piso.jpeg` (899×1599) | Foto de obra | Plataforma articulada (Torres) desplegada hasta el 7º piso en fachada |
 
-Los renders se muestran en el visor `render3d.html` (botón **Galería** y ficha de cada estancia). El plano de aires se ha recortado a `data/imagenes/plano_aires_recorte.jpg` para la galería.
+Los renders se muestran en la ficha de cada estancia del visor `render3d.html`.
 
 ## 2. Versión vigente de la distribución: PE.A.02 (confirmado 2026-09-19)
 

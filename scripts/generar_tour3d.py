@@ -156,7 +156,6 @@ kbd{font:600 10px var(--sans);background:rgba(0,0,0,.07);border-radius:4px;paddi
     <button class="btn" id="b-giro" aria-pressed="false">Girar</button>
     <button class="btn" id="b-full">Pantalla completa</button>
     <a class="btn" href="render3d.html">Vista 3D</a>
-    <a class="btn" href="planos.html">Planos 2D</a>
   </div>
 </header>
 
@@ -194,7 +193,7 @@ kbd{font:600 10px var(--sans);background:rgba(0,0,0,.07);border-radius:4px;paddi
         <li>Actualiza el navegador y los drivers de la gráfica (<code>libgl1-mesa-dri</code> en Linux) y comprueba en <a href="https://get.webgl.org/" target="_blank" rel="noopener">get.webgl.org</a>.</li>
       </ol>
       <p><button class="btn" type="button" onclick="location.reload()">Reintentar</button></p>
-      <p class="fb-alt">Mientras tanto: <a href="render3d.html">vista 3D</a> · <a href="planos.html">planos 2D</a></p>
+      <p class="fb-alt">Mientras tanto: <a href="render3d.html">vista 3D</a></p>
     </div>
   </div>
 

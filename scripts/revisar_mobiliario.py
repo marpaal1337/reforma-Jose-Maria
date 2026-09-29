@@ -11,7 +11,7 @@ vectorial del plano (planos3d.json, puertas.json, ventanas.json) y comprueba:
   3. que nada invada el barrido de las puertas abatibles ni los 0,8 m libres
      delante de las correderas,
   4. que nada alto tape una ventana por encima del antepecho; los huecos que
-     en realidad son puertas (la V05 es la boca del casoneto, con la D7) no
+     en realidad son puertas (la V05 es la boca del casoneto, con la P04) no
      generan banda,
   5. que no haya piezas solapadas (con excepciones: cojín sobre sofá, colchón
      sobre cama, frentes sobre el mueble…),
@@ -146,6 +146,65 @@ def poligonos_chocan(a, b, tol=0.0):
     return False
 
 
+def encoger(poly, tol):
+    """Erosiona un polígono convexo `tol` metros hacia dentro (desplazando
+    cada arista por su normal interior). Sirve para que los cruces de aristas
+    respeten la tolerancia: los muros del modelo invaden ~5 mm el interior y
+    las piezas a ras de muro 'chocaban' sin penetrar de verdad. Devuelve [] si
+    la erosión se come la pieza (placas más finas que 2·tol)."""
+    n = len(poly)
+    if n < 3 or tol <= 0:
+        return list(poly)
+    poly = list(poly)
+    # poda de micro-aristas (chaflanes de 4 mm del bisel): sin esto la
+    # intersección de aristas desplazadas da resultados sin sentido
+    cambio = True
+    while cambio and len(poly) > 3:
+        cambio = False
+        for i in range(len(poly)):
+            a, b, c = poly[i - 1], poly[i], poly[(i + 1) % len(poly)]
+            l1 = math.hypot(b[0] - a[0], b[1] - a[1])
+            l2 = math.hypot(c[0] - b[0], c[1] - b[1])
+            ax, az = b[0] - a[0], b[1] - a[1]
+            bx, bz = c[0] - a[0], c[1] - a[1]
+            L = math.hypot(bx, bz) or 1.0
+            if min(l1, l2) < 0.012 and abs(ax * bz - az * bx) / L < 0.012:
+                poly.pop(i)
+                cambio = True
+                break
+    n = len(poly)
+
+    def area(p):
+        return sum(p[i][0] * p[(i + 1) % len(p)][1] -
+                   p[(i + 1) % len(p)][0] * p[i][1]
+                   for i in range(len(p))) / 2
+
+    area2 = area(poly)
+    sgn = 1.0 if area2 >= 0 else -1.0          # CCW: interior a la izquierda
+    rectas = []
+    for i in range(n):
+        (ax, az), (bx, bz) = poly[i], poly[(i + 1) % n]
+        dx, dz = bx - ax, bz - az
+        L = math.hypot(dx, dz) or 1.0
+        nx, nz = -dz / L * sgn, dx / L * sgn
+        rectas.append((ax + nx * tol, az + nz * tol, dx, dz))
+    out = []
+    for i in range(n):
+        x1, z1, dx1, dz1 = rectas[i - 1]
+        x2, z2, dx2, dz2 = rectas[i]
+        den = dx1 * dz2 - dz1 * dx2
+        if abs(den) < 1e-9:
+            continue
+        t = ((x2 - x1) * dz2 - (z2 - z1) * dx2) / den
+        out.append((x1 + dx1 * t, z1 + dz1 * t))
+    if len(out) < 3:
+        return []
+    a1 = area(out)
+    if area2 * a1 <= 0 or abs(a1) > abs(area2):   # erosión total: no hay pieza
+        return []
+    return out
+
+
 def casco(puntos):
     pts = sorted(set(puntos))
     if len(pts) <= 2:
@@ -241,25 +300,33 @@ def piezas_glb(path=GLB):
 
 # ── clasificación ───────────────────────────────────────────────────────────
 
-ESTRUCTURA = ("suelo", "techo", "pav_", "muro_", "marco_", "pmarco_", "vidrio_",
+ESTRUCTURA = ("suelo", "techo", "falso_techo_", "tabica_", "rev_", "pav_",
+              "muro_", "marco_", "pmarco_", "vidrio_",
               "mont_", "dintel_", "pdintel_", "phoja_", "antepecho_", "rodapie_",
               "dl_disco_", "peto_", "pilar_visto", "cortina_", "ext_", "asset_",
               "b1_azulejo_", "b2_azulejo_")
 # elementos pegados a un muro: se admiten los solapes de unos centímetros del
 # modelo (encimera, sanitarios, panel de TV…) y se revisan aparte los espejos
-EN_PARED = ("cuadro_", "espejo", "tv_panel", "tv_cove", "tv_liston_", "tv_mueble",
-            "coc_mueble", "coc_encimera", "coc_columna", "coc_altos", "coc_horno",
-            "coc_freg", "coc_led",
-            "b1_mueble", "b1_encimera", "b1_wc", "b1_cisterna", "b1_led",
-            "b2_mueble", "b2_encimera", "b2_wc", "b2_cisterna",
-            "b1_azulejo_", "b2_azulejo_")
+EN_PARED = ("cuadro_", "espejo", "tv", "tv_",
+            "coc_",
+            "b1_", "b2_",
+            "ves_", "rec_zapatero", "rec_led_zapatero", "rec_espejo",
+            "lav_", "tz_",
+            "dp_panelado", "dp_est_", "dp_cabecero", "dp_listones_",
+            "dp_mesita_", "dp_banco",
+            "d3_a04_", "d3_e02_", "d3_cabecero", "d3_escritorio",
+            "d2_a03_", "d2_e01_", "d2_cabecero", "d2_comoda",
+            "d2_escritorio",
+            "est_bajos_", "est_a_", "est_b_", "aparador_")
 
 PREFIJOS = (
-    ("d1_", "dorm-1"), ("d2_", "dorm-2"), ("d3_", "dorm-3"),
-    ("dp_", "dorm-principal"), ("b1_", "bano-1"), ("b2_", "bano-2"),
-    ("rec_", "recibidor"), ("tz_", "terraza"), ("coc_", "salon"),
-    ("isla", "salon"), ("placa", "salon"), ("taburete_", "salon"),
-    ("campana", "salon"), ("tv_", "salon"), ("tv", "salon"),
+    ("d1_", "dorm-3"), ("d3_", "dorm-3"), ("d2_", "dorm-2"),
+    ("est_", "estudio"), ("dp_", "dorm-principal"), ("ves_", "vestidor"),
+    ("b1_", "bano-1"), ("b2_", "bano-2"),
+    ("rec_", "recibidor"), ("lav_", "lavadero"), ("tz_", "terraza"),
+    ("coc_", "cocina"), ("isla", "cocina"), ("placa", "cocina"),
+    ("taburete_", "cocina"), ("campana", "cocina"),
+    ("tv_", "salon"), ("tv", "salon"),
     ("sofa_", "salon"), ("cojin_", "salon"), ("alfombra", "salon"),
     ("mesa_centro", "salon"), ("butaca", "salon"), ("lampara_", "salon"),
     ("aparador", "salon"), ("cuadro_", "salon"), ("planta", "salon"),
@@ -268,44 +335,61 @@ PREFIJOS = (
 
 # grupos que pueden solaparse entre sí (misma pieza compuesta)
 GRUPOS_SOLAPE = (
-    ("d1_cama", "d1_colchon", "d1_colcha", "d1_almohada", "d1_cabecero"),
-    ("d2_cama", "d2_colchon", "d2_colcha", "d2_almohada", "d2_cabecero"),
-    ("dp_cama", "dp_colchon", "dp_colcha", "dp_almohada", "dp_cabecero",
-     "dp_alfombra", "dp_hilo_", "dp_pant_"),
-    ("sofa_", "cojin_", "alfombra"),
     ("coc_",),
-    ("isla", "isla_tapa", "placa", "campana", "taburete_"),
-    ("tv", "tv_"),
-    ("aparador", "aparador_pata_", "aparador_f"),
-    ("cuadro_",),
-    ("mesa", "mesa_pie"),
-    ("silla_",),
-    ("d3_sofa_", "d3_escritorio", "d3_pie_", "d3_silla"),
-    ("lampara_",),
-    ("mesa_centro",),
+    ("isla", "isla_cuerpo", "isla_zocalo", "isla_cajon_", "isla_tablero",
+     "isla_lateral_", "isla_frontal", "placa", "campana", "taburete_"),
+    ("tv", "tv_", "cuadro_", "cuadro_aparador"),
+    ("sofa_", "alfombra"),
+    ("mesa_comedor", "mesa_comedor_pie_", "silla_"),
+    ("lampara_comedor", "lampara_comedor_cable"),
+    ("lampara_pie", "lampara_pie_base", "lampara_pant"),
+    ("mesa_centro", "mesa_centro_base_"),
     ("butaca_",),
-    ("d1_escritorio", "d1_silla", "d1_pie_"),
-    ("b1_mueble", "b1_encimera", "b1_lavabo", "b1_grifo", "b1_espejo", "b1_led"),
-    ("b2_mueble", "b2_encimera", "b2_lavabo", "b2_grifo", "b2_espejo"),
-    ("b1_banera", "b1_banera_int", "b1_columna", "b1_wc", "b1_cisterna",
-     "b1_azulejo_"),
-    ("b2_plato", "b2_mampara", "b2_columna", "b2_ducha", "b2_wc",
-     "b2_cisterna", "b2_azulejo_"),
-    ("tz_mesa_bistro_pie", "tz_mesa_bistro", "tz_silla_"),
-    ("tz_jardinera_", "tz_tierra_", "tz_planta_", "tz_maceta"),
-    ("rec_armario", "rec_banco", "rec_espejo"),
+    ("aparador", "aparador_", "cuadro_aparador"),
+    ("rec_zapatero", "rec_zapatero_puerta_", "rec_led_zapatero"),
+    ("rec_espejo",),
+    ("lav_",),
+    ("ves_",),
+    ("dp_panelado", "dp_est_"),
+    ("dp_cama", "dp_colchon", "dp_manta", "dp_almohada_", "dp_cabecero",
+     "dp_listones_", "dp_mesita_", "dp_cable_", "dp_colgante_"),
+    ("d3_a04_",),
+    ("d3_e02_",),
+    ("d3_cama", "d3_cama_nido", "d3_colchon", "d3_manta", "d3_almohada",
+     "d3_cabecero"),
+    ("d3_escritorio", "d3_escritorio_pie_"),
+    ("d3_silla", "d3_silla_asiento", "d3_silla_respaldo", "d3_silla_pie_"),
+    ("d2_a03_",),
+    ("d2_e01_",),
+    ("d2_cama", "d2_cama_nido", "d2_colchon", "d2_manta", "d2_almohada",
+     "d2_cabecero"),
+    ("d2_comoda", "d2_comoda_cajon_", "d2_comoda_unero_"),
+    ("d2_escritorio", "d2_escritorio_pie_"),
+    ("d2_silla", "d2_silla_asiento", "d2_silla_respaldo", "d2_silla_pie_"),
+    ("est_bajos_",),
+    ("est_a_",),
+    ("est_b_",),
+    ("est_peninsula", "est_peninsula_redondeo", "est_peninsula_pie",
+     "est_peninsula_base"),
+    ("est_silla", "est_silla_asiento", "est_silla_respaldo", "est_silla_pie_"),
+    ("b1_",),
+    ("b2_",),
+    ("tz_",),
 )
 
 # paso libre exigido delante de cada pieza (m); d3_armario es la excepción:
 # el dormitorio 3 mide 1,85 m y el paso real queda en 0,52 m
-PASO_MINIMO = {"d1_armario": 0.9, "d2_armario": 0.9, "d3_armario": 0.5,
-               "dp_armario": 0.9, "coc_mueble": 0.9, "coc_altos": 0.9}
+PASO_MINIMO = {"ves_a01_cuerpo": 0.9,
+               "d3_a04_cuerpo": 0.9, "d2_a03_cuerpo": 0.9,
+               "est_a_fondo": 0.9, "est_b_fondo": 0.9,
+               "coc_bajo_fregadero": 0.9, "coc_altos": 0.9}
 
 ALTURA_TAPA = 0.35      # por encima del antepecho se considera que tapa
 
 # ── colisiones del visor (data/colisiones.json) ─────────────────────────────
 # huellas convexas en planta que usa el paseo del visor 3D (círculo-polígono).
-# El grupo replica el conmutador de mobiliario de generar_visor3d.py.
+# El campo "g" (salon/resto/base) se conserva informativo: el visor muestra
+# todo el mobiliario, así que aplica todas las huellas.
 COLISION_H0 = 0.75      # con la base por debajo de esta cota la pieza estorba
 COLISION_H1 = 0.35      # y debe llegar al menos a esta altura
 COLISION_BLANDAS = ("cojin_", "almohada", "colcha", "colchon", "manta",
@@ -413,14 +497,15 @@ def lado_servido(p, eid):
     return None
 
 
-SIRVE = {"D1": "dorm-1", "D2": "dorm-2", "D3": "dorm-3", "D4": "dorm-principal",
-         "D5": "bano-2", "D6": "bano-1", "D7": "recibidor", "D8": "recibidor"}
+SIRVE = {"P01": "vestidor", "P02": "bano-1", "P03": "pasillo", "P04": "bano-2",
+         "P05": "estudio", "P06": "dorm-2", "P07": "dorm-3", "PE": "recibidor",
+         "PL": "lavadero"}
 
 
 def barreras_puertas():
     out = {}
     for p in PUERTAS["puertas"]:
-        if p["id"] == "D0":       # entrada existente, sin datos de barrido
+        if p["id"] == "PE":       # entrada existente, sin datos de barrido
             continue
         if p["tipo"] == "corredera":
             n = lado_servido(p, SIRVE.get(p["id"]))
@@ -446,10 +531,14 @@ def bandas_ventanas():
     for v in VENTANAS["ventanas"]:
         h = v["hueco_plano"]
         # huecos que en realidad son puertas (p. ej. la V05 es la boca del
-        # casoneto, que lleva la corredera D7): no tienen banda
+        # casoneto, que lleva la corredera P04): no tienen banda
         if any(math.hypot(p["centro"][0] - h["centro"][0],
                           p["centro"][1] - h["centro"][1]) < 0.45
                for p in PUERTAS["puertas"]):
+            continue
+        # ventanales de suelo a techo (V01): el mobiliario a su paso es una
+        # decisión de proyecto, no un error
+        if v["antepecho_m"] is None and (v["alto_m"] or 0.0) >= 2.0:
             continue
         fachada = (h.get("fachada") or "").split("-")[0]
         # el hueco de planos3d más cercano de la misma fachada da la orientación
@@ -514,8 +603,9 @@ def revisar():
             fallos.append(("sin-estancia", nombre, "prefijo desconocido"))
             continue
         if not en_pared(nombre):
+            hull = encoger(p.hull, TOL_MURO)
             for m in MUROS:
-                if poligonos_chocan(p.hull, m, tol=TOL_MURO):
+                if poligonos_chocan(hull, m):
                     fallos.append(("muro", nombre, "se mete en un muro"))
                     en_muro.add(nombre)
                     break
@@ -539,7 +629,7 @@ def revisar():
         for nombre, pc in mob.items():
             if pc.h1 <= antepecho + ALTURA_TAPA:
                 continue
-            if poligonos_chocan(pc.hull, caja, tol=0.01):
+            if poligonos_chocan(encoger(pc.hull, 0.05), caja):
                 fallos.append(("ventana", nombre,
                                f"tapa {v['id']} por encima del antepecho"))
 

@@ -86,13 +86,14 @@ ANGULO_SMART = 60.0      # smart UV project: corta en aristas > 60°
 ISLA_SMART = 0.02        # separación inicial entre islas (fracción UV)
 UMBRAL_SOLAPE = 8        # loops UV solapados tolerados tras select_overlap
 
-ARQ = ("suelo", "pav_", "techo", "muro_", "rodapie_", "dintel_", "antepecho_",
-       "marco_", "mont_", "pmarco_", "pdintel_", "ext_balcon", "ext_voladizo",
-       "tv_panel", "tv_liston", "pilar")
+ARQ = ("suelo", "pav_", "techo", "falso_techo_", "tabica_", "rev_", "muro_",
+       "rodapie_", "dintel_", "antepecho_", "marco_", "mont_", "pmarco_",
+       "pdintel_", "ext_balcon", "ext_voladizo", "tv_panel", "tv_liston",
+       "pilar")
 # Sin aporte difuso útil: emisores (led, lampara_pantalla), cristales
 # (cristal, vidrio_acido), pantalla, espejo y cortina (translúcida). El
 # aluminio de los marcos y los metales oscuros sí se hornean (dan oclusión).
-NO_HORNEAR_MAT = {"cristal", "vidrio_acido", "cortina", "led",
+NO_HORNEAR_MAT = {"cristal", "vidrio_acido", "cortina", "led", "led_frio",
                   "lampara_pantalla", "pantalla", "espejo"}
 EXTERIOR_EXPORT = ("ext_balcon", "ext_barandilla", "ext_voladizo", "ext_propio")
 

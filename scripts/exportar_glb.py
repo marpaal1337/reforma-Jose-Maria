@@ -33,8 +33,14 @@ ACABADOS = {
     "marmol": ("marmol.jpg", 0.18, 0.0, 1.0),
     "azulejo": ("azulejo.jpg", 0.22, 0.0, 1.0),
     "travertino": ("travertino.jpg", 0.55, 0.0, 1.0),
+    "travertino_porc": ("travertino_porc.jpg", 0.35, 0.0, 1.0),
     "roble": ("roble.jpg", 0.42, 0.0, 1.0),
     "roble_h": ("roble.jpg", 0.42, 0.0, 1.0),
+    "roble_mel": ("roble_mel.jpg", 0.45, 0.0, 1.0),
+    "cerezo": ("cerezo.jpg", 0.30, 0.0, 1.0),
+    "silestone": ("silestone.jpg", 0.35, 0.0, 1.0),
+    "dekton": ("dekton.jpg", 0.30, 0.0, 1.0),
+    "hormigon_picado": ("hormigon.jpg", 0.70, 0.0, 1.0),
     "alfombra": ("tejido_claro.jpg", 0.95, 0.0, 1.0),
     "piedra_negra": ("piedra_negra.jpg", 0.20, 0.0, 1.0),
     "tejido": ("tejido.jpg", 0.95, 0.0, 1.0),
@@ -44,19 +50,28 @@ ACABADOS = {
 COLORES = {
     "negro_mate": (0.02, 0.02, 0.02, 0.6),
     "blanco_laca": (0.93, 0.93, 0.91, 0.35),
+    "blanco_electro": (0.92, 0.92, 0.90, 0.15),
     "vidrio_acido": (0.92, 0.94, 0.93, 0.45),
     "pantalla": (0.012, 0.012, 0.014, 0.08),
     "planta": (0.07, 0.16, 0.055, 0.7),
     "maceta": (0.85, 0.84, 0.80, 0.7),
-    "cobre": (0.72, 0.43, 0.20, 0.28),
-    "aluminio": (0.12, 0.115, 0.11, 0.35),
+    "cobre": (0.76, 0.45, 0.32, 0.32),
+    "aluminio": (0.030, 0.030, 0.032, 0.34),
     "espejo": (0.95, 0.95, 0.95, 0.03),
     "cristal": (1.0, 1.0, 1.0, 0.02),
     "metal_negro": (0.035, 0.035, 0.037, 0.42),
+    "cromo": (0.86, 0.87, 0.89, 0.06),
+    "bronce_barandilla": (0.09, 0.07, 0.055, 0.5),
     "cuero": (0.25, 0.11, 0.05, 0.5),
     "cortina": (0.96, 0.95, 0.92, 0.6),
     "lampara_pantalla": (0.82, 0.63, 0.42, 0.9),
     "lienzo": (0.88, 0.85, 0.79, 0.9),
+    # melaminas y acabados lisos nuevos
+    "grafito": (0.075, 0.075, 0.080, 0.45),
+    "gris_osc": (0.12, 0.12, 0.12, 0.5),
+    "resina": (0.90, 0.90, 0.89, 0.35),
+    "pav_exterior": (0.64, 0.63, 0.61, 0.5),
+    "revoco_fachada": (0.585, 0.365, 0.266, 0.88),
     # aproximaciones planas de las láminas procedurales (por si el .blend es
     # anterior a su generación; con imagen se conservan, ver _imagen_base)
     "lienzo_0": (0.72, 0.45, 0.30, 0.9),
@@ -65,9 +80,15 @@ COLORES = {
     "colcha": (0.72, 0.50, 0.34, 0.95),
     "tierra": (0.045, 0.032, 0.022, 0.95),
 }
-METALES = {"cobre", "aluminio", "espejo", "metal_negro"}
+METALES = {"cobre", "aluminio", "espejo", "metal_negro", "cromo",
+           "bronce_barandilla", "laton"}
 TRANSPARENTES = {"cristal": 0.18, "vidrio_acido": 0.55, "cortina": 0.5}
-ESCALA_TEX = {"marmol": 1.5, "azulejo": 1.5, "travertino": 1.2}
+# escala de la proyección de caja = 1/tamaño de textura en metros
+ESCALA_TEX = {
+    "marmol": 1.5, "azulejo": 1.5, "travertino": 1.2,
+    "travertino_porc": 1 / 1.2, "silestone": 1.0, "dekton": 1.0,
+    "cerezo": 1 / 0.8, "roble_mel": 1 / 0.8, "hormigon_picado": 1 / 0.6,
+}
 
 
 def ensure_uv(me: bpy.types.Mesh, escala: float = 1.0) -> None:
@@ -146,6 +167,11 @@ def aplicar_acabado(mat: bpy.types.Material) -> None:
     elif nombre == "led":
         bsdf.inputs["Base Color"].default_value = (1.0, 0.93, 0.82, 1.0)
         bsdf.inputs["Emission Color"].default_value = (1.0, 0.86, 0.66, 1.0)
+        bsdf.inputs["Emission Strength"].default_value = 2.0
+        bsdf.inputs["Roughness"].default_value = 0.5
+    elif nombre == "led_frio":
+        bsdf.inputs["Base Color"].default_value = (0.94, 0.96, 1.0, 1.0)
+        bsdf.inputs["Emission Color"].default_value = (0.88, 0.93, 1.0, 1.0)
         bsdf.inputs["Emission Strength"].default_value = 2.0
         bsdf.inputs["Roughness"].default_value = 0.5
     elif nombre == "lampara_pantalla":

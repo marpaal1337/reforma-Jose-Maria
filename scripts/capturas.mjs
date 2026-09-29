@@ -10,7 +10,7 @@
  * Requiere: playwright-core y chromium (los resuelve scripts/capturas.sh, que
  * los cachea en ~/.cache/opencode-reforma y ~/.cache/ms-playwright).
  * Vistas: orbita, salon (s4), terraza, cocina (s2), dormitorio (s3), fachada.
- * Activa el modo Realista si el horneado está disponible; si no, captura la maqueta.
+ * El visor arranca siempre en Realista; --maqueta lo fuerza a la maqueta.
  *
  * --medir no guarda capturas: informa del peso del HTML, el tiempo hasta estar
  * listo, draw calls/triángulos/programas/memoria de cada modo y milisegundos
@@ -128,7 +128,7 @@ async function esperarQuieto() {
   await page.waitForFunction('window.__visor.animando === undefined || !window.__visor.animando',
     null, { timeout: 60000 }).catch(() => {});
 }
-/* la intro de los muros (sólo maqueta) debe haber terminado antes de capturar */
+/* la altura de muros es fija (2,60 m): ya no hay intro que esperar */
 async function esperarIntro() {
   await page.waitForFunction('window.__visor.intro === undefined || window.__visor.intro >= 1',
     null, { timeout: 120000 }).catch(() => {});
@@ -140,10 +140,9 @@ await page.waitForFunction('window.__visor && window.__visor.listo', null, { tim
 if (MEDIR) {
   const listo_ms = await page.evaluate(() => Math.round(performance.now()));
   await page.waitForTimeout(1200);
-  // la intro crece los muros: hay que dejarla terminar antes de medir reposo
+  // el visor arranca en Realista; la altura de muros ya no se anima
   await esperarIntro();
   const realista = await page.evaluate(() => document.body.classList.contains('realista'));
-  // si el horneado está listo, el visor arranca en Realista; si no, arranca en maqueta
   await instrumentar();
   await esperarQuieto();
   const rep = {
@@ -173,7 +172,7 @@ if (MEDIR) {
   rep.orbita = await medP;
   rep.info_orbita = await info();
   if (realista) {
-    await page.evaluate(() => document.querySelector('#b-real').click());
+    await page.evaluate(() => window.__visor.setRealista(false));
     await page.waitForFunction('window.__visor.maquetaLista !== false', null, { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(1500);
     await esperarQuieto();
@@ -187,14 +186,12 @@ if (MEDIR) {
 
 await page.waitForTimeout(1200);
 
-// El visor arranca en Realista si hay horneado (setRealista(realListo)):
-// solo clicar si no está en el modo pedido.
+// El visor arranca en Realista; solo cambia si se pide --maqueta.
 const realista = await page.evaluate((maqueta) => {
-  const b = document.querySelector('#b-real');
-  if (!b) return false;
-  const on = b.getAttribute('aria-pressed') === 'true';
-  if (maqueta && on) b.click();
-  if (!maqueta && !on) b.click();
+  const V = window.__visor;
+  if (!V || !V.setRealista) return false;
+  if (maqueta && V.realista) V.setRealista(false);
+  if (!maqueta && !V.realista) V.setRealista(true);
   return document.body.classList.contains('realista');
 }, MAQUETA);
 await page.waitForFunction('window.__visor.maquetaLista !== false', null, { timeout: 60000 }).catch(() => {});

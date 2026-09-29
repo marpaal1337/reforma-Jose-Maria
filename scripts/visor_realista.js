@@ -1,6 +1,8 @@
 /* ══ Modo Realista ═══════════════════════════════════════════════════════════
    Interior con la luz de Cycles horneada (lightmaps) y las texturas PBR del
    render, y la ciudad real (OSM) alrededor, a la altura del 7º piso.
+   Es el modo por defecto y único del visor (sin conmutador); si falta el
+   horneado se cae a la maqueta. En RV se fuerza la maqueta por rendimiento.
    Recursos: scripts/hornear_visor.py -> data/visor/ (inyectados por
    scripts/generar_visor3d.py). Coordenadas Three.js: x = X, y = Z, z = -Y de
    Blender; el suelo de la calle está en REAL.info.suelo.y. El JSON viaja en
@@ -80,6 +82,8 @@ function rng(sem){ return ()=>{ sem |= 0; sem = sem + 0x6D2B79F5 | 0;
 const PALETA = [[0.60,0.38,0.27],[0.63,0.53,0.41],[0.72,0.68,0.61],[0.64,0.46,0.40],
                 [0.60,0.47,0.27],[0.38,0.17,0.11],[0.53,0.51,0.49]];
 const CUBIERTAS = [[0.42,0.19,0.14],[0.50,0.30,0.25],[0.55,0.54,0.50],[0.46,0.24,0.18]];
+const TIENDAS = [[0.55,0.07,0.05],[0.05,0.10,0.32],[0.08,0.26,0.12],
+                 [0.78,0.76,0.70],[0.62,0.22,0.05],[0.10,0.32,0.36]];
 function matFachada(propio){
   const i = REAL.info, s = i.sol, c = i.cielo;
   const senSol = Math.max(0, s.dir[1]);
@@ -93,7 +97,8 @@ function matFachada(propio){
     uClipY: {value: 1e9},
     uVFlip: {value: propio ? 1 : 0},
     uPaleta: {value: PALETA.map(p=>new THREE.Vector3(...p))},
-    uCubiertas: {value: CUBIERTAS.map(p=>new THREE.Vector3(...p))}
+    uCubiertas: {value: CUBIERTAS.map(p=>new THREE.Vector3(...p))},
+    uTiendas: {value: TIENDAS.map(p=>new THREE.Vector3(...p))}
   };
   return new THREE.ShaderMaterial({
     uniforms: uni, side: THREE.DoubleSide,
@@ -119,7 +124,7 @@ function matFachada(propio){
       #include <common>
       uniform vec3 uSol; uniform vec3 uSolE; uniform vec3 uCielo; uniform float uSuelo;
       uniform vec3 uHorizonte; uniform float uNiebla; uniform float uClipY; uniform float uVFlip;
-      uniform vec3 uPaleta[7]; uniform vec3 uCubiertas[4];
+      uniform vec3 uPaleta[7]; uniform vec3 uCubiertas[4]; uniform vec3 uTiendas[6];
       varying vec2 vUv; varying float vSem; varying float vTecho; varying float vTop;
       varying vec3 vN; varying vec3 vPos;
       float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -129,6 +134,11 @@ function matFachada(propio){
       vec3 cubierta(float s){ int i = int(clamp(floor(s * 4.0), 0.0, 3.0));
         vec3 c = uCubiertas[0];
         for(int k = 1; k < 4; k++) if(k == i) c = uCubiertas[k];
+        return c; }
+      vec3 palTienda(float s){
+        int i = int(clamp(floor(h21(vec2(s * 1.7 + 3.0, 9.0)) * 6.0), 0.0, 5.0));
+        vec3 c = uTiendas[0];
+        for(int k = 1; k < 6; k++) if(k == i) c = uTiendas[k];
         return c; }
       void main(){
         if(vPos.y > uClipY) discard;
@@ -200,9 +210,24 @@ function matFachada(propio){
           vec3 colB = mix(ant, vec3(0.030, 0.030, 0.035), max(barrote * 0.9, pasam));
           alb = mix(mix(hueco, revoco, muro), colB, enBajo);
           emis = vid * mVid * (1.0 - enBajo);
-          /* base: degradado en los ~2 primeros metros (no en el propio) */
-          float tb = (1.0 - smoothstep(0.0, 2.0, vUv.y)) * (1.0 - propio);
-          alb = mix(alb, revoco * 0.30 + vec3(0.015), tb * 0.9);
+          /* toldos crema, equipos de A/A y bajos comerciales (fotos de la calle) */
+          float vent = 1.0 - muro;
+          float hayT = step(0.28, rnd) * step(rnd, 0.55);
+          float bt = step(0.60, vr) * step(vr, 0.72);
+          alb = mix(alb, fract(rnd * 7.7) > 0.5 ? vec3(0.82,0.78,0.67)
+                                                : vec3(0.72,0.66,0.52),
+                    vent * hayT * bt);
+          float st = vent * hayT * step(0.585, vr) * step(vr, 0.605);
+          alb = mix(alb, vec3(0.30,0.28,0.24), st);
+          float hayA = step(0.06, rnd) * step(rnd, 0.24);
+          float aa = vent * hayA * step(2.15, f.x) * step(f.x, 2.65)
+                     * step(0.30, vr) * step(vr, 0.40);
+          alb = mix(alb, fract(vr * 60.0) > 0.5 ? vec3(0.76,0.76,0.74)
+                                                : vec3(0.62,0.62,0.60), aa);
+          /* bajos comerciales de los vecinos: escaparate oscuro + rótulo */
+          float tb = (1.0 - smoothstep(2.7, 3.4, vUv.y)) * (1.0 - propio);
+          alb = mix(alb, vec3(0.020,0.026,0.038), tb * step(vUv.y, 2.7) * 0.9);
+          alb = mix(alb, palTienda(sem), tb * step(2.7, vUv.y) * 0.9);
           emis *= 1.0 - tb * 0.6;
         }
         float cielo = 0.5 + 0.5 * Nf.y;
@@ -319,7 +344,6 @@ function construirArboles(lado, planta){
 
 let cieloMesh = null, nieblaReal = null, matPropio = null;
 const mostrarEnOrbita = [];
-const _posCam = new THREE.Vector3();   // la cámara puede colgar del dolly (RV)
 
 /* tapa de sección sobre el edificio propio en la vista de maqueta (órbita),
    donde su volumen se recorta a la cota del suelo del piso */
@@ -444,23 +468,15 @@ function setRealista(on){
   scene.traverse(o => { if(o.material) (Array.isArray(o.material) ? o.material : [o.material])
     .forEach(m => m.needsUpdate = true); });
   setMode(mode);
-  $("#b-real").setAttribute("aria-pressed", String(on));
   document.body.classList.toggle("realista", on);
   pedirFrame();
 }
 
 function actualizarRealista(){
   if(!realista) return;
-  if(cieloMesh) cieloMesh.position.copy(camera.getWorldPosition(_posCam));
+  if(cieloMesh) cieloMesh.position.copy(camera.position);
   const orb = camMode === "orbita";
   ocultarEnOrbita.forEach(o => o.visible = !orb);
   mostrarEnOrbita.forEach(o => o.visible = orb);
   if(matPropio) matPropio.uniforms.uClipY.value = orb ? -0.03 : 1e9;
 }
-
-$("#b-real").addEventListener("click", () => {
-  if(!realListo){ toast("El modo realista no está disponible en este archivo"); return; }
-  setRealista(!realista);
-  toast(realista ? "Realista: luz de Cycles horneada y la ciudad real a la altura del 7º"
-                 : "Maqueta: planta con acabados y sol interactivo");
-});

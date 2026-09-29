@@ -1,0 +1,25 @@
+# Mapas PBR derivados en generar_texturas.py.
+# Fuentes CC0 de Poly Haven (https://polyhaven.com) copiadas a data/pbr/.
+# Los derivados NO sobrescriben la fuente: se escriben como <nombre>_Diffuse /
+# _Rough / _nor_gl.jpg y el original se conserva tal cual.
+
+silestone_charcoal: derivado de Poly Haven marble_01, CC0
+    https://polyhaven.com/a/marble_01  (fuente: marble_01_Diffuse/Rough/nor_gl)
+    -> mármol claro invertido y oscurecido a carbón (~sRGB 40) con vetas
+       gris claro (~110-140), tono ligeramente frío; rough ~0,38;
+       nor_gl aplanado al 30 %.
+hormigon_picado: derivado de Poly Haven concrete_debris, CC0
+    https://polyhaven.com/a/concrete_debris  (fuente: concrete_debris_Diffuse)
+    -> recoloreado a gris neutro medio (~sRGB 125) con moteado fino oscuro
+       (lectura de hormigón picado / granito gris). Rough y normal generados
+       proceduralmente (la fuente solo trae difuso en el repo).
+cerezo: derivado de Poly Haven cherry_veneer, CC0
+    https://polyhaven.com/a/cherry_veneer  (fuente: cherry_veneer_Diffuse)
+    -> madera tintada a cerezo barnizado cálido-rojizo (~sRGB (150,78,45)),
+       veta visible. Rough y normal generados (la fuente solo trae difuso).
+fachada_revoco: derivado de Poly Haven white_stucco, CC0
+    https://polyhaven.com/a/white_stucco  (fuente: white_stucco_Diffuse)
+    -> revoco salmón-beige propio (~sRGB (201,163,141)) como en las fotos.
+dekton: usa la fuente existente marble_01 (mármol claro gris cálido); SKIPPED.
+roble_mel: usa la fuente existente oak_veneer_01 (roble algo más cálido en el
+    visor); SKIPPED.

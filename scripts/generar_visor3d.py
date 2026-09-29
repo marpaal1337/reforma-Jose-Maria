@@ -37,7 +37,7 @@ TEX_B64 = base64.b64encode((DATA / "imagenes" / "planta_textura.jpg").read_bytes
 ENV_JPG = DATA / "pbr" / "hdri" / "venice_sunset_env.jpg"
 
 # texturas de acabados que usa la geometría del visor (muros y suelos)
-TEXTURAS_VISOR = ("suelo_madera", "azulejo", "terraza", "muro")
+TEXTURAS_VISOR = ("suelo_madera", "travertino_porc", "terraza", "muro")
 
 
 def b64(path: Path) -> str:
@@ -62,7 +62,6 @@ ENV_B64 = ("data:image/jpeg;base64," + b64(ENV_JPG)) if (ENV_JPG.exists() and EM
 # paseo queda con los muros, como antes)
 COL_FILE = DATA / "colisiones.json"
 COL = json.loads(COL_FILE.read_text(encoding="utf-8"))["piezas"] if COL_FILE.exists() else []
-XR_JS = (ROOT / "scripts" / "visor_xr.js").read_text(encoding="utf-8")
 
 # modo Realista: recursos horneados por scripts/hornear_visor.py (data/visor/)
 VISOR = _opcion("--visor", DATA / "visor")  # datos horneados alternativos
@@ -99,7 +98,7 @@ HTML = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FAF7F2">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="description" content="Modelo 3D interactivo de la reforma, generado automáticamente del plano de distribución PE.A.02 (arquitectura colegiada).">
+<meta name="description" content="Modelo 3D interactivo de la reforma, generado automáticamente del plano de distribución PE/A.03 (arquitectura colegiada).">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -218,26 +217,6 @@ input[type=range]{width:100%;accent-color:var(--accent);height:18px}
 .thumbs button img{width:100%;height:100%;object-fit:cover;display:block;opacity:.7}
 .thumbs button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .thumbs button[aria-pressed="true"] img{opacity:1}
-
-#galeria{position:fixed;inset:0;z-index:60;overflow:auto;padding:76px 24px 48px;
-  background:rgba(26,24,20,.88);backdrop-filter:blur(7px)}
-#galeria[hidden]{display:none}
-#galeria .gal-head{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;
-  align-items:center;padding:16px 22px;color:#F5F1EA;background:linear-gradient(rgba(20,18,15,.75),transparent)}
-#galeria h2{font-family:var(--serif);font-size:21px;margin:0;font-weight:600}
-#galeria .gal-sub{font-size:11px;color:#C9BFAD;margin-top:2px}
-#galeria .close{border:1px solid rgba(245,241,234,.35);background:transparent;color:#F5F1EA;
-  width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:15px}
-#galeria .close:hover{background:rgba(245,241,234,.12)}
-#galeria .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;max-width:1180px;margin:0 auto}
-#galeria figure{margin:0;background:var(--paper);border-radius:12px;overflow:hidden;cursor:zoom-in;
-  box-shadow:0 18px 44px -20px rgba(0,0,0,.6);transition:transform .3s}
-#galeria figure:hover{transform:translateY(-3px)}
-#galeria figure.zoom{grid-column:1/-1;cursor:zoom-out}
-#galeria img{display:block;width:100%;height:auto}
-#galeria figure.zoom img{max-height:74vh;width:auto;max-width:100%;margin:0 auto}
-#galeria figcaption{padding:9px 12px;font-size:11.5px;color:var(--ink-2);font-family:var(--sans)}
-#galeria figcaption b{font-family:var(--serif);font-weight:600;color:var(--ink)}
 
 /* ── etiquetas 3D ── */
 #labels{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:10}
@@ -423,14 +402,9 @@ body.movil #stick i{width:52px;height:52px;margin:-26px 0 0 -26px}
 body.movil #stick.act{border-color:var(--accent);box-shadow:0 0 0 3px rgba(181,101,29,.18),var(--shadow)}
 body.movil #stick::after{content:"mover"}
 
-body.movil #galeria{padding:calc(74px + var(--sat)) 14px calc(28px + var(--sab))}
-body.movil #galeria .gal-head{padding:calc(14px + var(--sat)) 14px 14px}
-body.movil #galeria .grid{grid-template-columns:1fr}
-body.movil #galeria .close{width:44px;height:44px}
-body.movil #galeria h2{font-size:19px}
-body.movil .panel-scroll,body.movil #card,body.movil #galeria{scrollbar-width:none}
-body.movil .panel-scroll::-webkit-scrollbar,body.movil #card::-webkit-scrollbar,
-body.movil #galeria::-webkit-scrollbar{display:none}
+body.movil .panel-scroll,body.movil #card{scrollbar-width:none}
+body.movil .panel-scroll::-webkit-scrollbar,
+body.movil #card::-webkit-scrollbar{display:none}
 
 @media (orientation:landscape) and (max-height:520px){
   body.movil aside{top:0;bottom:0;left:auto;right:0;width:min(370px,76vw);max-height:100dvh;
@@ -446,7 +420,7 @@ body.movil #galeria::-webkit-scrollbar{display:none}
   body.movil .actions-grid{grid-template-columns:repeat(6,1fr)}
   body.movil .actions-grid a,body.movil .actions-grid button{min-height:66px;padding:8px 4px}
 }
-body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:none}
+body.realista .seg[aria-label="Modo de suelo"]{display:none}
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
@@ -462,7 +436,7 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
 
   <header>
     <div class="title-block">
-      <div class="eyebrow micro">Arquitectura colegiada · Plano PE.A.02 · Junio/25</div>
+      <div class="eyebrow micro">Arquitectura colegiada · Plano PE/A.03 · Junio/25</div>
       <h1>Reforma vivienda Valencia</h1>
       <p><b>Modelo 3D generado del plano de distribución a escala 1:50</b></p>
     </div>
@@ -476,10 +450,7 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
         <button id="c-caminar" aria-pressed="false">Caminar</button>
         <button id="c-vuelo" aria-pressed="false">Vuelo</button>
       </div>
-      <button class="btn" id="b-real" aria-pressed="false" title="Luz de Cycles horneada y la ciudad real alrededor">Realista</button>
-      <button class="btn" id="b-vr" hidden aria-pressed="false" title="Paseo inmersivo (gafas compatibles con WebXR)">RV</button>
       <button class="btn" id="b-labels" aria-pressed="true">Etiquetas</button>
-      <button class="btn" id="b-galeria">Galería</button>
       <a class="btn" href="tour3d.html">Tour 360</a>
       <button class="btn" id="b-panel" aria-pressed="true">Panel</button>
       <button class="btn" id="b-export">
@@ -501,25 +472,10 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
       <span class="micro" id="panel-count"></span>
     </div>
     <div class="panel-scroll">
-      <div class="ctl">
-        <label class="micro" for="s-altura">Altura de muros <output id="o-altura">2,60 m</output></label>
-        <input id="s-altura" type="range" min="0" max="2.6" step="0.05" value="2.6">
-      </div>
-      <div class="ctl" id="ctl-sol">
-        <label class="micro" for="s-sol">Posición del sol <output id="o-sol">140°</output></label>
-        <input id="s-sol" type="range" min="0" max="359" step="1" value="140">
-      </div>
-      <div class="ctl">
-        <label class="micro">Mobiliario</label>
-        <div class="seg" role="group" aria-label="Mobiliario visible">
-          <button id="mob-todo" aria-pressed="true">Toda la casa</button>
-          <button id="mob-abierto" aria-pressed="false">Salón · cocina</button>
-        </div>
-      </div>
       <ul class="rooms" id="rooms"></ul>
     </div>
     <div class="panel-foot">
-      <span class="micro">Superficie interior medida</span>
+      <span class="micro">Superficie útil (plano PE/A.03)</span>
       <span class="total num" id="total">—</span>
     </div>
   </aside>
@@ -543,17 +499,6 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
     <p class="note" id="card-note"></p>
   </section>
 
-  <div id="galeria" hidden>
-    <div class="gal-head">
-      <div>
-        <h2>Ambientación y documentación</h2>
-        <div class="gal-sub" id="gal-sub"></div>
-      </div>
-      <button class="close" id="gal-close" aria-label="Cerrar galería">✕</button>
-    </div>
-    <div class="grid" id="gal-grid"></div>
-  </div>
-
   <footer>
     <div class="hint">
       <span id="hint-orbita"><kbd>Arrastrar</kbd> orbitar · <kbd>Rueda</kbd> zoom · <kbd>Botón derecho</kbd> desplazar · <kbd>1</kbd>/<kbd>2</kbd> modo · <kbd>L</kbd> etiquetas · <kbd>P</kbd> planta · <kbd>R</kbd> vista · <kbd>C</kbd>/<kbd>V</kbd> caminar/vuelo</span>
@@ -561,7 +506,7 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
     </div>
     <div class="credit">
       <b>__FECHA__</b> · geometría vectorial del PDF (escala exacta 1:50, __PTM__ pt/m).<br>
-      Superficies medidas del plano. Alzado 2D en <a href="planos.html">planos.html</a>.
+      Superficies medidas del plano.
     </div>
   </footer>
 
@@ -598,16 +543,12 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Vista general</button>
         <button type="button" data-act="planta">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 3v18"/></svg>Planta</button>
-        <button type="button" data-act="galeria">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 17 5-4 4 3 3-2 6 5"/></svg>Galería</button>
         <a href="tour3d.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/><path d="M5.6 5.6c3.5 3 9.3 3 12.8 0M5.6 18.4c3.5-3 9.3-3 12.8 0"/></svg>Tour 360</a>
         <button type="button" data-act="png">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Descargar PNG</button>
         <button type="button" data-act="ayuda">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.8 2.8 0 1 1 4 2.5c-.9.5-1.3 1-1.3 2"/><path d="M12 17h.01"/></svg>Ayuda</button>
-        <button type="button" data-act="vr" id="a-vr" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18v8a2 2 0 0 1-2 2h-3.2a2 2 0 0 1-1.7-.9l-1-1.6a1.2 1.2 0 0 0-2.1 0l-1 1.6a2 2 0 0 1-1.7.9H5a2 2 0 0 1-2-2V8Z"/></svg>RV</button>
       </div>
     </div>
   </div>
@@ -652,7 +593,7 @@ body.realista #ctl-sol, body.realista .seg[aria-label="Modo de suelo"]{display:n
         <li>Actualiza el navegador y los drivers de la gráfica (<code>libgl1-mesa-dri</code> en Linux) y comprueba en <a href="https://get.webgl.org/" target="_blank" rel="noopener">get.webgl.org</a>.</li>
       </ol>
       <p><button class="btn" type="button" onclick="location.reload()">Reintentar</button></p>
-      <p class="fb-alt">Mientras tanto: <a href="render3d.html">vista 3D</a> · <a href="planos.html">planos 2D</a></p>
+      <p class="fb-alt">Mientras tanto: <a href="render3d.html">vista 3D</a></p>
     </div>
   </div>
 </div>
@@ -680,15 +621,18 @@ function leerBlob(id){
 /* ── paleta de estancias ── */
 const STYLE = {
   "dorm-principal": {c:0xC07A4E, label:"Dormitorio principal"},
-  "dorm-1":         {c:0x8FA37E, label:"Dormitorio 1"},
   "dorm-2":         {c:0x7E9DB8, label:"Dormitorio 2"},
   "dorm-3":         {c:0xB08D9A, label:"Dormitorio 3"},
-  "bano-1":         {c:0x6FA8A0, label:"Baño 1"},
-  "bano-2":         {c:0x8FAEC4, label:"Baño 2"},
-  "salon":          {c:0xD89A50, label:"Salón · comedor · cocina"},
+  "vestidor":       {c:0xC9B072, label:"Vestidor"},
+  "bano-1":         {c:0x6FA8A0, label:"Baño 1 (ducha)"},
+  "bano-2":         {c:0x8FAEC4, label:"Baño 2 (bañera)"},
+  "cocina":         {c:0x9CB48A, label:"Cocina"},
+  "salon":          {c:0xD89A50, label:"Salón · comedor"},
+  "estudio":        {c:0xB58BB0, label:"Estudio"},
   "pasillo":        {c:0xBFBAAD, label:"Pasillo"},
   "recibidor":      {c:0xC4A87E, label:"Recibidor"},
-  "terraza":        {c:0xA97A4E, label:"Terraza"}
+  "lavadero":       {c:0x9FB3A6, label:"Lavadero"},
+  "terraza":        {c:0xA97A4E, label:"Balcón"}
 };
 const ZONES = PLAN.estancias.filter(e => STYLE[e.id]);
 
@@ -697,20 +641,15 @@ const RENDERS = {
   "salon": [
     {src:"data/reales/salon-render.jpeg",        cap:"Salón · ventanal a terraza"},
     {src:"data/reales/salon2-render.jpeg",       cap:"Salón · pilar visto y mueble de TV"},
-    {src:"data/reales/salon-cocina_render.jpeg", cap:"Salón-comedor · cocina al fondo"},
-    {src:"data/reales/cocina-render.jpeg",       cap:"Cocina · península de piedra"}
+    {src:"data/reales/salon-cocina_render.jpeg", cap:"Salón-comedor · cocina al fondo"}
+  ],
+  "cocina": [
+    {src:"data/reales/cocina-render.jpeg",       cap:"Cocina · isla de piedra"},
+    {src:"data/reales/salon-cocina_render.jpeg", cap:"Cocina · vista al comedor"}
   ],
   "dorm-principal": [{src:"data/reales/dormitorio-principal-render.jpeg", cap:"Dormitorio principal · armario y cabecero de listones"}],
-  "bano-1": [{src:"data/reales/baño-principal-render.jpeg", cap:"Baño · bañera y revestimiento pétreo"}],
   "bano-2": [{src:"data/reales/baño-principal-render.jpeg", cap:"Baño · bañera y revestimiento pétreo"}]
 };
-const GALERIA = [
-  ...RENDERS["salon"],
-  ...RENDERS["dorm-principal"],
-  ...RENDERS["bano-1"],
-  {src:"data/imagenes/plano_aires_recorte.jpg", cap:"Plano de conductos de clima marcado por el instalador (croquis de conductos; la distribución vigente es el PE.A.02)", tag:"Obra"},
-  {src:"data/reales/grua al 7º piso.jpeg", cap:"Medios auxiliares: plataforma articulada en fachada para el 7º piso", tag:"Obra"}
-];
 const INTERIOR = ZONES.filter(e => e.id !== "terraza");
 const AREA_INT = INTERIOR.reduce((s,e)=>s+e.area,0);
 
@@ -731,7 +670,6 @@ function toast(msg, ms=3400){
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let realista = false;   // modo Realista (ver scripts/visor_realista.js)
 const fmt = (v,d=1) => v.toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d});
-const eur = v => v.toLocaleString("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
 
 function shapeFrom(pts){
   const s = new THREE.Shape();
@@ -768,13 +706,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = true;
 
-/* bucle bajo demanda: sólo se dibuja cuando algo cambia (cámara, intro,
-   teclas, sol, selección…). En reposo la GPU queda a cero. */
+/* bucle bajo demanda: sólo se dibuja cuando algo cambia (cámara, teclas,
+   sol, selección…). En reposo la GPU queda a cero. */
 let rafId = 0;
-function pedirFrame(){
-  if(renderer.xr.isPresenting) return;   // en RV manda renderer.setAnimationLoop()
-  if(!rafId) rafId = requestAnimationFrame(tick);
-}
+function pedirFrame(){ if(!rafId) rafId = requestAnimationFrame(tick); }
 
 scene = new THREE.Scene();
 const FAR_CIUDAD = 5000;   // modo Realista: la ciudad OSM (el cielo a 0,9·far)
@@ -807,8 +742,8 @@ if(ENV_SRC){
 /* luces */
 const hemi = new THREE.HemisphereLight(0xFFFDF6, 0xCFC6B6, 0.66);
 scene.add(hemi);
-/* shadowMap.autoUpdate=false: el mapa de sombras sólo se recalcula cuando se
-   mueve el sol, cambia la altura de muros o se sale de Realista */
+/* shadowMap.autoUpdate=false: el mapa de sombras sólo se recalcula cuando
+   se mueve el sol o cambia el mobiliario visible */
 let sombrasSucias = true;
 const sun = new THREE.DirectionalLight(0xFFF2DE, 0.92);
 sun.castShadow = true;
@@ -862,8 +797,7 @@ const ALTURA = PLAN.altura_muro;
 
 /* Muros fusionados por tipo (estructural/tabique/vidrio → 3 mallas) y los
    contornos en un solo LineSegments, en vez de una malla y un contorno por
-   muro (~180 draw calls menos). El crecimiento de la intro y el slider se
-   hacen con scale.y por tipo, igual que antes malla a malla. */
+   muro (~180 draw calls menos). Altura fija de 2,60 m. */
 function geoFusionada(geos){
   let nCap = 0, nLado = 0;
   geos.forEach(g => g.groups.forEach(gr => {
@@ -891,7 +825,6 @@ function geoFusionada(geos){
 const MATERIAL_MURO = {
   estructural: [matTapa, matMuro], tabique: [matTapaTab, matTabique], vidrio: [matVidrio],
 };
-let wallMeshes = [];
 {
   const porTipo = {estructural: [], tabique: [], vidrio: []};
   const contornos = [];
@@ -910,7 +843,6 @@ let wallMeshes = [];
     mesh.castShadow = tipo !== "vidrio";
     mesh.receiveShadow = true;
     gMuros.add(mesh);
-    wallMeshes.push({mesh, tipo});
   });
   const n = contornos.reduce((s,a)=>s+a.length, 0);
   const arr = new Float32Array(n);
@@ -966,7 +898,7 @@ function buildFloor(texture){
 const zoneMeshes = [];
 const zoneOutlines = {};
 const SUELO_ZONA = id => id==="terraza" ? {tex:"terraza", escala:1.15}
-  : id.indexOf("bano")===0 ? {tex:"azulejo", escala:1.0}
+  : id.indexOf("bano")===0 ? {tex:"travertino_porc", escala:1.0}
   : {tex:"suelo_madera", escala:1.7};
 ZONES.forEach(z=>{
   const st = STYLE[z.id];
@@ -1092,14 +1024,10 @@ PLAN.muros.forEach(w=>{
   }
 });
 /* colisiones con el mobiliario: huellas convexas en planta generadas por
-   scripts/revisar_mobiliario.py (data/colisiones.json). "base" = piezas que
-   siempre se ven; "resto" = las que oculta el conmutador salón·cocina. */
+   scripts/revisar_mobiliario.py (data/colisiones.json). El mobiliario está
+   siempre visible, así que todas las huellas están activas. */
 const COLISIONES = __COLISIONES__;
 const RADIO_MOB = 0.26;   // algo menor que el de los muros: pasos más cómodos
-let colisionActivas = [];
-function actualizarColisiones(){
-  colisionActivas = COLISIONES.filter(c => c.g === "base" || mobTodo);
-}
 function empujarPoligono(p, pts){
   let mejor = 1e9, mx = 0, mz = 0, dentro = false;
   for(let i=0, j=pts.length-1; i<pts.length; j=i++){
@@ -1149,8 +1077,8 @@ function colisionar(p){
         p.x=qx+ex/d*RADIO; p.z=qz+ez/d*RADIO; tocado=true;
       }
     }
-    for(let i=0;i<colisionActivas.length;i++){
-      const c=colisionActivas[i];
+    for(let i=0;i<COLISIONES.length;i++){
+      const c=COLISIONES[i];
       const dx=p.x-c.c[0], dz=p.z-c.c[1], rr=c.r+RADIO_MOB;
       if(dx*dx+dz*dz > rr*rr) continue;
       if(empujarPoligono(p, c.p)) tocado=true;
@@ -1270,7 +1198,6 @@ function moverLibre(dt){
 
 /* ratón: pointer lock en modo libre */
 $("#c").addEventListener("click", e=>{
-  if(renderer.xr.isPresenting) return;
   if(camMode!=="orbita" && e.pointerType==="mouse" && !document.pointerLockElement)
     $("#c").requestPointerLock();
 });
@@ -1315,7 +1242,6 @@ stick.addEventListener("pointermove", e=>{
 const cvs = $("#c");
 let drag = null, downAt = null, lookLast = null;
 cvs.addEventListener("pointerdown", e=>{
-  if(renderer.xr.isPresenting) return;
   if(camMode==="orbita"){
     cvs.setPointerCapture(e.pointerId);
     drag = {x:e.clientX, y:e.clientY, pan:(e.button===2||e.shiftKey)};
@@ -1497,9 +1423,10 @@ function select(id){
 }
 $("#card-close").addEventListener("click", ()=>{ selected=null; select(null); });
 /* zona de uso por estancia */
-const ZONA_USO = {"dorm-principal":"Noche","dorm-1":"Noche","dorm-2":"Noche","dorm-3":"Noche",
-  "bano-1":"Servicio","bano-2":"Servicio","salon":"Día","pasillo":"Circulación",
-  "recibidor":"Circulación","terraza":"Exterior"};
+const ZONA_USO = {"dorm-principal":"Noche","dorm-2":"Noche","dorm-3":"Noche",
+  "vestidor":"Noche","bano-1":"Servicio","bano-2":"Servicio","cocina":"Día",
+  "salon":"Día","estudio":"Día · trabajo","pasillo":"Circulación",
+  "recibidor":"Circulación","lavadero":"Servicio","terraza":"Exterior"};
 
 function setCardRender(r){
   const img = $("#card-render-img");
@@ -1618,10 +1545,8 @@ actions.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click", ()
   cerrarAcciones();
   if(act==="vista") $("#b-reset").click();
   else if(act==="planta") $("#b-planta").click();
-  else if(act==="galeria") abrirGaleria();
   else if(act==="png") exportPNG();
   else if(act==="ayuda") abrirCoach();
-  else if(act==="vr" && typeof entrarXR === "function") entrarXR();
 }));
 
 /* guía de primer uso */
@@ -1659,38 +1584,7 @@ $("#b-planta").addEventListener("click", ()=>{
 $("#c-orbita").addEventListener("click", ()=>setCamMode("orbita"));
 $("#c-caminar").addEventListener("click", ()=>setCamMode("caminar"));
 $("#c-vuelo").addEventListener("click", ()=>setCamMode("vuelo"));
-$("#s-altura").addEventListener("input", e=>{
-  const h = parseFloat(e.target.value);
-  $("#o-altura").textContent = fmt(h,2).replace(".",",")+" m";
-  setWallHeight(h);
-});
-$("#s-sol").addEventListener("input", e=>{
-  const a = parseInt(e.target.value,10);
-  $("#o-sol").textContent = a+"°";
-  orientarSol(a);
-});
 $("#b-export").addEventListener("click", exportPNG);
-let galeriaConstruida = false;
-function abrirGaleria(){
-  const g = $("#galeria");
-  if(!galeriaConstruida){
-    const grid = $("#gal-grid");
-    GALERIA.forEach(item=>{
-      const fig = document.createElement("figure");
-      fig.innerHTML = `<img src="${item.src}" alt="${item.cap}" loading="lazy"><figcaption><b>${item.tag || "Render"}</b> · ${item.cap}</figcaption>`;
-      fig.querySelector("img").addEventListener("error", ()=>fig.remove());
-      fig.addEventListener("click", ()=>fig.classList.toggle("zoom"));
-      grid.appendChild(fig);
-    });
-    $("#gal-sub").textContent = "Renders de ambientación, plano de conductos y medios auxiliares · " + GALERIA.length + " imágenes";
-    galeriaConstruida = true;
-  }
-  g.hidden = false;
-}
-function cerrarGaleria(){ $("#galeria").hidden = true; }
-$("#b-galeria").addEventListener("click", abrirGaleria);
-$("#gal-close").addEventListener("click", cerrarGaleria);
-$("#galeria").addEventListener("click", e=>{ if(e.target === $("#galeria")) cerrarGaleria(); });
 addEventListener("keydown", e=>{
   const k = e.key.toLowerCase();
   if(["w","a","s","d","q","e","shift"," ","arrowup","arrowdown","arrowleft","arrowright"].includes(k)){
@@ -1704,7 +1598,6 @@ addEventListener("keydown", e=>{
     if(document.pointerLockElement){ document.exitPointerLock(); return; }
     if(!actions.hidden){ cerrarAcciones(); return; }
     if(!coach.hidden){ cerrarCoach(); return; }
-    if(!$("#galeria").hidden){ cerrarGaleria(); return; }
     if(!$("#panel").classList.contains("hidden")){ cerrarPanel(); return; }
     if($("#card").classList.contains("show")){ select(null); return; }
     if(camMode!=="orbita"){ setCamMode("orbita"); return; }
@@ -1722,20 +1615,9 @@ addEventListener("keydown", e=>{
   else if(k==="l") $("#b-labels").click();
   else if(k==="r") $("#b-reset").click();
   else if(k==="p") $("#b-planta").click();
-  else if(k==="g") abrirGaleria();
   else if(k==="e") exportPNG();
 });
 addEventListener("keyup", e=>{ keys.delete(e.key.toLowerCase()); pedirFrame(); });
-
-function setWallHeight(h){
-  planoCorte.constant = h >= ALTURA - 1e-3 ? 99 : Math.max(h, 0.001);
-  wallMeshes.forEach(({mesh, tipo})=>{
-    const base = tipo==="vidrio" ? Math.min(PLAN.altura_vidrio, h) : h;
-    mesh.scale.y = Math.max(base, 0.0001)/ALTURA;
-  });
-  sombrasSucias = true;
-  pedirFrame();
-}
 
 /* exportar PNG a 2x (en móvil usa la hoja de compartir si está disponible) */
 function descargar(blob, nombre){
@@ -1785,12 +1667,13 @@ function updateLabels(){
 }
 
 /* ── bucle bajo demanda ── */
-let intro = 0, ready = false, maquetaLista = false, prevT = 0, ultimoAnimando = false;
+/* `intro` queda fijo en 1: la altura de muros ya no se anima (2,60 m) */
+let intro = 1, ready = false, maquetaLista = false, prevT = 0, ultimoAnimando = false;
 window.__visor = {scene, camera, renderer, gMob, free, setCamMode, pedirFrame, colisionar,
   get modo(){ return camMode; }, get listo(){ return ready; },
   get realista(){ return realista; }, get maquetaLista(){ return maquetaLista; },
   get intro(){ return intro; }, get animando(){ return ultimoAnimando; },
-  get colisiones(){ return colisionActivas.length; }};
+  get colisiones(){ return COLISIONES.length; }, setRealista};
 
 /* indicador opcional ?perf (fps reales en una máquina con GPU) */
 const PERF = /(?:^|[?&])perf(?:=1)?(?:&|$)/.test(location.search);
@@ -1808,7 +1691,6 @@ function actualizarPerf(t){
 }
 function tick(t){
   rafId = 0;
-  if(renderer.xr.isPresenting) return;   // en RV manda visor_xr.js
   const dt = prevT ? Math.min(0.05, (t-prevT)/1000) : 0.016;
   prevT = t;
   let animando = false;
@@ -1840,17 +1722,10 @@ function tick(t){
     if(verTecho !== techoGLB.visible){ techoGLB.visible = verTecho; sombrasSucias = true; }
   }
   actualizarRealista();
-  if(ready && intro < 1){
-    intro = Math.min(1, intro + 0.012);
-    const e = 1 - Math.pow(1-intro, 3);
-    setWallHeight(ALTURA*e);
-    if(intro===1) $("#s-altura").value = ALTURA;
-    animando = true;
-  }
   setPixelRatio(animando ? 1 : PR_MAX);
   camera.updateMatrixWorld();   // si no, las etiquetas usan la cámara del fotograma anterior
   updateLabels();
-  if(sombrasSucias && intro >= 1){ renderer.shadowMap.needsUpdate = true; sombrasSucias = false; }
+  if(sombrasSucias && ready){ renderer.shadowMap.needsUpdate = true; sombrasSucias = false; }
   renderer.render(scene, camera);
   if(PERF) actualizarPerf(t);
   ultimoAnimando = animando;
@@ -1859,7 +1734,6 @@ function tick(t){
   if(animando) pedirFrame();
 }
 function resize(){
-  if(renderer.xr.isPresenting) return;   // la RV usa su propio framebuffer
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight, false);
@@ -1878,8 +1752,6 @@ applyCamera(true);
 setMode("plan");
 
 __REALISTA_JS__
-
-__XR_JS__
 
 /* ── carga ── */
 const bar = $("#loadbar");
@@ -1933,10 +1805,10 @@ async function bytesDeB64(b64){
   }catch(e){ /* sin fetch de data: -> atob */ }
   return base64AB(b64);
 }
-/* El visor conserva toda la arquitectura y el mobiliario de la casa; el
-   conmutador del panel elige entre "toda la casa" (por defecto) y el espacio
-   abierto salón·cocina (sin el conjunto de comedor: mesa, sillas y taburetes). */
-const MOB_ESTRUCTURA = ["suelo", "pav_", "techo", "muro_", "marco_",
+/* El visor conserva toda la arquitectura y el mobiliario de la casa, siempre
+   visible (sin conmutador): estructura, salón·cocina y resto de estancias. */
+const MOB_ESTRUCTURA = ["suelo", "pav_", "techo", "falso_techo_", "tabica_",
+  "rev_", "muro_", "marco_",
   "vidrio_", "mont_", "dintel_", "antepecho_", "pmarco_", "pdintel_", "phoja_",
   "dl_disco_", "peto_"];
 /* 2026-09-19: "banda_" excluido a propósito — las 5 bandas de cinta no
@@ -1960,25 +1832,6 @@ function mobConservar(nombre){
   return enLista(nombre, MOB_ESTRUCTURA) || enLista(nombre, MOB_SALON)
       || esMobHabitacion(nombre);
 }
-let mobTodo = true;
-actualizarColisiones();
-function aplicarMobiliario(){
-  actualizarColisiones();
-  gMob.traverse(o=>{
-    if(!o.isMesh || o.userData.mobBase === undefined) return;
-    if(o.name === "suelo" || o.name === "techo") return;   // los gobiernan el visor / la cámara
-    o.visible = o.userData.mobBase || mobTodo;
-  });
-  if(ready){ sombrasSucias = true; pedirFrame(); }
-}
-function setMobTodo(todo){
-  mobTodo = todo;
-  $("#mob-todo").setAttribute("aria-pressed", String(todo));
-  $("#mob-abierto").setAttribute("aria-pressed", String(!todo));
-  aplicarMobiliario();
-}
-$("#mob-todo").addEventListener("click", ()=>setMobTodo(true));
-$("#mob-abierto").addEventListener("click", ()=>setMobTodo(false));
 function cargarMobiliario(){
   if(typeof THREE.GLTFLoader !== "function" || (!MOBILIARIO_B64 && !MOBILIARIO_SRC))
     return Promise.resolve(null);
@@ -1989,8 +1842,6 @@ function cargarMobiliario(){
       g.scene.traverse(o=>{
         if(!o.isMesh) return;
         if(!mobConservar(o.name)){ quitar.push(o); return; }
-        o.userData.mobBase = enLista(o.name, MOB_ESTRUCTURA) ||
-                             enLista(o.name, MOB_SALON);
         o.castShadow = true;
         o.receiveShadow = true;
         if(o.name.indexOf("peto_")===0) petos.push(o);
@@ -2014,7 +1865,6 @@ function cargarMobiliario(){
         SEGS.push([x0,z0,x1,z0],[x1,z0,x1,z1],[x1,z1,x0,z1],[x0,z1,x0,z0]);
       });
       gMob.add(g.scene);
-      aplicarMobiliario();
       res(g);
     };
     const onErr = err=>{ console.warn("No se pudo cargar el mobiliario:", err); res(null); };
@@ -2025,16 +1875,12 @@ function cargarMobiliario(){
   });
 }
 /* Carga: primero el modo Realista (el de arranque), la maqueta en segundo
-   plano, y se precompilan los dos modos para que el cambio no dé un tirón. */
+   plano; se precompilan los dos modos porque la RV y las capturas usan la
+   maqueta. */
 function alListo(){
   if(ready) return;
   requestAnimationFrame(()=>{
     $("#loader").classList.add("done");
-    /* la intro recorta el interior del Realista (planoCorte): si ya se arranca
-       ahí, los muros aparecen a su altura final y se ahorran ~80 fotogramas */
-    const saltarIntro = reduceMotion || realista;
-    setWallHeight(saltarIntro ? ALTURA : 0);
-    intro = saltarIntro ? 1 : 0;
     ready = true;
     pedirFrame();
     if(esMovil() && !coachVisto) setTimeout(abrirCoach, 650);
@@ -2062,14 +1908,14 @@ async function cargarTodo(){
   maquetaLista = true;
   bar.style.width = "90%";
   if(!realListo){
+    /* sin horneado no hay Realista: queda la maqueta */
     setRealista(false);
     compilarEscena();
     alListo();
   }else{
-    const inicial = realista;
     setRealista(false);
     compilarEscena();
-    setRealista(inicial);
+    setRealista(true);
     compilarEscena();
   }
   bar.style.width = "100%";
@@ -2089,7 +1935,6 @@ html = (HTML
         .replace("__THREE__", THREE.read_text(encoding="utf-8"))
         .replace("__GLTFLOADER__", GLTF.read_text(encoding="utf-8"))
         .replace("__REALISTA_JS__", REAL_JS)
-        .replace("__XR_JS__", XR_JS)
         .replace("__COLISIONES__", json.dumps(COL, ensure_ascii=False, separators=(",", ":")))
         .replace("__REAL_JSON__", REAL_JSON)
         .replace("__TEXTURAS_JS__", json.dumps(TEXTURAS_JS, ensure_ascii=False, separators=(",", ":")))

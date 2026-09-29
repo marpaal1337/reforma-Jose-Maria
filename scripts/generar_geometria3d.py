@@ -34,31 +34,58 @@ OUT_DEBUG = ROOT / "data" / "imagenes" / "geometria_debug.png"
 PT_PER_M = 20.0 / 25.4 * 72.0
 FILL_MURO = (0.81961, 0.81961, 0.81961)        # muros (gris oscuro)
 FILL_ALICATADO = (0.92941, 0.92941, 0.92941)   # suelos alicatados (gris claro)
-ALTURA_MURO = 2.6
+ALTURA_MURO = 2.46
 ALTURA_VIDRIO = 2.3
 GRID = 40  # px por metro para el análisis de estancias
 
 # Semillas de estancia (id, nombre, x, z) en metros de modelo. Varias semillas
 # pueden compartir id (p. ej. el pasillo o el salón, que son espacios abiertos).
 SEEDS = [
-    ("dorm-1", "Dormitorio 1", -5.8, -2.4),
-    ("bano-1", "Baño 1", -2.6, -2.4),
-    ("bano-2", "Baño 2", 0.3, -2.4),
-    ("dorm-principal", "Dormitorio principal", 4.3, -2.0),
-    ("pasillo", "Pasillo", -5.0, -1.0),
-    ("pasillo", "Pasillo", -1.5, -1.0),
-    ("pasillo", "Pasillo", 1.5, -1.0),
-    ("dorm-2", "Dormitorio 2", -5.3, 1.5),
-    ("dorm-3", "Dormitorio 3", -2.6, 1.5),
-    ("salon", "Salón · comedor · cocina", 0.5, 0.5),
-    ("salon", "Salón · comedor · cocina", 3.0, 1.0),
-    ("salon", "Salón · comedor · cocina", 5.5, 1.5),
-    ("salon", "Salón · comedor · cocina", 3.0, 2.8),
-    ("recibidor", "Recibidor", 0.9, 3.3),
+    ("dorm-3", "Dormitorio 3", -5.8, -2.0),
+    ("bano-2", "Baño 2", -2.6, -2.4),          # el de la bañera (oeste)
+    ("bano-1", "Baño 1", 0.6, -2.3),           # el de la ducha (este)
+    ("vestidor", "Vestidor", 2.7, -1.9),
+    ("dorm-principal", "Dormitorio principal", 5.8, -1.9),
+    ("pasillo", "Pasillo", -3.6, -1.0),
+    ("dorm-2", "Dormitorio 2", -5.1, 1.2),
+    ("estudio", "Estudio", -2.6, 1.2),
+    ("cocina", "Cocina", -0.4, 0.5),
+    ("salon", "Salón · comedor", 4.7, 1.2),
+    ("recibidor", "Recibidor", 1.0, 3.3),
 ]
 
+# 2026-09-29: cajas de recorte por estancia (x0, z0, x1, z1) medidas en los
+# planos PE/A.03 (cotas) y PE/I.06 (carpintería), que comparten geometría con
+# distribución.pdf. Cada estancia es el espacio libre (sin muro) dentro de su
+# caja: los límites abiertos (cocina|salón, vestidor|dormitorio, P03, P01,
+# PA02) quedan fijados por el plano y las cajas acaban en la cara interior de
+# fachada, así que los huecos de ventana ya no fugan.
+CLIP_BOXES = {
+    "dorm-3": [(-8.10, -3.24, -4.11, -1.54), (-8.10, -1.54, -4.707, -0.52)],
+    "bano-2": [(-4.00, -3.24, -1.30, -1.54)],
+    "bano-1": [(-0.93, -3.24, 1.75, -1.54)],
+    "vestidor": [(1.854, -3.24, 4.11, -0.42)],
+    "dorm-principal": [(4.11, -3.24, 7.91, -0.42)],
+    "pasillo": [(-4.707, -1.50, -1.576, -0.52)],
+    "cocina": [(-1.576, -1.50, 1.854, -0.45), (-1.53, -0.52, 1.81, 2.47)],
+    "dorm-2": [(-7.60, -0.42, -3.62, 2.88)],
+    "estudio": [(-3.53, -0.42, -1.62, 2.88)],
+    "salon": [(1.81, -0.42, 7.91, 3.67)],
+    "recibidor": [(0.32, 2.47, 1.78, 4.33)],
+}
+
+# Superficie útil y altura libre oficiales (PE/A.03)
+OFICIAL = {
+    "dorm-3": (9.1, 2.46), "bano-2": (4.3, 2.30), "bano-1": (4.3, 2.30),
+    "vestidor": (6.0, 2.30), "dorm-principal": (10.1, 2.46), "pasillo": (2.8, 2.30),
+    "dorm-2": (10.7, 2.46), "estudio": (6.3, 2.46), "cocina": (12.9, 2.30),
+    "salon": (24.0, 2.46), "recibidor": (2.7, 2.30), "lavadero": (2.2, 2.46),
+    "terraza": (2.6, None),
+}
+
 # Terraza (polígono manual, no está cerrada por muros en el plano)
-TERRAZA = {"id": "terraza", "nombre": "Terraza", "pts": [[8.23, -0.5], [9.5, -0.5], [9.5, 3.45], [8.23, 3.45]]}
+TERRAZA = {"id": "terraza", "nombre": "Balcón", "pts": [[8.23,0.08],[8.86,0.08],[8.86,3.88],[8.23,3.88]]}
+LAVADERO_MANUAL = {"id": "lavadero", "nombre": "Lavadero", "pts": [[-1.16,2.49],[0.08,2.49],[0.08,4.30],[-1.16,4.30]]}
 
 
 def vis_transform(page):
@@ -432,6 +459,7 @@ def rdp(points, eps):
     return [points[0], points[-1]]
 
 
+
 def main() -> int:
     doc = pymupdf.open(PDF)
     page = doc[0]
@@ -566,31 +594,28 @@ def main() -> int:
         if len(huella) < 3:
             huella = []
 
-    for rid, _n, sx, sz in SEEDS:
-        gx, gz = m2g(sx, sz)
-        if 0 <= gz < h and 0 <= gx < w and exterior[gz, gx]:
-            print(f"  ! semilla de {rid} en ({sx},{sz}) cae en el exterior (posible fuga)")
-
-    # semillas por zona (varias semillas comparten zona)
-    zone_ids = []
-    seeds_px = []
-    for sid, (rid, _n, sx, sz) in enumerate(SEEDS, start=1):
-        if rid not in zone_ids:
-            zone_ids.append(rid)
-        gx, gz = m2g(sx, sz)
-        gx = min(max(gx, 0), w - 1)
-        gz = min(max(gz, 0), h - 1)
-        seeds_px.append((zone_ids.index(rid) + 1, (gz, gx)))
-    lab = watershed(free, seeds_px, (h, w))
-
+    # estancias: espacio libre dentro de la caja de recorte de cada una; si la
+    # caja contiene varios trozos se queda el de la semilla (o el mayor)
+    gz_idx, gx_idx = np.mgrid[0:h, 0:w]
+    mx_grid, mz_grid = g2m(gx_idx, gz_idx)
     estancias = []
-    for zi, rid in enumerate(zone_ids, start=1):
-        nombre = next(n for r, n, _, _ in SEEDS if r == rid)
-        comp = lab == zi
-        npix = int(comp.sum())
-        if npix < GRID * GRID * 0.5:
-            print(f"  ! {rid}: sin zona asignada")
+    for rid, nombre, sx, sz in SEEDS:
+        caja = np.zeros((h, w), dtype=bool)
+        for bx0, bz0, bx1, bz1 in CLIP_BOXES[rid]:
+            caja |= (mx_grid >= bx0) & (mx_grid <= bx1) & (mz_grid >= bz0) & (mz_grid <= bz1)
+        ys, xs = np.nonzero(caja)
+        y0, y1, x0c, x1c = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        lab_z, n = label(free[y0:y1, x0c:x1c] & caja[y0:y1, x0c:x1c])
+        if n == 0:
+            print(f"  ! {rid}: caja sin espacio libre")
             continue
+        gx, gz = m2g(sx, sz)
+        sel = lab_z[gz - y0, gx - x0c] if y0 <= gz < y1 and x0c <= gx < x1c else 0
+        if sel == 0:
+            sel = int(np.argmax(np.bincount(lab_z.ravel())[1:])) + 1
+        comp = np.zeros((h, w), dtype=bool)
+        comp[y0:y1, x0c:x1c] = lab_z == sel
+        npix = int(comp.sum())
         cont = trace_contour(comp)
         if len(cont) < 4:
             continue
@@ -599,20 +624,25 @@ def main() -> int:
         pts = [[round(p[0], 2), round(p[1], 2)] for p in simple]
         cy_, cx_ = np.mean(np.nonzero(comp), axis=1)
         centro = [round(v, 2) for v in g2m(cx_, cy_)]
-        estancias.append({"id": rid, "nombre": nombre,
-                          "area": round(npix / (GRID * GRID), 2),
-                          "centro": centro, "pts": pts})
+        area, altura = OFICIAL[rid]
+        estancias.append({"id": rid, "nombre": nombre, "area": area,
+                          "area_medida": round(npix / (GRID * GRID), 2),
+                          "altura": altura, "centro": centro, "pts": pts})
 
-    area_terraza = poly_area([(p[0] * PT_PER_M, p[1] * PT_PER_M) for p in TERRAZA["pts"]]) / PT_PER_M ** 2
-    estancias.append({"id": TERRAZA["id"], "nombre": TERRAZA["nombre"],
-                      "area": round(area_terraza, 2),
-                      "centro": [round((TERRAZA["pts"][0][0] + TERRAZA["pts"][1][0]) / 2, 2),
-                                 round((TERRAZA["pts"][0][1] + TERRAZA["pts"][2][1]) / 2, 2)],
-                      "pts": TERRAZA["pts"], "manual": True})
+    for man in (LAVADERO_MANUAL, TERRAZA):
+        area_m = poly_area([(p[0] * PT_PER_M, p[1] * PT_PER_M) for p in man["pts"]]) / PT_PER_M ** 2
+        area, altura = OFICIAL[man["id"]]
+        estancias.append({"id": man["id"], "nombre": man["nombre"], "area": area,
+                          "area_medida": round(area_m, 2), "altura": altura,
+                          "centro": [round((man["pts"][0][0] + man["pts"][1][0]) / 2, 2),
+                                     round((man["pts"][0][1] + man["pts"][2][1]) / 2, 2)],
+                          "pts": man["pts"], "manual": True})
 
     print(f"estancias: {len(estancias)}")
     for e in estancias:
-        print(f"  {e['id']:16s} {e['area']:6.2f} m2  centro=({e['centro'][0]:6.2f},{e['centro'][1]:6.2f})")
+        dif = (e["area_medida"] / e["area"] - 1) * 100
+        print(f"  {e['id']:16s} plano {e['area']:5.1f}  medida {e['area_medida']:6.2f} m2 ({dif:+5.1f} %)"
+              f"  h={e['altura']}  centro=({e['centro'][0]:6.2f},{e['centro'][1]:6.2f})")
 
     # ── textura recortada (incluye terraza) ──
     OUT_TEXTURE.parent.mkdir(parents=True, exist_ok=True)
@@ -654,7 +684,8 @@ def main() -> int:
         dr.polygon([to_px(p) for p in e["pts"]], fill=col + (80,), outline=col + (255,))
         c = to_px(e["centro"])
         dr.rectangle([c[0] - 4, c[1] - 4, c[0] + 4 + 280, c[1] + 40], fill=(255, 255, 255, 230))
-        dr.text((c[0], c[1]), f"{e['nombre']} {e['area']:.1f}m2", fill=(0, 0, 0, 255), font=font)
+        dr.text((c[0], c[1]), f"{e['nombre']} {e['area_medida']:.1f}/{e['area']:.1f}m2",
+                fill=(0, 0, 0, 255), font=font)
 
     for conn in conectores:
         dr.polygon([to_px(p) for p in conn], fill=(255, 0, 0, 120))
