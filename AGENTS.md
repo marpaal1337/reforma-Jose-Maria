@@ -33,14 +33,16 @@ This repo is a **3D design viewer for a home renovation in Valencia** (Spanish-l
 ├── visor/src/               código del visor (se edita aquí): index.html, visor.css, visor.js,
 │                            realista.js (modo Realista), carga.js (arranque); render3d.html se empaqueta de aquí
 ├── Makefile                 atajos: `make` lista objetivos (dev, visor, check, humo, capturas…)
-├── informes/                7 design-only Markdown reports (no prices)
+├── informes/                9 design-only Markdown reports (no prices) + img/ (planos de la crítica y la alternativa B)
 │   ├── ANALISIS_PLANOS.md
 │   ├── ARQUITECTO_MEMORIA_DESCRIPTIVA.md
 │   ├── ARQUITECTO_MEMORIA_CALIDADES.md
 │   ├── ARQUITECTO_ANALISIS_DISTRIBUCION.md
 │   ├── ARQUITECTO_ANALISIS_ILUMINACION.md
 │   ├── DISTRIBUCION_POR_ESTANCIAS.md   (surfaces only, no costs)
-│   └── RENDERS_Y_PLANO_AIRES.md
+│   ├── RENDERS_Y_PLANO_AIRES.md
+│   ├── ARQUITECTO_CRITICA_PE_A02.md          análisis crítico del PE.A.02 (2026-10-02)
+│   └── ARQUITECTO_ALTERNATIVA_PE_A02B.md     alternativa B y variante B+ (2026-10-02)
 ├── skills/arquitecto/       only remaining skill (design role)
 ├── index.html               entry point: redirects to render3d.html
 ├── render3d.html            interactive 3D model (Three.js + Cycles bake inlined, ~30 MB)
@@ -82,6 +84,7 @@ scripts/
 ├── comprobar_privacidad.sh  sin importes/direcciones en render3d.html y tour3d.html
 ├── render_blender.py        renders one camera from escena.blend (Cycles CPU)
 ├── generar_tour3d.py        renders/panos + camaras.json → tour3d.html
+├── dibujar_alternativa.py   planos de informes/img/ (hallazgos PE.A.02, alternativa B y B+)
 └── revisar_mobiliario.py    control de colocación del mobiliario del GLB (falla si algo choca)
                             y huellas de colisión → data/colisiones.json
 ```
