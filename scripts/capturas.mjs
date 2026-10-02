@@ -6,6 +6,8 @@
  *   node scripts/capturas.mjs [--visor render3d.html] [--salida capturas/] [--ancho 1280] [--alto 800]
  *   node scripts/capturas.mjs --medir [--visor render3d.html]
  *   node scripts/capturas.mjs --maqueta [--salida capturas/]
+ *   node scripts/capturas.mjs --humo [--url http://127.0.0.1:8000/]   (carga y falla si hay errores)
+ * --url abre una URL (p. ej. scripts/dev_visor.py) en vez de --visor.
  *
  * Requiere: playwright-core y chromium (los resuelve scripts/capturas.sh, que
  * los cachea en ~/.cache/opencode-reforma y ~/.cache/ms-playwright).
@@ -58,12 +60,14 @@ const opt = (n, d) => {
 };
 const MEDIR = args.includes('--medir');
 const MAQUETA = args.includes('--maqueta');
+const HUMO = args.includes('--humo');
+const URL_VISOR = opt('--url', null);
 const VISOR = resolve(opt('--visor', 'render3d.html'));
 const SALIDA = resolve(opt('--salida', 'capturas'));
 const ANCHO = parseInt(opt('--ancho', '1280'), 10);
 const ALTO = parseInt(opt('--alto', '800'), 10);
 
-if (!MEDIR) mkdirSync(SALIDA, { recursive: true });
+if (!MEDIR && !HUMO) mkdirSync(SALIDA, { recursive: true });
 
 // pos + target en coords Three.js (x=X, y=Z, z=-Y Blender)
 const VISTAS = {
@@ -72,6 +76,17 @@ const VISTAS = {
   terraza: { pos: [8.75, 1.62, 1.5], target: [30, 4.0, 1.5] },
   cocina: { pos: [4.6, 1.55, 3.1], target: [0.2, 1.15, 0.6] },
   dormitorio: { pos: [3.1, 1.5, -0.95], target: [5.9, 1.05, -3.0] },
+  dorm2a: { pos: [-4.3, 1.55, 0.15], target: [-6.6, 1.0, 2.5] },
+  dorm2b: { pos: [-6.3, 1.65, 0.2], target: [-3.7, 1.0, 1.8] },
+  dorm2c: { pos: [-3.9, 1.55, 2.5], target: [-6.8, 1.0, 0.2] },
+  dorm2d: { pos: [-5.0, 1.6, 2.5], target: [-5.6, 1.1, -0.4] },
+  dorm3a: { pos: [-4.9, 1.55, -1.0], target: [-7.0, 0.9, -2.8] },
+  dorm3b: { pos: [-6.0, 1.7, -0.8], target: [-4.4, 1.2, -2.6] },
+  dorm3c: { pos: [-5.0, 1.55, -2.0], target: [-6.7, 1.3, -3.3] },
+  dorm3d: { pos: [-4.6, 1.6, -1.0], target: [-7.5, 1.0, -1.5] },
+  pasillo3: { pos: [-3.2, 1.5, -0.9], target: [-3.6, 1.2, -1.6] },
+  pasillo: { pos: [-1.8, 1.6, -1.0], target: [-4.6, 1.2, -1.0] },
+  pasillo2: { pos: [-4.4, 1.6, -1.0], target: [-1.5, 1.2, -1.0] },
   fachada: { pos: [20, 7.0, -8.0], target: [0, 1.0, 0.6] },
   calle: { pos: [26, -19.2, 6], target: [8.4, -8, 0] },
   aerea: { pos: [70, 55, 60], target: [0, -15, 0] },
@@ -94,7 +109,13 @@ if (!CHROME) {
 }
 const browser = await chromium.launch({ executablePath: CHROME });
 const page = await browser.newPage({ viewport: { width: ANCHO, height: ALTO } });
-page.on('console', m => { if (m.type() === 'warning') console.log('[consola]', m.text().slice(0, 160)); });
+const errores = [];
+page.on('console', m => {
+  if (m.type() === 'warning') console.log('[consola]', m.text().slice(0, 160));
+  if (m.type() === 'error') errores.push('consola: ' + m.text().slice(0, 300));
+});
+page.on('pageerror', e => errores.push('excepción: ' + String(e.message || e).slice(0, 300)));
+page.on('requestfailed', r => errores.push('petición fallida: ' + r.url().slice(0, 160)));
 
 /* ── instrumentación de fotogramas (envolver renderer.render) ── */
 async function instrumentar() {
@@ -149,8 +170,19 @@ async function esperarIntro() {
     null, { timeout: 120000 }).catch(() => {});
 }
 
-await page.goto('file://' + VISOR);
+await page.goto(URL_VISOR || 'file://' + VISOR);
 await page.waitForFunction('window.__visor && window.__visor.listo', null, { timeout: 120000 });
+
+if (HUMO) {
+  await page.waitForTimeout(1500);
+  const rep = await page.evaluate(() => ({
+    realista: document.body.classList.contains('realista'),
+    drawCalls: window.__visor.renderer.info.render.calls,
+  }));
+  console.log(JSON.stringify({ ...rep, errores }, null, 2));
+  await browser.close();
+  process.exit(errores.length ? 1 : 0);
+}
 
 if (MEDIR) {
   const listo_ms = await page.evaluate(() => Math.round(performance.now()));
@@ -161,8 +193,8 @@ if (MEDIR) {
   await instrumentar();
   await esperarQuieto();
   const rep = {
-    archivo: VISOR.replace(process.cwd() + '/', ''),
-    mb: +(statSync(VISOR).size / 1048576).toFixed(1),
+    archivo: URL_VISOR || VISOR.replace(process.cwd() + '/', ''),
+    mb: URL_VISOR ? null : +(statSync(VISOR).size / 1048576).toFixed(1),
     listo_ms,
     realista,
     info_inicial: await info(),

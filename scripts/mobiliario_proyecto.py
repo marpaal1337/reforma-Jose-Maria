@@ -530,8 +530,7 @@ def construir(m, h):
         h.poly_prism([(-7.94, -3.16), (-7.35, -3.16), (-7.35, -0.94),
                       (-7.44, -0.94)], hh, hh + 0.04,
                      f"d3_e02_balda_{k}", roble_mel)
-    h.box(-7.37, -3.16, -7.35, -0.94, 0.0, 2.10, "d3_e02_frente",
-          roble_mel, bevel=0.004)
+    # montantes de canto (sin frente cerrado: las baldas quedan a la vista)
     h.box(-7.37, -3.16, -7.35, -3.13, 0.0, 2.10, "d3_e02_lat_n", roble_mel)
     h.box(-7.37, -0.97, -7.35, -0.94, 0.0, 2.10, "d3_e02_lat_s", roble_mel)
     # cama nido con cabecero al norte
@@ -557,17 +556,19 @@ def construir(m, h):
            "d3_silla")
 
     # ══ DORMITORIO 2 · biblioteca de cerezo trasladada del estudio ══════════
-    # (techo 2,46). Composición del estudio reimplantada: bajos en L (sur bajo
-    # la ventana V07 + tramo en el muro norte), estantería alta A en el muro
-    # este (arranca en z=0,70: libre del barrido de P06 y de la banda de V07),
-    # península con pie metálico, estantería B girada al muro norte y silla
-    # al sur de la península (deja 0,90 m de paso delante de la estantería A).
-    # El estudio queda sin amueblar.
-    h.box(-5.53, 2.43, -3.94, 2.88, 0.08, 0.72, "d2_bajos_sur", cerezo,
+    # (techo 2,46). Composición de las fotos (data/reales/*bibloteca*): bajos
+    # bajo la ventana V07 hasta el muro este, estantería alta A en el muro este
+    # terminando en z=2,06 (la banda de 0,8 m de V07 queda libre), con la mesa
+    # península saliendo de su calle sur y enrasada con los bajos (un relleno
+    # cierra el hueco de 0,37 m entre A y los bajos); la silla queda al norte de
+    # la mesa. A arranca en z=0,61: el barrido de P06 (bisagra E, abre al S)
+    # llega a z=0,30. Estantería B y tramo de bajos en el
+    # muro norte (el este no da para las dos). El estudio queda sin amueblar.
+    h.box(-5.53, 2.43, -3.66, 2.88, 0.08, 0.72, "d2_bajos_sur", cerezo,
           bevel=0.006)
-    h.box(-5.53, 2.43, -3.94, 2.88, 0.72, 0.75, "d2_bajos_sur_tapa",
+    h.box(-5.53, 2.43, -3.66, 2.88, 0.72, 0.75, "d2_bajos_sur_tapa",
           cerezo, bevel=0.004)
-    h.box(-5.48, 2.48, -3.99, 2.83, 0.0, 0.08, "d2_bajos_sur_zocalo",
+    h.box(-5.48, 2.48, -3.71, 2.83, 0.0, 0.08, "d2_bajos_sur_zocalo",
           cerezo)
     for k in range(2):
         x0 = -5.51 + k * 0.45
@@ -583,29 +584,33 @@ def construir(m, h):
     h.box(-5.68, -0.41, -4.55, 0.04, 0.72, 0.75, "d2_bajos_norte_tapa",
           cerezo, bevel=0.004)
     for k, (xa, xb) in enumerate(((-5.627, -5.113), (-5.107, -4.593))):
-        h.box(xa, 0.028, xb, 0.04, 0.10, 0.70,
+        h.box(xa, 0.04, xb, 0.052, 0.10, 0.70,
               f"d2_bajos_norte_puerta_{k}", cerezo, bevel=0.004)
-    # estantería alta A contra el muro este, con armario bajo en la calle central
-    h.box(-3.68, 0.70, -3.66, 2.15, 0.0, 2.25, "d2_a_fondo", cerezo)
-    for k, zc in enumerate((0.70, 1.15, 1.65, 2.15)):
-        h.box(-3.94 if k in (0, 3) else -3.95, zc - 0.0125,
-              -3.66, zc + 0.0125, 0.0, 2.25, f"d2_a_costado_{k}", cerezo)
-    h.box(-3.92, 1.175, -3.68, 1.625, 0.0, 0.74, "d2_a_armario", cerezo,
+    # estantería alta A contra el muro este, con armario bajo en la calle sur
+    h.box(-3.68, 0.61, -3.66, 2.06, 0.0, 2.25, "d2_a_fondo", cerezo)
+    for k, zc in enumerate((0.61, 1.06, 1.56, 2.06)):
+        zi = zc + (0.0125 if k == 0 else -0.0125 if k == 3 else 0.0)
+        h.box(-3.94 if k in (0, 3) else -3.95, zi - 0.0125,
+              -3.66, zi + 0.0125, 0.0, 2.25, f"d2_a_costado_{k}", cerezo)
+    h.box(-3.92, 1.585, -3.68, 2.035, 0.0, 0.74, "d2_a_armario", cerezo,
           bevel=0.006)
-    h.box(-3.94, 1.16, -3.66, 1.64, 0.74, 0.77, "d2_a_encimera", cerezo,
+    h.box(-3.94, 1.57, -3.66, 2.05, 0.74, 0.77, "d2_a_encimera", cerezo,
           bevel=0.004)
     for k in range(5):
         hh = 0.80 + k * 0.33
-        h.box(-3.94, 0.70, -3.66, 2.15, hh, hh + 0.025,
+        h.box(-3.94, 0.61, -3.66, 2.06, hh, hh + 0.025,
               f"d2_a_balda_{k}", cerezo)
-    # mesa península de extremo redondeado con pie metálico
-    h.box(-4.94, 0.45, -3.94, 1.05, 0.72, 0.75, "d2_peninsula", cerezo,
+    h.box(-3.94, 2.06, -3.66, 2.43, 0.08, 0.75, "d2_a_relleno", cerezo,
           bevel=0.004)
-    h.cylinder(-4.94, 0.75, 0.30, 0.72, 0.75, "d2_peninsula_redondeo",
+    # mesa península de extremo redondeado con pie metálico, enrasada con los
+    # bajos (frente z=2,43) y saliendo de la encimera del armario de A
+    h.box(-4.94, 1.82, -3.94, 2.41, 0.72, 0.75, "d2_peninsula", cerezo,
+          bevel=0.004)
+    h.cylinder(-4.94, 2.115, 0.295, 0.72, 0.75, "d2_peninsula_redondeo",
                cerezo, n=36)
-    h.cylinder(-4.82, 0.75, 0.04, 0.02, 0.72, "d2_peninsula_pie",
+    h.cylinder(-4.82, 2.115, 0.04, 0.02, 0.72, "d2_peninsula_pie",
                metal_negro, n=16)
-    h.cylinder(-4.82, 0.75, 0.16, 0.0, 0.02, "d2_peninsula_base",
+    h.cylinder(-4.82, 2.115, 0.16, 0.0, 0.02, "d2_peninsula_base",
                metal_negro, n=28)
     # estantería alta B girada al muro norte (mismo desarrollo, 1,30 m)
     h.box(-7.00, -0.43, -5.70, -0.41, 0.0, 2.30, "d2_b_fondo", cerezo)
@@ -620,7 +625,8 @@ def construir(m, h):
         hh = 0.30 + k * 0.30
         h.box(-7.00, -0.41, -5.70, -0.15, hh, hh + 0.025,
               f"d2_b_balda_{k}", cerezo)
-    _silla(h, tejido_claro, roble, -4.71, 1.60, -4.39, 2.04, "S",
+    # silla al norte de la mesa (respaldo N, mirando a la ventana)
+    _silla(h, tejido_claro, roble, -4.94, 1.34, -4.62, 1.78, "N",
            "d2_silla")
 
     # ══ ESTUDIO · sin amueblar (biblioteca trasladada al dormitorio 2) ═══

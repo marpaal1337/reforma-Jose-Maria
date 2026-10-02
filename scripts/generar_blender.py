@@ -1660,7 +1660,7 @@ def mat_fachadas():
                _math(nt, "FRACT", _math(nt, "DIVIDE", u, 3.1)), 3.1)
 
     # toldo crema con raya en el tercio superior (~1/3 de ventanas, como en
-    # las fotos de la calle; sincronizado con scripts/visor_realista.js)
+    # las fotos de la calle; sincronizado con visor/src/realista.js)
     hay_toldo = _math(nt, "MULTIPLY",
                       _math(nt, "GREATER_THAN", rnd, 0.22),
                       _math(nt, "LESS_THAN", rnd, 0.58))
@@ -1680,7 +1680,7 @@ def mat_fachadas():
     color = _mix(nt, sombra_t, color, (0.30, 0.28, 0.24))
 
     # equipo de A/A junto al borde derecho (~1/4 de ventanas, como en
-    # las fotos de la calle; sincronizado con scripts/visor_realista.js)
+    # las fotos de la calle; sincronizado con visor/src/realista.js)
     hay_aa = _math(nt, "MULTIPLY",
                    _math(nt, "GREATER_THAN", rnd, 0.05),
                    _math(nt, "LESS_THAN", rnd, 0.30))
@@ -2408,6 +2408,7 @@ def build_entorno(m):
             propios.append(mp)
             pts_propio, cols_propio = pts, fp.columnas(b["pts"])
             continue
+        pts = fp.recortar_fuera(pts, [(x, -z) for x, z in PLAN["huella"]])
         p = b["plantas"] or 3
         h = BAJO + (p - 1) * PLANTA + 1.0 if p >= 3 else p * 3.4
         semilla = 0.15 + 0.85 * rnd.random()

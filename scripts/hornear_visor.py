@@ -186,6 +186,14 @@ def orientar_normales(ob):
                 f.normal_flip()
     else:
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        # recalc falla en los muros-cuña con un vértice duplicado (muro_025,
+        # muro_031…): quedan con las caras hacia dentro y se hornean negras.
+        # En un sólido cerrado el volumen con signo debe salir positivo.
+        if all(e.is_manifold for e in bm.edges):
+            vol = sum(f.calc_center_median().dot(f.normal) * f.calc_area()
+                      for f in bm.faces) / 3.0
+            if vol < -1e-6:
+                bmesh.ops.reverse_faces(bm, faces=bm.faces)
     bm.to_mesh(ob.data)
     bm.free()
 
@@ -756,7 +764,7 @@ def main():
     info["glb_kb"] = ruta.stat().st_size // 1024
     (OUT / "visor.json").write_text(json.dumps(info, ensure_ascii=False, indent=1),
                                     encoding="utf-8")
-    t_log(f"GLB {info['glb_kb']} KB, {len(obs)} mallas -> {OUT.relative_to(ROOT)}")
+    t_log(f"GLB {info['glb_kb']} KB, {len(obs)} mallas -> {OUT.relative_to(ROOT) if OUT.is_relative_to(ROOT) else OUT}")
 
 
 if __name__ == "__main__":

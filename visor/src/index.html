@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Render 3D · Reforma vivienda Valencia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF7F2">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Modelo 3D interactivo de la reforma, generado automáticamente del plano de distribución PE/A.03 (arquitectura colegiada).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+__CSS__</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="c" aria-label="Modelo 3D de la vivienda"></canvas>
+  <div id="labels"></div>
+  <div id="perf" hidden></div>
+  <div id="stick" aria-hidden="true"><i></i></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <header>
+    <div class="title-block">
+      <div class="eyebrow micro">Arquitectura colegiada · Plano PE/A.03 · Junio/25</div>
+      <h1>Reforma vivienda Valencia</h1>
+      <p><b>Modelo 3D generado del plano de distribución a escala 1:50</b></p>
+    </div>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Modo de suelo">
+        <button id="m-plan" aria-pressed="true">Plano</button>
+        <button id="m-zonas" aria-pressed="false">Zonas</button>
+      </div>
+      <div class="seg" role="group" aria-label="Modo de cámara">
+        <button id="c-orbita" aria-pressed="true">Órbita</button>
+        <button id="c-caminar" aria-pressed="false">Caminar</button>
+        <button id="c-vuelo" aria-pressed="false">Vuelo</button>
+      </div>
+      <button class="btn" id="b-labels" aria-pressed="true">Etiquetas</button>
+      <a class="btn" href="tour3d.html">Tour 360</a>
+      <button class="btn" id="b-panel" aria-pressed="true">Panel</button>
+      <button class="btn" id="b-export">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+        PNG
+      </button>
+      <button class="btn" id="b-planta">Planta</button>
+      <button class="btn" id="b-reset" title="Vista general">Vista</button>
+      <button class="btn" id="b-help" title="Ayuda" aria-label="Ayuda">?</button>
+    </div>
+  </header>
+
+  <div id="scrim"></div>
+
+  <aside id="panel">
+    <div class="grip" id="panel-grip" aria-hidden="true"></div>
+    <div class="panel-head">
+      <h2>Estancias</h2>
+      <span class="micro" id="panel-count"></span>
+    </div>
+    <div class="panel-scroll">
+      <ul class="rooms" id="rooms"></ul>
+    </div>
+    <div class="panel-foot">
+      <span class="micro">Superficie útil (plano PE/A.03)</span>
+      <span class="total num" id="total">—</span>
+    </div>
+  </aside>
+
+  <section id="card" role="dialog" aria-label="Ficha de estancia" aria-live="polite">
+    <div class="grip" id="card-grip" aria-hidden="true"></div>
+    <button class="close" id="card-close" aria-label="Cerrar ficha">✕</button>
+    <div class="swatch-lg" id="card-color"></div>
+    <h3 id="card-name">—</h3>
+    <div class="sub" id="card-sub">—</div>
+    <figure class="render" id="card-render">
+      <img id="card-render-img" alt="">
+      <figcaption id="card-render-cap"></figcaption>
+    </figure>
+    <div class="thumbs" id="card-thumbs"></div>
+    <div class="stats">
+      <div><span>Superficie</span><b id="card-area" class="num">—</b></div>
+      <div><span>% útil</span><b id="card-share" class="num">—</b></div>
+      <div><span>Zona de uso</span><b id="card-zona">—</b></div>
+    </div>
+    <p class="note" id="card-note"></p>
+  </section>
+
+  <footer>
+    <div class="hint">
+      <span id="hint-orbita"><kbd>Arrastrar</kbd> orbitar · <kbd>Rueda</kbd> zoom · <kbd>Botón derecho</kbd> desplazar · <kbd>1</kbd>/<kbd>2</kbd> modo · <kbd>L</kbd> etiquetas · <kbd>P</kbd> planta · <kbd>R</kbd> vista · <kbd>C</kbd>/<kbd>V</kbd> caminar/vuelo</span>
+      <span id="hint-libre" hidden><kbd>WASD</kbd> mover · <kbd>Ratón</kbd> mirar · <kbd>Shift</kbd> correr · <kbd>Espacio</kbd>/<kbd>Q</kbd> subir/bajar · <kbd>Esc</kbd> salir</span>
+    </div>
+    <div class="credit">
+      <b>__FECHA__</b> · geometría vectorial del PDF (escala exacta 1:50, __PTM__ pt/m).<br>
+      Superficies medidas del plano.
+    </div>
+  </footer>
+
+  <nav id="mbar" aria-label="Controles del visor">
+    <button id="mb-suelo" aria-label="Cambiar modo de suelo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
+      <span id="mb-suelo-txt">Plano</span>
+    </button>
+    <button id="mb-estancias" aria-controls="panel" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v15"/><path d="M9 21v-5h6v5"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01"/></svg>
+      <span>Estancias</span>
+    </button>
+    <button id="mb-labels" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-8.6-8.6a2 2 0 0 1-.6-1.4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 1.4.6L20.6 12a2 2 0 0 1 0 1.4Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+      <span>Etiquetas</span>
+    </button>
+    <button id="mb-cam" aria-label="Cambiar cámara">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7l-8-5Z"/><path d="M12 22V12M4 7l8 5 8-5"/></svg>
+      <span id="mb-cam-txt">Órbita</span>
+    </button>
+    <button id="mb-more" aria-haspopup="dialog" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+      <span>Más</span>
+    </button>
+  </nav>
+
+  <div id="actions" hidden role="dialog" aria-modal="true" aria-label="Más acciones">
+    <div class="scrim" id="actions-scrim"></div>
+    <div class="sheet">
+      <div class="grip" id="actions-grip" aria-hidden="true"></div>
+      <h2>Más acciones</h2>
+      <div class="actions-grid">
+        <button type="button" data-act="vista">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Vista general</button>
+        <button type="button" data-act="planta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 3v18"/></svg>Planta</button>
+        <a href="tour3d.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/><path d="M5.6 5.6c3.5 3 9.3 3 12.8 0M5.6 18.4c3.5-3 9.3-3 12.8 0"/></svg>Tour 360</a>
+        <button type="button" data-act="png">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Descargar PNG</button>
+        <button type="button" data-act="ayuda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.8 2.8 0 1 1 4 2.5c-.9.5-1.3 1-1.3 2"/><path d="M12 17h.01"/></svg>Ayuda</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="coach" hidden>
+    <div class="coach-card">
+      <div class="micro">Guía rápida</div>
+      <h2>Explora la reforma en 3D</h2>
+      <ul>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V12"/><path d="M14 12V6.5a1.5 1.5 0 0 1 3 0V13"/><path d="M17 13v-2a1.5 1.5 0 0 1 3 0v5a6 6 0 0 1-6 6h-2.3a5 5 0 0 1-3.5-1.4L4.5 17c-.6-.6-.6-1.6 0-2.2.7-.7 1.7-.6 2.3 0L8 16"/></svg></span><span><b>Girar y desplazar</b>Arrastra un dedo para orbitar la vivienda.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m18 0V5a2 2 0 0 0-2-2h-4m0 18h4a2 2 0 0 0 2-2v-4M3 15v4a2 2 0 0 0 2 2h4"/><circle cx="12" cy="12" r="2.5"/></svg></span><span><b>Zoom</b>Pellizca con dos dedos para acercarte.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v15"/><path d="M9 21v-5h6v5"/></svg></span><span><b>Estancias</b>Toca una habitación o ábrela en «Estancias» para ver su ficha.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m10 9 5 3-5 3V9Z"/></svg></span><span><b>Recorre la casa</b>Con «Cámara» pasa a Caminar o Vuelo y usa el joystick.</span></li>
+      </ul>
+      <ul class="coach-extra" id="coach-extra" hidden>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg></span><span><b>Plano / Zonas</b>Cambia el suelo entre la planta escaneada y los acabados por estancia.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-8.6-8.6a2 2 0 0 1-.6-1.4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 1.4.6L20.6 12a2 2 0 0 1 0 1.4Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg></span><span><b>Etiquetas</b>Muestra u oculta los nombres y superficies de cada estancia.</span></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 3v18"/></svg></span><span><b>Planta y PNG</b>«Más» → Planta para ver el alzado 2D o Descargar PNG para guardar la vista.</span></li>
+      </ul>
+      <div class="foot">
+        <button class="btn ghost" id="coach-mas" type="button">Más ayuda</button>
+        <button class="btn solid" id="coach-ok" type="button">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loader">
+    <div class="box">
+      <h2>Construyendo el modelo</h2>
+      <p>Extruyendo muros y estancias desde el plano vectorial…</p>
+      <div class="bar"><i id="loadbar"></i></div>
+    </div>
+  </div>
+  <div id="fallback">
+    <div class="fb-box">
+      <h2>Tu navegador no puede mostrar WebGL</h2>
+      <p id="fb-why" class="fb-why"></p>
+      <ol class="fb-steps">
+        <li><b>Chrome / Edge:</b> Ajustes → Sistema → activa «Usar aceleración gráfica cuando esté disponible» y reinicia. Comprueba el motivo en <code>chrome://gpu</code>.</li>
+        <li><b>Firefox:</b> en <code>about:config</code> pon <code>webgl.disabled</code> = <code>false</code>; si sigue, <code>webgl.force-enabled</code> = <code>true</code>. Mira <code>about:support</code> → Graphics.</li>
+        <li><b>Sin GPU / VM / escritorio remoto:</b> en Chrome ≥137 arranca con <code>--enable-unsafe-swiftshader</code>; en Firefox prueba <code>LIBGL_ALWAYS_SOFTWARE=1 firefox</code>.</li>
+        <li>Actualiza el navegador y los drivers de la gráfica (<code>libgl1-mesa-dri</code> en Linux) y comprueba en <a href="https://get.webgl.org/" target="_blank" rel="noopener">get.webgl.org</a>.</li>
+      </ol>
+      <p><button class="btn" type="button" onclick="location.reload()">Reintentar</button></p>
+      <p class="fb-alt">Mientras tanto: <a href="render3d.html">vista 3D</a></p>
+    </div>
+  </div>
+</div>
+
+<script type="application/octet-stream" id="d-mob">__MOB_B64__</script>
+<script type="application/json" id="d-real">__REAL_JSON__</script>
+<script>__THREE__</script>
+<script>__GLTFLOADER__</script>
+<script>
+__JS__</script>
+</body>
+</html>

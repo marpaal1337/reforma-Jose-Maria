@@ -55,6 +55,46 @@ def principal(edificios):
     return None
 
 
+def recortar_fuera(pts, huella, margen=0.08, paso=0.25):
+    """Saca de la huella del piso el polígono de un edificio vecino. El contorno
+    OSM de la medianera se mete hasta ~1 m en D2 y D3: se densifica el borde y
+    cada punto que cae dentro de `huella` se lleva hacia el oeste (el vecino está
+    a ese lado) hasta su primer cruce con el contorno, `margen` más allá. Mismas
+    coordenadas que `pts` (x, y de Blender)."""
+    h = limpiar(huella)
+    xs, ys = [p[0] for p in h], [p[1] for p in h]
+    caja = (min(xs) - 1, min(ys) - 1, max(xs) + 1, max(ys) + 1)
+
+    def cerca(p):
+        return caja[0] <= p[0] <= caja[2] and caja[1] <= p[1] <= caja[3]
+
+    def oeste(p):                       # x del cruce más próximo a la izquierda de p
+        mejor = None
+        for i in range(len(h)):
+            (x1, y1), (x2, y2) = h[i], h[i - 1]
+            if (y1 > p[1]) != (y2 > p[1]):
+                x = x1 + (x2 - x1) * (p[1] - y1) / (y2 - y1)
+                if x < p[0] and (mejor is None or x > mejor):
+                    mejor = x
+        return mejor
+
+    for paso_i in (paso, 0.05):         # la 2ª pasada afina las cuerdas de las esquinas
+        out = []
+        n = len(pts)
+        for i in range(n):
+            a, b = pts[i], pts[(i + 1) % n]
+            k = max(1, int(math.dist(a, b) / paso_i)) if cerca(a) or cerca(b) else 1
+            for j in range(k):
+                p = (a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k)
+                if cerca(p) and dentro(p, h):
+                    x = oeste(p)
+                    if x is not None:
+                        p = (x - margen, p[1])
+                out.append(p)
+        pts = out
+    return limpiar(pts)
+
+
 def _area(pts):
     return sum(pts[i][0] * pts[(i + 1) % len(pts)][1]
                - pts[(i + 1) % len(pts)][0] * pts[i][1] for i in range(len(pts))) / 2

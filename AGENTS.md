@@ -30,6 +30,9 @@ This repo is a **3D design viewer for a home renovation in Valencia** (Spanish-l
 │   ├── panos/               12 equirectangular panoramas 4096×2048
 │   └── stills/              perspective stills 2560×1440 (s4…) + s4_salon_ventanal_poc.jpg
 ├── libs/                    vendored Three.js r147 (MIT) inlined into render3d.html
+├── visor/src/               código del visor (se edita aquí): index.html, visor.css, visor.js,
+│                            realista.js (modo Realista), carga.js (arranque); render3d.html se empaqueta de aquí
+├── Makefile                 atajos: `make` lista objetivos (dev, visor, check, humo, capturas…)
 ├── informes/                7 design-only Markdown reports (no prices)
 │   ├── ANALISIS_PLANOS.md
 │   ├── ARQUITECTO_MEMORIA_DESCRIPTIVA.md
@@ -74,12 +77,31 @@ scripts/
 │                            lo llama build_mobiliario)
 ├── medir_sol_hdri.py        mide el azimut/elevación del sol en un HDRI (para HDRI_SOL)
 ├── exportar_glb.py          escena.blend → data/mobiliario.glb (UVs + texturas)
-├── generar_visor3d.py       planos3d + three.min.js + GLTFLoader + GLB + texturas → render3d.html
+├── generar_visor3d.py       empaquetador: visor/src/ + planos3d + three.min.js + GLTFLoader + GLB + texturas → render3d.html
+├── dev_visor.py             servidor de desarrollo (visor/src/ sin empaquetar, recarga al guardar)
+├── comprobar_privacidad.sh  sin importes/direcciones en render3d.html y tour3d.html
 ├── render_blender.py        renders one camera from escena.blend (Cycles CPU)
 ├── generar_tour3d.py        renders/panos + camaras.json → tour3d.html
 └── revisar_mobiliario.py    control de colocación del mobiliario del GLB (falla si algo choca)
                             y huellas de colisión → data/colisiones.json
 ```
+
+### Iterar sobre el visor (sin regenerar 30 MB)
+
+El código del visor está en `visor/src/` (no en `generar_visor3d.py`, que solo empaqueta).
+
+```bash
+make dev                      # http://127.0.0.1:8000/ ; guardar visor/src/* o data/* recarga la pestaña
+make dev-maqueta              # sin modo Realista (arranca antes)
+make humo-dev                 # con `make dev` en marcha: carga el visor en Chromium y falla si hay errores
+make visor                    # empaqueta render3d.html autocontenido (<1 s + base64)
+make check                    # revisar_mobiliario + privacidad + humo sobre render3d.html
+```
+
+- En dev, `/visor.js` es `visor.js` + `realista.js` + `carga.js` concatenados (igual que en el HTML final): las líneas de los errores de la consola cuentan sobre esa unión.
+- Los marcadores `__DATA__`, `__COLISIONES__`, `__TEXTURAS_JS__`, `__ENV_SRC__`, `__TEXTURE__`, `__MOB_SRC__` (en `visor.js`) y `__MOB_B64__`, `__REAL_JSON__`, `__FECHA__`, `__PTM__` (en `index.html`) los rellena `generar_visor3d.py`; no los quites ni cambies su nombre.
+- `capturas.sh --humo [--url …]` carga el visor y devuelve error si hay excepciones, `console.error` o peticiones fallidas.
+- Tras cambiar el empaquetador, comprobar que el HTML sale igual: `python3 scripts/generar_visor3d.py --salida /ruta/x.html` y `cmp` contra el anterior.
 
 ### How to regenerate (no budgets)
 
@@ -126,7 +148,7 @@ En WSL, **no lances el horneado a la vez que capturas/render** (el equipo ha suf
 - **Atrezzo CC0** (`data/assets/`, Poly Haven): plantas en maceta y jarrones con fallback procedural; se excluyen del GLB del visor (`asset_*`).
 - Stills a **2560×1440 con DOF f/5,6**.
 
-`generar_geometria3d.py` only needs the plan (`Planos/PE_planta_distribucion.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_visor3d.py` needs `libs/three.min.js` y `libs/GLTFLoader.js` (ya vendored), `data/imagenes/planta_textura.jpg`, `data/texturas/` y `data/mobiliario.glb` (si falta el GLB, el visor arranca sin mobiliario; si falta `data/colisiones.json`, el paseo queda solo con los muros).
+`generar_geometria3d.py` only needs the plan (`Planos/PE_planta_distribucion.pdf` + `distribución.png`) and Python deps `pymupdf`, `numpy`, `pillow`. `generar_visor3d.py` needs `visor/src/`, `libs/three.min.js` y `libs/GLTFLoader.js` (ya vendored), `data/imagenes/planta_textura.jpg`, `data/texturas/` y `data/mobiliario.glb` (si falta el GLB, el visor arranca sin mobiliario; si falta `data/colisiones.json`, el paseo queda solo con los muros).
 
 Tiempos medidos: ~20 min por panorama 4096×2048 a 320 muestras (Cycles CPU, 20 hilos, 2 en paralelo). `renders/escena.blend` no se versiona (se regenera).
 
@@ -145,7 +167,7 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución PE/
 - Sin `logarithmicDepthBuffer` ni `preserveDrawingBuffer`; `near/far` por modo (órbita 0,1/300, caminar-vuelo 0,08/250, Realista 0,08/5.000 con el cielo a 0,9·far). El PNG se sigue exportando dibujando justo antes de `toBlob`.
 - **Sombras**: el sol está fijo al centro de la vivienda, `shadowMap.autoUpdate=false` y sólo se recalcula al mover el sol, cambiar el mobiliario visible o cruzar el umbral del techo (2,45 m); en Realista se desactivan (la luz ya está horneada).
 - **Datos grandes en etiquetas de datos inertes** (`<script type="application/json|octet-stream">`) y decodificación nativa con `fetch(data:)` (respaldo `atob`). Arranca en Realista (o en maqueta si falta el horneado) y carga la maqueta en segundo plano; ambos modos se precompilan (la RV y las capturas usan la maqueta).
-- **Fachadas y azoteas procedurales (shader)**: `matFachada` en `visor_realista.js` dibuja revoco con juntas de panel (1,5 m y media planta), ladrillo caravista en ~40 % de los vecinos, huecos con marco, persianas, toldos, splits, balcones pintados, bajos comerciales y azoteas de baldosín rojizo con peto y casetas (los vecinos también llevan casetas). Coches, farolas, contenedores y palmeras son mallas instanciadas (`construirCalle`, `construirPalmeras`) a partir de `info.coches/farolas/urbano` de `visor.json`. Los colores se ajustan contra las fotos con `PALETA[0]` y `REVOCO_HORNEADO` (el lightmap solo lleva iluminación).
+- **Fachadas y azoteas procedurales (shader)**: `matFachada` en `visor/src/realista.js` dibuja revoco con juntas de panel (1,5 m y media planta), ladrillo caravista en ~40 % de los vecinos, huecos con marco, persianas, toldos, splits, balcones pintados, bajos comerciales y azoteas de baldosín rojizo con peto y casetas (los vecinos también llevan casetas). Coches, farolas, contenedores y palmeras son mallas instanciadas (`construirCalle`, `construirPalmeras`) a partir de `info.coches/farolas/urbano` de `visor.json`. Los colores se ajustan contra las fotos con `PALETA[0]` y `REVOCO_HORNEADO` (el lightmap solo lleva iluminación).
 - **Indicador `?perf`** (fps, ms, draw calls, triángulos, programas): abrir `render3d.html?perf`.
 - Se abre desde `file://`; Three.js + GLTFLoader van inline. Solo Google Fonts es externo.
 - `data/imagenes/geometria_debug.png` es el overlay de control tras cambiar el plano.
@@ -157,7 +179,7 @@ Modelo 3D generado de la **geometría vectorial** del plano de distribución PE/
 - `scripts/extraer_entorno.py`: OpenStreetMap → `data/entorno.json`. Las coordenadas se pasan por CLI y **no se versionan** (`--lat --lon --rumbo [--radio]`, p. ej. un punto de Street View frente a la fachada). El JSON solo guarda geometría relativa en metros de la escena (volúmenes con nº de plantas, calzadas, carriles bici, verdes y árboles), sin lat/lon ni nombres de calles. Datos © OpenStreetMap contributors (ODbL 1.0).
 - `scripts/hornear_visor.py`: hornea la luz de Cycles de `renders/escena.blend` → `data/visor/`. Se lanza con Blender (`./scripts/blender.sh -b renders/escena.blend -noaudio -P scripts/hornear_visor.py -- [--muestras N] [--res N] [--rapido] [--salida <dir>]`; `--salida` permite probar sin tocar `data/visor`). Genera `interior.glb` (UV de material + lightmap), `lm_a/b.jpg`, `suelo_cerca/lejos.jpg`, `cielo.jpg`, `reflejo.jpg`, `arbol_*.webp` y `visor.json`. Coste: rápido (`--rapido`, 32 muestras/1024) ~10 min; completo 128 muestras con `--res 2048` ~60–90 min; `--res 4096` (por defecto) multiplica ×4 el tiempo (~4 h). El horneado se corta a medias si WSL se reinicia: deja escrito `visor.json` solo al final y no mezcles un horneado parcial con el anterior.
 - **Empaquetado UV del horneado (aviso)**: el margen de isla es una fracción fija del atlas. Con ~2.000 islas, 16 px por isla no caben a 1024 px y el atlas sale **negro** (K=1,000). Por eso `MARGEN_ISLAS_PX`/`MARGEN_BAKE_PX` valen 16/8 desde 2048 px y 6/3 por debajo, y `_comprobar_atlas` aborta si las UV se salen de [0,1]. Las piezas finas del exterior (`SIN_LIGHTMAP`: barandillas, toldos, splits, azotea) no se hornean: van con luz de entorno. El edificio propio (`ext_propio*`) tampoco: su iluminación es analítica en el shader.
-- `scripts/visor_realista.js`: modo **Realista** del visor (interior con lightmaps + PBR del render y ciudad OSM alrededor a la altura del 7º piso). Lo inyecta `scripts/generar_visor3d.py` (`--visor <dir>` para horneados alternativos). Es el **modo por defecto y único** (sin conmutador en la interfaz; en RV se fuerza la maqueta): `setRealista(true)` tras la carga, y si falta el horneado cae a la maqueta. La exposición se calibra contra los stills Cycles con la constante `AJUSTE_EXPOSICION` (barrido medido con `capturas.mjs` y `ref_cycles.py`: EV 0,90 final frente al 2,30 de usar `exposicion` tal cual; sin compensar salía +0,3/+0,6 EV).
+- `visor/src/realista.js`: modo **Realista** del visor (interior con lightmaps + PBR del render y ciudad OSM alrededor a la altura del 7º piso). Lo inyecta `scripts/generar_visor3d.py` (`--visor <dir>` para horneados alternativos). Es el **modo por defecto y único** (sin conmutador en la interfaz; en RV se fuerza la maqueta): `setRealista(true)` tras la carga, y si falta el horneado cae a la maqueta. La exposición se calibra contra los stills Cycles con la constante `AJUSTE_EXPOSICION` (barrido medido con `capturas.mjs` y `ref_cycles.py`: EV 0,90 final frente al 2,30 de usar `exposicion` tal cual; sin compensar salía +0,3/+0,6 EV).
 - `scripts/capturas.mjs` + `scripts/capturas.sh`: capturas automáticas del visor con Playwright/Chromium (vistas: `orbita`, `salon`, `terraza`, `cocina`, `dormitorio`, `fachada`, `calle` (tipo Street View), `aerea` (tipo Google 3D), `satelite`, `bano1`, `bano2`, `fregadero`; `--vistas a,b` limita). Flags: `--visor/--salida/--ancho/--alto`, `--maqueta` (captura la maqueta en vez del modo Realista) y `--medir` (sin capturas: imprime peso del HTML, tiempo hasta estar listo, draw calls/triángulos/programas/memoria, y ms por fotograma en reposo y orbitando). `capturas.sh` cachea `playwright-core` en `~/.cache/opencode-reforma` (no depende de `/tmp`).
 - `scripts/ref_cycles.py`: referencia Cycles de la misma cámara que las capturas (`--cam/--todas`, más `--samples/--res/--out/--out-dir`). Usa `scripts/blender.sh`.
 - `data/visor/` es un **artefacto local regenerable** (ya en `.gitignore`): se regenera con `hornear_visor.py` y no se versiona.
